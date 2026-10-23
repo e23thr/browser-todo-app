@@ -1,0 +1,143 @@
+/*
+ * Settings screen (M14) — docs/design/ux-foundation.md §4.9 (sections, compact/wide columns)
+ * and §6.5/§6.6 (segmented radio rows, native select).
+ *
+ * Imported after shell.css, so `.settings` wins the layout over `.view` at equal specificity.
+ */
+
+.settings {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  min-width: 0;
+}
+
+.settings-heading {
+  margin: 0;
+  font-size: var(--font-h2);
+  line-height: var(--line-h2);
+}
+
+.settings-pending {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+}
+
+.field-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.field-legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+}
+
+/* §6.5 segmented control: native radios, restyled — arrow keys and group semantics intact. */
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.segment {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-min);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard);
+}
+
+.segment:hover {
+  background: var(--color-surface-hover);
+}
+
+.segment input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+/* Selected: fill + accent border + weight. The native radio dot is the non-colour channel. */
+.segment:has(input:checked) {
+  background: var(--color-surface-subtle);
+  border-color: var(--color-accent);
+  color: var(--color-accent-text);
+  font-weight: var(--weight-semibold);
+}
+
+.segment:has(input:focus-visible) {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  max-width: 320px;
+}
+
+.field-label {
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+  font-weight: var(--weight-medium);
+}
+
+/* §6.6 native select, minimally restyled — platform pickers on iOS/Android. */
+.select {
+  width: 100%;
+  min-height: var(--touch-min);
+  padding: 0 var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--font-body);
+}
+
+.select:hover {
+  border-color: var(--color-text-secondary);
+}
+
+.select:disabled {
+  background: var(--color-surface-subtle);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+/* §4.9: two columns from the md breakpoint up, one column below. */
+@media (min-width: 768px) {
+  .settings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}

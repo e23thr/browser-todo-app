@@ -1,0 +1,431 @@
+/*
+ * Shell styles — docs/design/ux-foundation.md §4.1 (anatomy), §4.2 (chrome states),
+ * §6 (buttons/icon buttons/empty state), §3.6 (layout tokens & breakpoints).
+ *
+ * Mobile-first: the compact pattern is the base, the wide pattern is the min-width:1024px
+ * layer. Only one chrome is in the DOM at a time (App renders it from a media query), so
+ * these rules never have to hide a second navigation.
+ */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.shell-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------- top app bar (compact) */
+
+.appbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--appbar-h);
+  padding: var(--space-1) var(--space-2);
+  padding-top: calc(var(--space-1) + env(safe-area-inset-top));
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------------------------------------------------------------- sidebar (wide) */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-3);
+  background: var(--color-surface);
+}
+
+.wordmark {
+  margin: 0;
+  padding: 0 var(--space-3);
+  font-size: var(--font-h3);
+  line-height: var(--line-h3);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav-list a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-min);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.nav-list a:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+/* Current page: accent + a 3 px bar (sidebar) — never colour alone (§8). */
+.nav-list a[aria-current='page'] {
+  background: var(--color-surface-subtle);
+  color: var(--color-accent-text);
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.nav-heading {
+  margin: var(--space-4) 0 var(--space-2);
+  padding: 0 var(--space-3);
+  font-size: var(--font-caption);
+  line-height: var(--line-caption);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-tertiary);
+}
+
+.nav-empty {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+  color: var(--color-text-tertiary);
+}
+
+.nav-label {
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------- main */
+
+.app-main {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-5) var(--space-4);
+  /* Clear the fixed tab bar and the FAB, incl. the iOS home-indicator inset. */
+  padding-bottom: calc(var(--tabbar-h) + 72px + env(safe-area-inset-bottom));
+}
+
+/* ---------------------------------------------------------------- bottom tab bar (compact) */
+
+.tabbar {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: var(--z-sticky);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tabbar ul {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: var(--tabbar-h);
+  min-width: var(--touch-min);
+  padding: var(--space-1) 2px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: var(--font-caption);
+  line-height: var(--line-caption);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.tab:hover {
+  background: var(--color-surface-hover);
+}
+
+/* Active tab: accent + a filled pill + medium weight — three channels, never colour alone. */
+.tab[aria-current='page'] {
+  background: var(--color-surface-subtle);
+  color: var(--color-accent-text);
+}
+
+.tab-label {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* §9.5: the only allowed label-hiding case — labels drop below 360 px, icons keep names. */
+@media (max-width: 359px) {
+  .tab-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* ---------------------------------------------------------------- FAB (compact) */
+
+.fab {
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(var(--tabbar-h) + var(--space-4) + env(safe-area-inset-bottom));
+  z-index: var(--z-sticky);
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-standard);
+}
+
+.fab:hover {
+  background: var(--color-accent-hover);
+}
+
+.fab:active {
+  transform: scale(0.96);
+}
+
+/* ---------------------------------------------------------------- drawer (compact) */
+
+.drawer-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-scrim);
+  display: flex;
+}
+
+.drawer-scrim {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: var(--scrim);
+  cursor: pointer;
+}
+
+.drawer {
+  position: relative;
+  z-index: var(--z-dialog);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: min(320px, 85vw);
+  height: 100%;
+  padding: var(--space-4);
+  padding-top: calc(var(--space-4) + env(safe-area-inset-top));
+  overflow-y: auto;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  animation: drawer-in var(--dur-slow) var(--ease-emphasized);
+}
+
+.drawer:focus {
+  outline: none;
+}
+
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* ---------------------------------------------------------------- view + empty state */
+
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: var(--layout-content-max);
+}
+
+.view-title {
+  margin: 0;
+  font-size: var(--font-title);
+  line-height: var(--line-title);
+  font-weight: var(--weight-semibold);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-block: var(--space-12);
+}
+
+.empty-state-icon {
+  color: var(--color-text-secondary);
+}
+
+.empty-state-title {
+  margin: 0;
+  font-size: var(--font-h3);
+  line-height: var(--line-h3);
+  font-weight: var(--weight-semibold);
+}
+
+.empty-state-body {
+  margin: 0;
+  max-width: 44ch;
+  color: var(--color-text-secondary);
+  font-size: var(--font-body);
+  line-height: var(--line-body);
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--touch-min);
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.button-primary {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.button-primary:hover {
+  background: var(--color-accent-hover);
+}
+
+.button-secondary {
+  background: var(--color-surface);
+  border-color: var(--color-border-control);
+  color: var(--color-text);
+}
+
+.button-secondary:hover {
+  background: var(--color-surface-hover);
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: var(--space-2);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.icon-button:hover {
+  background: var(--color-surface-hover);
+}
+
+.icon {
+  flex: none;
+}
+
+.icon-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------- wide pattern */
+
+@media (min-width: 1024px) {
+  .shell-body {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    flex: none;
+    width: var(--layout-sidebar);
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+    border-right: 1px solid var(--color-border);
+  }
+
+  .app-main {
+    max-width: var(--layout-content-max);
+    margin-inline: auto;
+    padding: var(--space-6) var(--space-6) var(--space-16);
+  }
+
+  .view-title {
+    font-size: var(--font-display);
+    line-height: var(--line-display);
+  }
+
+  /* §6.13: centred on wide, left-aligned on compact. */
+  .empty-state {
+    align-items: center;
+    text-align: center;
+  }
+}
