@@ -11,7 +11,7 @@
  * guard so nothing is mutated (Decision 2).
  */
 
-import { err, ok, unknownError } from './errors';
+import { classifyUnknown, err, ok } from './errors';
 import type { Result, StorageError } from './errors';
 import { AppDBImpl, openRawAppDB } from './db';
 import type { AppDB, BootReport } from './db';
@@ -80,19 +80,12 @@ async function bootFresh(options: BootOptions): Promise<Result<AppDB, StorageErr
     meta = (await raw.get('meta', META_KEY)) as Meta | undefined;
   } catch (e) {
     raw.close();
-    return err(unknownError(e));
+    // classify, never wrap: a QuotaExceededError here must reach the §5.5
+    // export/cleanup dialog as QUOTA_EXCEEDED, not drown as UNKNOWN (QA D3).
+    return err(classifyUnknown(e));
   }
 
   const target = targetVersionOf(registry);
-  const report: BootReport = {
-    schemaVersion: meta?.schemaVersion ?? APP_SCHEMA_VERSION,
-    migrated: null,
-    preMigrationSnapshotId: null,
-    quarantined: 0,
-    purgedTombstones: 0,
-    newerSchema: null,
-    bootWarnings: [],
-  };
 
   if (meta === undefined) {
     meta = {
@@ -106,14 +99,32 @@ async function bootFresh(options: BootOptions): Promise<Result<AppDB, StorageErr
       await raw.put('meta', meta, META_KEY);
     } catch (e) {
       raw.close();
-      return err(unknownError(e));
+      return err(classifyUnknown(e)); // same contract as the read above (QA D3)
     }
   }
 
-  const db = new AppDBImpl(raw, meta, report);
+  // QA defect D4: `meta.schemaVersion` is only a version when it is an integer
+  // >= 1. A corrupt value (e.g. 0.5) must never feed the migration comparison —
+  // it produced a bogus `migrated` report and a spurious pre-migration snapshot
+  // on EVERY boot. Version unknown -> no chain, no snapshot, no NEWER_SCHEMA
+  // comparison; the row is quarantined by step 4 and heals via snapshot restore.
+  const versionKnown = trustworthySchemaVersion(meta.schemaVersion);
+  const resolvedVersion = versionKnown ? meta.schemaVersion : target;
+
+  const report: BootReport = {
+    schemaVersion: resolvedVersion,
+    migrated: null,
+    preMigrationSnapshotId: null,
+    quarantined: 0,
+    purgedTombstones: 0,
+    newerSchema: null,
+    bootWarnings: [],
+  };
+
+  const db = new AppDBImpl(raw, { ...meta, schemaVersion: resolvedVersion }, report);
 
   // NEWER_SCHEMA: reads stay available, every write refuses (Decision 2).
-  if (meta.schemaVersion > target) {
+  if (versionKnown && meta.schemaVersion > target) {
     db.setWriteGuard({ code: 'NEWER_SCHEMA', found: meta.schemaVersion, supported: target });
     db.updateReport({
       newerSchema: { found: meta.schemaVersion, supported: target },
@@ -127,19 +138,23 @@ async function bootFresh(options: BootOptions): Promise<Result<AppDB, StorageErr
   }
 
   // Step 3: migration chain (snapshot-first, atomic steps, rollback on failure).
-  const migrated = await runMigrations(db, { registry, codec, now });
-  if (!migrated.ok) {
-    // Migration failed and rolled back: typed error out, connection closed.
-    // The DB is back on the old version and still readable next boot.
-    db.close();
-    return err(migrated.error);
-  }
-  if (migrated.value.preMigrationSnapshotId !== null) {
-    db.updateReport({
-      migrated: { from: migrated.value.from, to: migrated.value.to },
-      preMigrationSnapshotId: migrated.value.preMigrationSnapshotId,
-    });
-    db.setSchemaVersion(migrated.value.to);
+  // Skipped when the declared version is untrustworthy (D4): there is nothing
+  // truthful to migrate from, and guessing a version would corrupt the data.
+  if (versionKnown) {
+    const migrated = await runMigrations(db, { registry, codec, now });
+    if (!migrated.ok) {
+      // Migration failed and rolled back: typed error out, connection closed.
+      // The DB is back on the old version and still readable next boot.
+      db.close();
+      return err(migrated.error);
+    }
+    if (migrated.value.preMigrationSnapshotId !== null) {
+      db.updateReport({
+        migrated: { from: migrated.value.from, to: migrated.value.to },
+        preMigrationSnapshotId: migrated.value.preMigrationSnapshotId,
+      });
+      db.setSchemaVersion(migrated.value.to);
+    }
   }
 
   // Step 4: boot validation + quarantine (non-destructive).
@@ -171,4 +186,12 @@ async function bootFresh(options: BootOptions): Promise<Result<AppDB, StorageErr
   }
 
   return ok(db);
+}
+
+/**
+ * `meta.schemaVersion` is only comparable when it is an integer >= 1 — the same
+ * range `validateMeta` enforces. Anything else is corruption, not a version.
+ */
+function trustworthySchemaVersion(v: unknown): v is number {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 1;
 }

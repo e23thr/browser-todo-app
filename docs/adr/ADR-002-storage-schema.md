@@ -358,6 +358,22 @@ row, `title` prefixed, linked by no field — plain row) — never a silent over
 - Purge never touches live rows and never touches snapshots. Undo for MVP is the pre-import
   snapshot + export discipline (undo toast = S7, V1).
 
+> **Amendment (2026-10-23, QA fix card t_dbe04ac6).** Two clarifications after the E1
+> corruption-drill QA (docs/qa/e1-storage.md §5):
+>
+> 1. **Purge transaction shape (finding D6):** the automatic pass now stamps `meta.lastPurgeAt`
+>    in the **same** `readwrite` transaction as the tombstone deletions (one transaction
+>    covering `lists`, `tasks` and `meta`) rather than one transaction per store plus a second
+>    stamp transaction. With the old shape a failed stamp (quota) surfaced `QUOTA_EXCEEDED`
+>    while the deletions had already committed — boot reported `purgedTombstones: 0` although
+>    rows were gone. Deletions and stamp now commit or roll back together; TTL (90d) and
+>    throttle (24h) are unchanged.
+> 2. **Singleton safety (finding D2, reinforces Decision 3.1):** explicit `quarantine.purge()`
+>    never destroys the `meta`/`settings` singletons. A quarantined `meta` carries the device
+>    identity; hard-deleting it made the next boot silently re-seed a NEW `deviceId` (identity
+>    reset). Singleton entries stay quarantined and downloadable in the recovery file and are
+>    healed via snapshot restore/import, never via purge.
+
 ---
 
 ## Decision 7 — localStorage contract (boot-critical prefs ONLY)

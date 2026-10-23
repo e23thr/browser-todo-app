@@ -11,6 +11,7 @@
 import { err, ok } from './errors';
 import type { Result, StorageError } from './errors';
 import type { AppDBImpl } from './db';
+import type { StoreName } from './types';
 
 export const TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 export const PURGE_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -24,7 +25,9 @@ export type PurgeOptions = {
 
 /**
  * Returns the number of tombstoned rows hard-deleted (0 when the throttled
- * auto pass is skipped). `QUOTA_EXCEEDED`/other errors propagate typed.
+ * auto pass is skipped). `QUOTA_EXCEEDED`/other errors propagate typed — and
+ * when a pass errors, NOTHING was purged: the deletions and the throttle stamp
+ * share one transaction (QA defect D6), so the count can never lie.
  */
 export async function purgeTombstones(
   db: AppDBImpl,
@@ -43,9 +46,15 @@ export async function purgeTombstones(
 
   const cutoff = now - TOMBSTONE_TTL_MS;
   let purged = 0;
-  for (const store of TOMBSTONE_STORES) {
-    // One readwrite transaction per store (ADR-002 Decision 6).
-    const result = await db.tx([store], 'readwrite', async (t) => {
+  // ONE readwrite transaction for the whole pass: the per-store deletions and
+  // the auto `meta.lastPurgeAt` stamp commit or roll back TOGETHER (ADR-002
+  // Decision 6 amended; previously the stamp ran in a second tx after the
+  // deletions had committed, so a stamp failure reported QUOTA_EXCEEDED with
+  // rows already purged and the count lost). `meta` rides along only in auto
+  // mode — explicit passes never touch the throttle.
+  const stores: StoreName[] = mode === 'auto' ? ['lists', 'tasks', 'meta'] : ['lists', 'tasks'];
+  const result = await db.tx(stores, 'readwrite', async (t) => {
+    for (const store of TOMBSTONE_STORES) {
       const rows = await t.getAll(store);
       for (const row of rows) {
         if (row.deletedAt === null) continue;
@@ -54,19 +63,13 @@ export async function purgeTombstones(
           purged += 1;
         }
       }
-      return ok(undefined);
-    });
-    if (!result.ok) return err(result.error);
-  }
-
-  if (mode === 'auto') {
-    const stamped = await db.tx(['meta'], 'readwrite', async (t) => {
+    }
+    if (mode === 'auto') {
       const meta = await t.get('meta', 'meta');
-      if (meta === undefined) return ok(undefined);
-      await t.put('meta', { ...meta, lastPurgeAt: now });
-      return ok(undefined);
-    });
-    if (!stamped.ok) return err(stamped.error);
-  }
+      if (meta !== undefined) await t.put('meta', { ...meta, lastPurgeAt: now });
+    }
+    return ok(undefined);
+  });
+  if (!result.ok) return err(result.error);
   return ok(purged);
 }

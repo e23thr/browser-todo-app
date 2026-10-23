@@ -1,20 +1,24 @@
 /**
  * Record types for the local-first todo database.
  *
- * BINDING: these shapes are ADR-002 §3 verbatim. Changing any field is an ADR
- * amendment plus a `meta.schemaVersion` migration step — never an in-place edit.
+ * BINDING: these shapes are ADR-002 §3 verbatim. `Task`/`List`/`Settings` (and
+ * their field unions) now live in `src/domain/model.ts` — their canonical TS home
+ * per ADR-003 Decision 1.2 — and are re-exported here so every ADR-002 import
+ * site keeps compiling. Changing any field is an ADR amendment plus a
+ * `meta.schemaVersion` migration step — never an in-place edit.
  */
 
-export type TaskStatus = 'open' | 'done' | 'archived';
-export type Priority = 0 | 1 | 2;
+export type {
+  List,
+  Priority,
+  Recurrence,
+  Settings,
+  StoreName,
+  Task,
+  TaskStatus,
+} from '../domain/model';
 
-/** RRULE-lite subset (S4 owns semantics). */
-export type Recurrence = {
-  freq: 'daily' | 'weekly' | 'monthly' | 'weekdays';
-  interval: number;
-  until?: string;
-  count?: number;
-};
+import type { List, Settings, StoreName, Task } from '../domain/model';
 
 /** Singleton under out-of-line key `'meta'` (ADR-002 §3.1). */
 export type Meta = {
@@ -23,48 +27,6 @@ export type Meta = {
   createdAt: number;
   lastOpenedAt: number;
   lastPurgeAt?: number;
-};
-
-export type List = {
-  id: string;
-  name: string;
-  color: string;
-  sortOrder: string;
-  createdAt: number;
-  updatedAt: number;
-  deletedAt: number | null;
-  deviceId: string;
-};
-
-export type Task = {
-  id: string;
-  listId: string;
-  title: string;
-  notes: string | null;
-  status: TaskStatus;
-  priority: Priority;
-  dueDate?: string;
-  reminderAt?: number;
-  recurrence?: Recurrence;
-  tags: string[];
-  parentTaskId?: string;
-  sortOrder: string;
-  createdAt: number;
-  updatedAt: number;
-  completedAt?: number;
-  deletedAt: number | null;
-  deviceId: string;
-};
-
-/** Singleton; the single record has `id: 'settings'` (ADR-002 §3.4). */
-export type Settings = {
-  id: 'settings';
-  theme: 'light' | 'dark' | 'system';
-  locale: string;
-  weekStart: 0 | 1;
-  defaultListId: string | null;
-  notificationsEnabled: boolean;
-  lastBackupAt: number | null;
 };
 
 export type SnapshotKind = 'auto' | 'manual';
@@ -84,12 +46,6 @@ export type SnapshotPayload = {
   id: string;
   payload: string;
 };
-
-/**
- * Store names (ADR-002 Decision 3). `tags` is deliberately reserved and must
- * not appear here until a migration creates it (ADR-002 §3.7).
- */
-export type StoreName = 'meta' | 'lists' | 'tasks' | 'settings' | 'snapshots' | 'snapshot_payloads';
 
 export type RowMap = {
   meta: Meta;

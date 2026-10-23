@@ -8,26 +8,13 @@
 
 import type { StoreName } from './types';
 
-export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
+// `Result`/`StorageError` are physically declared in the domain kernel
+// (ADR-003 Decision 1.2) and re-exported here — the ADR-002 API surface is
+// unchanged. `ok`/`err` come along so this module stays the one import site.
+export type { Result, StorageError } from '../domain/kernel';
+export { err, ok } from '../domain/kernel';
 
-export function ok<T>(value: T): Result<T, never> {
-  return { ok: true, value };
-}
-
-export function err<E>(error: E): Result<never, E> {
-  return { ok: false, error };
-}
-
-export type StorageError =
-  | { code: 'UNAVAILABLE'; cause?: unknown }
-  | { code: 'BLOCKED'; message: string }
-  | { code: 'QUOTA_EXCEEDED'; cause?: unknown }
-  | { code: 'INVALID_RECORD'; store: StoreName; id?: string; issues: string[] }
-  | { code: 'NOT_FOUND'; store: StoreName; key: string }
-  | { code: 'MIGRATION_FAILED'; from: number; to: number; cause?: unknown }
-  | { code: 'NEWER_SCHEMA'; found: number; supported: number }
-  | { code: 'TX_ABORTED'; cause?: unknown }
-  | { code: 'UNKNOWN'; cause?: unknown };
+import type { StorageError } from '../domain/kernel';
 
 export function unavailable(cause?: unknown): StorageError {
   return cause === undefined ? { code: 'UNAVAILABLE' } : { code: 'UNAVAILABLE', cause };

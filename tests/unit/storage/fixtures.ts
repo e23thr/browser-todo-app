@@ -97,13 +97,25 @@ const emptyReport = (): BootReport => ({
   bootWarnings: [],
 });
 
-/** Open a wrapped DB without boot steps (raw fixture surface for unit tests). */
+/**
+ * Open a wrapped DB without boot steps (raw fixture surface for unit tests).
+ * Meta is READ-AND-KEPT (QA defect D5): an existing row — including a
+ * deliberately corrupt one — is never overwritten by an inspection open, so
+ * reopening can no longer mask meta-level corruption or rotate deviceId.
+ * A fresh `meta` is written only on the first open (or when explicitly given).
+ */
 export async function openFixtureDb(dbName: string, meta?: Meta): Promise<AppDBImpl> {
   const opened = await openRawAppDB({ dbName });
   if (!opened.ok) throw new Error(`fixture open failed: ${opened.error.code}`);
-  const effective = meta ?? makeMeta();
+  if (meta !== undefined) {
+    const db = new AppDBImpl(opened.value, meta, emptyReport());
+    await db.put('meta', meta);
+    return db;
+  }
+  const existing = (await opened.value.get('meta', 'meta')) as Meta | undefined;
+  const effective = existing ?? makeMeta();
   const db = new AppDBImpl(opened.value, effective, emptyReport());
-  await db.put('meta', effective);
+  if (existing === undefined) await db.put('meta', effective);
   return db;
 }
 
@@ -158,5 +170,20 @@ export function injectQuotaOnPuts(): () => void {
   };
   return () => {
     proto.put = original;
+  };
+}
+
+/**
+ * Fault-inject quota exhaustion on IDB reads until the returned restore fn is
+ * called. Covers `get` request paths (boot's meta read catch block).
+ */
+export function injectQuotaOnGets(): () => void {
+  const proto = IDBObjectStore.prototype as unknown as { get: (...args: unknown[]) => unknown };
+  const original = proto.get;
+  proto.get = function get() {
+    throw quotaError();
+  };
+  return () => {
+    proto.get = original;
   };
 }

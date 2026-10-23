@@ -11,9 +11,9 @@
  *   6. snapshot restore works like a feature (take -> corrupt -> restore).
  * Plus wrapper resilience drills (BLOCKED, closed-DB errors, missing payload).
  *
- * Contract deviations found while writing these drills are tracked separately
- * (see docs/qa/e1-storage.md, defects D1-D4) and are deliberately NOT asserted
- * here so the committed suite stays green.
+ * The QA regression section at the bottom pins the contract-deviation probes
+ * (docs/qa/e1-storage-logs/probe-contract-deviations.txt P1-P4) as green tests
+ * for fix card t_dbe04ac6 (D1-D6).
  */
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -39,6 +39,7 @@ import type { List, Meta, Settings, Task } from '../../../src/storage/types';
 
 import {
   fixedNow,
+  injectQuotaOnGets,
   injectQuotaOnPuts,
   makeList,
   makeMeta,
@@ -77,8 +78,10 @@ function byId<T extends { id: string }>(rows: T[]): T[] {
 }
 
 /**
- * Non-clobbering raw inspection: `openFixtureDb` REWRITES meta on every open
- * (defect D5), so byte-equivalence checks must read through raw IDB.
+ * Fixture-independent raw inspection: byte-equivalence checks read through raw
+ * IDB so no fixture-layer open can influence what is asserted (QA defect D5
+ * made the point concrete — `openFixtureDb` used to rewrite meta on every open;
+ * it now reads-and-keeps, and raw reads remain the ground truth).
  */
 type RawHandle = {
   get(store: string, key: string): Promise<unknown>;
@@ -415,12 +418,12 @@ describe('Drill 3: QuotaExceededError is a typed QUOTA_EXCEEDED on every write s
     const warnings = db.bootReport.bootWarnings;
     expect(warnings.map((w) => w.step).sort()).toEqual(['lastOpenedAt', 'purge']);
     for (const warning of warnings) expect(warning.error.code).toBe('QUOTA_EXCEEDED');
-    // Documented semantics (defect D6): the per-store purge deletions commit in
-    // their own transactions BEFORE the meta stamp fails, so the tombstone is
-    // actually gone even though the pass reported an error and lost its count.
+    // D6 FIXED (atomic pass): the throttle stamp and the deletions commit or
+    // roll back together — under quota the tombstone SURVIVES, the pass reports
+    // the typed error, and the count stays a truthful 0 (retried next boot).
     const raw = await db.readUnfiltered('tasks');
-    expect(raw.ok && raw.value).toHaveLength(0);
-    expect(db.bootReport.purgedTombstones).toBe(0); // count lost (D6)
+    expect(raw.ok && raw.value).toHaveLength(1);
+    expect(db.bootReport.purgedTombstones).toBe(0); // truthful: nothing was purged
   });
 });
 
@@ -669,5 +672,139 @@ describe('Drill 7: wrapper resilience', () => {
     // Data untouched by the failed restore.
     const rows = await db.readUnfiltered('tasks');
     expect(rows.ok && rows.value).toHaveLength(1);
+  });
+});
+
+/* ======== QA regression drills (t_dbe04ac6): probes P1-P4 as green tests ======== */
+
+describe('Regression P1 (D1): Tx.get applies the quarantine denylist end-to-end', () => {
+  it('a quarantined row is invisible to Tx.get and Tx.getAll, still in the DB', async () => {
+    const name = uniqueDbName('p1-txget');
+    const bad = makeTask({ title: 'x'.repeat(1001) });
+    const good = makeTask({ title: 'fine' });
+    await seedDb(name, { meta: makeMeta({ schemaVersion: 1 }), tasks: [bad, good] });
+
+    const db = await bootOk(name);
+    expect(db.bootReport.quarantined).toBe(1);
+
+    const viaTx = await db.tx(['tasks'], 'readonly', async (t) => ({
+      ok: true as const,
+      value: { one: await t.get('tasks', bad.id), all: await t.getAll('tasks') },
+    }));
+    expect(viaTx.ok).toBe(true);
+    if (viaTx.ok) {
+      expect(viaTx.value.one).toBeUndefined(); // denied single-row read
+      expect(viaTx.value.all.map((t) => t.id)).toEqual([good.id]);
+    }
+
+    const raw = await db.readUnfiltered('tasks');
+    expect(raw.ok && raw.value).toHaveLength(2); // never dropped
+  });
+});
+
+describe('Regression P2 (D2): quarantine.purge() never destroys the singletons', () => {
+  it('a quarantined meta survives purge + reboot — deviceId is never reset (ADR-002 §3.1)', async () => {
+    const name = uniqueDbName('p2-purge-meta');
+    const badMeta = makeMeta({ deviceId: 'not-a-ulid' });
+    await seedDb(name, { meta: badMeta, tasks: [makeTask({ title: 'fine' })] });
+
+    const db = await bootOk(name);
+    expect(db.deviceId).toBe('not-a-ulid');
+    expect(db.bootReport.quarantined).toBe(1);
+
+    // Purge destroys NOTHING here: the meta singleton is skipped by design.
+    const purged = await db.quarantine.purge();
+    expect(purged.ok && purged.value).toBe(0);
+    expect(db.quarantine.list()).toHaveLength(1); // still quarantined...
+    const file = JSON.parse(db.quarantine.recoveryFile().json) as { entries: unknown[] };
+    expect(file.entries).toHaveLength(1); // ...and still downloadable
+    const raw = await db.readUnfiltered('meta');
+    expect(raw.ok && raw.value).toEqual([badMeta]); // byte-identical in the DB
+
+    resetBootSingleton(name);
+    const second = await bootOk(name);
+    expect(second.deviceId).toBe(badMeta.deviceId); // identity survives reboot
+    expect(second.bootReport.quarantined).toBe(1); // honestly still quarantined
+  });
+
+  it('purge hard-deletes data rows but skips the meta/settings singletons', async () => {
+    const name = uniqueDbName('p2-purge-mixed');
+    const badTask = makeTask({ title: 'x'.repeat(1001) });
+    const badSettings = { ...makeSettings(), theme: 'neon' } as unknown as Settings;
+    const badMeta = makeMeta({ deviceId: 'not-a-ulid' });
+    await seedDb(name, { meta: badMeta, tasks: [badTask], settings: [badSettings] });
+
+    const db = await bootOk(name);
+    expect(db.bootReport.quarantined).toBe(3);
+
+    const purged = await db.quarantine.purge();
+    expect(purged.ok && purged.value).toBe(1); // the task only
+    expect(db.quarantine.list().map((e) => e.store).sort()).toEqual(['meta', 'settings']);
+    expect(db.bootReport.quarantined).toBe(2);
+
+    const tasks = await db.readUnfiltered('tasks');
+    expect(tasks.ok && tasks.value).toHaveLength(0); // explicit purge IS the data-row exit
+    const settings = await db.readUnfiltered('settings');
+    expect(settings.ok && settings.value).toEqual([badSettings]); // singleton kept
+  });
+});
+
+describe('Regression P3 (D3): boot classifies QuotaExceededError on the meta paths', () => {
+  it('fresh-boot meta seeding under quota exhaustion returns QUOTA_EXCEEDED', async () => {
+    const name = uniqueDbName('p3-metaseed');
+    const restore = injectQuotaOnPuts();
+    let result: Result<AppDB, StorageError> | null = null;
+    try {
+      result = await boot({ dbName: name, now: fixedNow });
+    } finally {
+      restore();
+    }
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('QUOTA_EXCEEDED'); // §5.5 dialog contract
+  });
+
+  it('meta READ failure is classified too (QUOTA_EXCEEDED, never UNKNOWN)', async () => {
+    const name = uniqueDbName('p3-metaread');
+    await seedDb(name, { meta: makeMeta({ schemaVersion: 1 }) });
+
+    const restore = injectQuotaOnGets();
+    let result: Result<AppDB, StorageError> | null = null;
+    try {
+      result = await boot({ dbName: name, now: fixedNow });
+    } finally {
+      restore();
+    }
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('QUOTA_EXCEEDED');
+  });
+});
+
+describe('Regression P4 (D4): corrupt meta.schemaVersion never fakes a migration', () => {
+  it('a non-integer schemaVersion yields migrated: null and no spurious snapshot, on EVERY boot', async () => {
+    const name = uniqueDbName('p4-metaversion');
+    await seedDb(name, {
+      meta: makeMeta({ schemaVersion: 0.5 }),
+      tasks: [makeTask({ title: 'untouched' })],
+    });
+
+    const first = await bootOk(name);
+    expect(first.bootReport.migrated).toBeNull(); // no real chain ran
+    expect(first.bootReport.preMigrationSnapshotId).toBeNull();
+    expect(Number.isInteger(first.schemaVersion)).toBe(true); // no 0.5 leaks out
+    const snaps = await first.getAll('snapshots');
+    expect(snaps.ok && snaps.value).toHaveLength(0);
+
+    // The regression was "a spurious pre-migration snapshot on EVERY boot".
+    resetBootSingleton(name);
+    const second = await bootOk(name);
+    expect(second.bootReport.migrated).toBeNull();
+    const snapsAgain = await second.getAll('snapshots');
+    expect(snapsAgain.ok && snapsAgain.value).toHaveLength(0);
+    expect(second.bootReport.quarantined).toBe(1); // corrupt meta quarantined, not trusted
+
+    const tasks = await second.getAll('tasks');
+    expect(tasks.ok && tasks.value.map((t) => t.title)).toEqual(['untouched']);
   });
 });

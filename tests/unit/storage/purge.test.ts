@@ -89,8 +89,8 @@ describe('tombstone purge (ADR-002 Decision 6)', () => {
   });
 
   it('propagates QUOTA_EXCEEDED instead of silently dropping the pass', async () => {
-    // Auto mode writes meta.lastPurgeAt at the end of the pass — a quota-exhausted
-    // write must surface as the typed error, never vanish.
+    // Auto mode stamps meta.lastPurgeAt in the pass transaction — a
+    // quota-exhausted write must surface as the typed error, never vanish.
     const db = await fixture(makeMeta({ lastPurgeAt: 0 }));
     const restore = injectQuotaOnPuts();
     try {
@@ -100,5 +100,24 @@ describe('tombstone purge (ADR-002 Decision 6)', () => {
     } finally {
       restore();
     }
+  });
+
+  it('auto pass is atomic (D6): a stamp failure rolls the deletions back', async () => {
+    const db = await fixture(makeMeta({ lastPurgeAt: 0 }));
+    await db.put('tasks', makeTask({ deletedAt: NOW - TOMBSTONE_TTL_MS - 1 }));
+    const restore = injectQuotaOnPuts();
+    try {
+      const result = await purgeTombstones(db, { now: NOW, mode: 'auto' });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.code).toBe('QUOTA_EXCEEDED');
+    } finally {
+      restore();
+    }
+    // Nothing half-purged: deletions and the throttle stamp share one tx, so
+    // the pass either commits completely or leaves the DB untouched.
+    const rows = await db.getAll('tasks');
+    expect(rows.ok && rows.value).toHaveLength(1);
+    const meta = await db.get('meta', 'meta');
+    expect(meta.ok && meta.value?.lastPurgeAt).toBe(0); // stamp rolled back too
   });
 });

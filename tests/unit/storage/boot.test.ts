@@ -8,7 +8,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { boot, resetBootSingleton } from '../../../src/storage/boot';
-import type { AppDBImpl } from '../../../src/storage/db';
+import { openRawAppDB, type AppDBImpl } from '../../../src/storage/db';
 import { err, ok } from '../../../src/storage/errors';
 import type { MigrationRegistry, MigrationStep } from '../../../src/storage/migrations';
 import { ULID_RE } from '../../../src/storage/id';
@@ -159,10 +159,17 @@ describe('boot: acceptance — migration interrupted mid-chain rolls back', () =
     }
 
     // Verify the rollback left the DB byte-equivalent to the v1 fixture.
+    // Meta is asserted through RAW reads (QA defect D5): inspection must never
+    // ride a fixture-layer open that could rewrite what it is asserting.
+    const raw = await openRawAppDB({ dbName: name });
+    expect(raw.ok).toBe(true);
+    if (raw.ok) {
+      const meta = (await raw.value.get('meta', 'meta')) as { schemaVersion?: number } | undefined;
+      expect(meta?.schemaVersion).toBe(1);
+      raw.value.close();
+    }
     const check = await openFixtureDb(name);
     booted.push(check);
-    const meta = await check.get('meta', 'meta');
-    if (meta.ok) expect(meta.value?.schemaVersion).toBe(1);
     const tasks = await check.readUnfiltered('tasks');
     expect(tasks.ok).toBe(true);
     if (tasks.ok) {
