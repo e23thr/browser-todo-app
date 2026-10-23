@@ -24,15 +24,25 @@
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Todo — local-first</title>
+    <!--
+      No-flash theme boot (design §5.2 / M7): reads the ADR-002 boot-prefs mirror
+      (`todo:prefs:v1:theme`) and paints <html data-theme> before first paint. Anything that is
+      not an explicit "light" behaves as `system`, matching readThemePref() in src/app/theme.ts.
+      If localStorage throws (private mode) nothing is applied and the CSS prefers-color-scheme
+      fallback in tokens.css paints the page (§5.2 failure semantics).
+    -->
     <script id="theme-boot">
       (function () {
         try {
-          var theme = localStorage.getItem('theme');
-          if (theme === 'light' || theme === 'dark') {
-            document.documentElement.dataset.theme = theme;
-          }
+          var pref = localStorage.getItem('todo:prefs:v1:theme');
+          var dark =
+            pref === 'dark' ||
+            (pref !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var el = document.documentElement;
+          el.setAttribute('data-theme', dark ? 'dark' : 'light');
+          el.style.colorScheme = dark ? 'dark' : 'light';
         } catch (error) {
-          /* storage unavailable: fall back to the system colour scheme */
+          /* storage or matchMedia unavailable: paint from the CSS defaults */
         }
       })();
     </script>
