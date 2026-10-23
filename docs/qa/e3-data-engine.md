@@ -35,8 +35,10 @@ Test-only seams (deterministic corpus, ADR-004 §2.4 canonical-byte fingerprinti
 
 ## 1. Per-drill evidence (ADR-004 testing contract)
 
-Browser column = `tests/e2e/data-safety-journey.spec.ts` (run 2026-10-23, log:
-`docs/qa/e3-data-engine-logs/playwright-data-safety-run.txt`). Unit column =
+Browser column = `tests/e2e/data-safety-journey.spec.ts` (log:
+`docs/qa/e3-data-engine-logs/playwright-data-safety-run.txt`; re-run green against engine
+commit `675a154` which landed mid-review — UTF-8 byte caps + rollback payload validation).
+Unit column =
 `tests/unit/portability/*` (log: `docs/qa/e3-data-engine-logs/vitest-portability-storage.txt`).
 
 | Drill | Requirement | Browser (real IDB, offline) | Unit suite | Evidence / notes |
