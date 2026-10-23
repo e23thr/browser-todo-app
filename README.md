@@ -38,6 +38,7 @@ npm run dev       # http://localhost:5173
 | `npm run typecheck`                                      | `tsc -b` over app, node, test and e2e projects                                                                      |
 | `npm run lint`                                           | ESLint (type-aware strict + jsx-a11y), `--max-warnings 0`                                                           |
 | `npm run format:check` / `npm run format`                | Prettier check / write                                                                                              |
+| `npm run i18n:check`                                     | i18n catalog gate: en/th key + `{name}` placeholder parity, flat keys, every literal `t()` call site resolves       |
 | `npm test`                                               | Vitest unit + component tests                                                                                       |
 | `npm run test:coverage`                                  | Vitest with coverage thresholds (§9.5)                                                                              |
 | `npm run budget`                                         | Bundle-budget gate over `dist/` (build first)                                                                       |
@@ -135,12 +136,15 @@ prevent gate drift: production `dist/`, **gzip level 9**, `*.map` excluded (neve
 (`build.manifest: true`), i.e. framework + app core + always-loaded UI. Dynamic route chunks —
 `SettingsView` today, settings/backup/storage views later — are deliberately outside it.
 
-### Locale-pack convention (for the i18n epic)
+### Locale-pack convention (implemented — M15)
 
-The gate recognises a locale pack as a chunk whose manifest key starts with `src/i18n/` (or a file
-named `locale-<tag>-*.js`). Tag extraction takes the source basename (`src/i18n/locales/th.ts` →
-`th`), and `en` is the boot locale counted inside the app-shell sum. With no packs present the
-gate reports `0.0 KB` and passes — it does not silently pass a real violation:
+Shipped: `src/i18n/` lazy packs + the `npm run i18n:check` catalog gate. See
+[`docs/i18n/README.md`](docs/i18n/README.md) for the API, key conventions and the workflow
+for adding strings. The budget gate recognises a locale pack as a chunk whose manifest key
+starts with `src/i18n/` (or a file named `locale-<tag>-*.js`). Tag extraction takes the
+source basename (`src/i18n/locale-th.ts` → `th`), and `en` is the boot locale counted inside
+the app-shell sum. With no packs present the gate reports `0.0 KB` and passes — it does not
+silently pass a real violation:
 
 ```sh
 npx vitest run tests/unit/bundle-budget.test.ts   # proves every FAIL path, including over-budget
