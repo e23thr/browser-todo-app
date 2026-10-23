@@ -230,7 +230,7 @@ describe('compact pattern (< 1024 px)', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Menu' });
 
     expect(within(dialog).getByRole('heading', { name: 'Lists' })).toBeTruthy();
-    expect(within(dialog).getByText('No lists yet')).toBeTruthy();
+    expect(within(dialog).getByText('No lists yet', { exact: true })).toBeTruthy();
   });
 });
 

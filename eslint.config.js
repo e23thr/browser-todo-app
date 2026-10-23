@@ -9,6 +9,55 @@ import tseslint from 'typescript-eslint';
  * plain recommended for build/CI scripts, eslint-config-prettier last so formatting stays with
  * Prettier. CI runs `eslint . --max-warnings 0`.
  */
+
+// --- D1 regression guard (docs/qa/e1-scaffold-gates.md §2.7/§6) --------------------------------
+// Playwright's default `getByRole(..., { name })` match is a case-insensitive SUBSTRING match, so
+// renaming the Today heading to "Todayy" passed the smoke gate 7/7 — QA defect D1. Policy (also
+// documented in the tests/e2e/smoke.spec.ts header): every role/text name match carries
+// `exact: true`. An explicit `exact: false` is banned outright in tests/.
+//
+// Deliberate choice, stated in the rule messages: an anchored regex alone (`/^Today$/`) is NOT an
+// accepted substitute for `exact: true`. One spelling keeps the policy greppable (`grep exact:
+// true tests/`) and a regex cannot be validated as anchored by a selector anyway.
+//
+// Scope of the role-query half: tests/e2e/** (Playwright's `testDir`) only, because Testing
+// Library specs physically cannot comply — `ByRoleOptions` has no `exact` property (TypeScript
+// rejects it: "'exact' does not exist in type 'ByRoleOptions'") and @testing-library/dom already
+// compares the accessible name with whole-string equality (`matches()` → `normalizedText ===
+// matcher`), so there is no substring hole to plug there. The text-query half (`getByText`/…)
+// IS substring-by-default in both libraries, so that half runs across all of tests/**.
+const ROLE_QUERY_GUARD = {
+  selector:
+    'CallExpression[callee.property.name=/^(get|query|find)ByRole$/]:' +
+    'has(ObjectExpression > Property[key.name=name]):' +
+    'not(:has(ObjectExpression > Property[key.name=exact]))',
+  message:
+    'D1 guard: getByRole(..., { name }) must also pass exact: true — Playwright matches role ' +
+    'names by case-insensitive substring by default, which let a broken label pass the smoke gate ' +
+    '(docs/qa/e1-scaffold-gates.md D1). Add exact: true; an anchored regex alone is not accepted.',
+};
+
+const TEXT_QUERY_GUARD = {
+  selector:
+    'CallExpression[callee.property.name=/^(get|query|find)By(Text|Title|Label|LabelText|' +
+    'Placeholder|PlaceholderText|AltText|DisplayValue)$/]:' +
+    'not(:has(ObjectExpression > Property[key.name=exact]))',
+  message:
+    'D1 guard: getByText/getByTitle/getByLabel/… must pass { exact: true } — a string or regex ' +
+    'matcher is a case-insensitive substring match by default in Playwright and Testing Library ' +
+    'alike, so a broken label can pass silently (docs/qa/e1-scaffold-gates.md D1).',
+};
+
+const EXACT_FALSE_GUARD = {
+  selector:
+    'CallExpression[callee.property.name=/^(get|query|find)By(Role|Text|Title|Label|LabelText|' +
+    'Placeholder|PlaceholderText|AltText|DisplayValue)$/]:has(ObjectExpression > ' +
+    'Property[key.name=exact][value.raw="false"])',
+  message:
+    'D1 guard: exact: false is banned in tests/ — substring name matching is exactly the hole that ' +
+    'let a broken label pass the gate (docs/qa/e1-scaffold-gates.md D1). Use exact: true.',
+};
+
 export default tseslint.config(
   {
     ignores: [
@@ -132,6 +181,24 @@ export default tseslint.config(
     files: ['tests/e2e/**/*.ts'],
     languageOptions: {
       globals: { ...globals.node },
+    },
+  },
+
+  // --- D1 guard, all tests: text queries are substring by default in BOTH libraries -----------
+  {
+    files: ['tests/**/*.ts', 'tests/**/*.tsx'],
+    rules: {
+      'no-restricted-syntax': ['error', TEXT_QUERY_GUARD, EXACT_FALSE_GUARD],
+    },
+  },
+
+  // --- D1 guard, Playwright specs: role-name matches must be exact ---------------------------
+  // Later block wins for tests/e2e/**, so it repeats the text guard above (flat config replaces
+  // a rule's config rather than merging it).
+  {
+    files: ['tests/e2e/**/*.ts'],
+    rules: {
+      'no-restricted-syntax': ['error', ROLE_QUERY_GUARD, TEXT_QUERY_GUARD, EXACT_FALSE_GUARD],
     },
   },
 
