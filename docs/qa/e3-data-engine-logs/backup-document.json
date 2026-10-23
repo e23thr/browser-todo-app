@@ -1,0 +1,106 @@
+{
+  "format": "local-first-todo-backup",
+  "formatVersion": 1,
+  "schemaVersion": 1,
+  "kind": "export",
+  "exportedAt": 1700000000000,
+  "deviceId": "00000000000000000000000000",
+  "app": {
+    "name": "local-first-todo",
+    "version": "0.1.0"
+  },
+  "counts": {
+    "lists": 2,
+    "tasks": 3,
+    "snapshots": 1
+  },
+  "data": {
+    "settings": {
+      "id": "settings",
+      "theme": "system",
+      "locale": "en",
+      "weekStart": 1,
+      "defaultListId": null,
+      "notificationsEnabled": false,
+      "lastBackupAt": 1700000000000
+    },
+    "lists": [
+      {
+        "id": "01ARZ3NDEKTSV4RRFFQ6000010",
+        "name": "Personal",
+        "color": "#336699",
+        "sortOrder": "h",
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000,
+        "deletedAt": null,
+        "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000"
+      },
+      {
+        "id": "01ARZ3NDEKTSV4RRFFQ6000011",
+        "name": "Work",
+        "color": "#336699",
+        "sortOrder": "m",
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000,
+        "deletedAt": 1699999999995,
+        "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "01ARZ3NDEKTSV4RRFFQ6000020",
+        "listId": "01ARZ3NDEKTSV4RRFFQ6000010",
+        "title": "Buy milk",
+        "notes": null,
+        "status": "open",
+        "priority": 0,
+        "tags": [],
+        "sortOrder": "h",
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000,
+        "deletedAt": null,
+        "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000"
+      },
+      {
+        "id": "01ARZ3NDEKTSV4RRFFQ6000022",
+        "listId": "01ARZ3NDEKTSV4RRFFQ6000010",
+        "title": "Old task I deleted",
+        "notes": null,
+        "status": "open",
+        "priority": 0,
+        "tags": [],
+        "sortOrder": "i",
+        "createdAt": 1700000000000,
+        "updatedAt": 1699999999999,
+        "deletedAt": 1699999999999,
+        "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000"
+      },
+      {
+        "id": "01ARZ3NDEKTSV4RRFFQ6000021",
+        "listId": "01ARZ3NDEKTSV4RRFFQ6000011",
+        "title": "Quarterly report",
+        "notes": "Numbers",
+        "status": "done",
+        "priority": 2,
+        "tags": [],
+        "sortOrder": "h",
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000,
+        "completedAt": 1699999999998,
+        "deletedAt": null,
+        "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000"
+      }
+    ],
+    "snapshots": [
+      {
+        "id": "01ARZ3NDEKTSV4RRFFQ6000030",
+        "takenAt": 1699999999900,
+        "kind": "auto",
+        "reason": "scheduled",
+        "sizeBytes": 10,
+        "schemaVersion": 1,
+        "payloadRef": "01ARZ3NDEKTSV4RRFFQ6000030"
+      }
+    ]
+  }
+}

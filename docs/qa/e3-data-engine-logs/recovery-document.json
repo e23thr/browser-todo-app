@@ -1,0 +1,79 @@
+{
+  "format": "local-first-todo-recovery",
+  "formatVersion": 1,
+  "schemaVersion": 1,
+  "createdAt": 1792766178209,
+  "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000",
+  "source": {
+    "kind": "import",
+    "fileName": "inline-import.json",
+    "fileSchemaVersion": 1
+  },
+  "entries": [
+    {
+      "store": "tasks",
+      "id": "01ARZ3NDEKTSV4RRFFQ6000050",
+      "issues": [
+        "title: type (string)"
+      ],
+      "raw": {
+        "id": "01ARZ3NDEKTSV4RRFFQ6000050",
+        "listId": "01ARZ3NDEKTSV4RRFFQ6000010",
+        "title": {
+          "nested": "not a string"
+        },
+        "notes": null,
+        "status": "open",
+        "priority": 0,
+        "tags": [],
+        "sortOrder": "h",
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000,
+        "deletedAt": null,
+        "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000"
+      }
+    },
+    {
+      "store": "tasks",
+      "id": "01ARZ3NDEKTSV4RRFFQ6000020",
+      "issues": [
+        "duplicate id: later occurrence quarantined (first occurrence wins)"
+      ],
+      "raw": {
+        "id": "01ARZ3NDEKTSV4RRFFQ6000020",
+        "listId": "01ARZ3NDEKTSV4RRFFQ6000010",
+        "title": "duplicate id",
+        "notes": null,
+        "status": "open",
+        "priority": 0,
+        "tags": [],
+        "sortOrder": "z",
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000,
+        "deletedAt": null,
+        "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000"
+      }
+    },
+    {
+      "store": "tasks",
+      "id": "01ARZ3NDEKTSV4RRFFQ6000051",
+      "issues": [
+        "listId: references no accepted list record"
+      ],
+      "raw": {
+        "id": "01ARZ3NDEKTSV4RRFFQ6000051",
+        "listId": "01ARZ3NDEKTSV4RRFFQ6000099",
+        "title": "orphan",
+        "notes": null,
+        "status": "open",
+        "priority": 0,
+        "tags": [],
+        "sortOrder": "h",
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000,
+        "deletedAt": null,
+        "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000"
+      }
+    }
+  ]
+}

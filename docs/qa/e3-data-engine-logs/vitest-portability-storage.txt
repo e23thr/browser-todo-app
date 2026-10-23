@@ -1,0 +1,14 @@
+ ✓ tests/unit/storage/errors.test.ts > errors.ts typed contract (ADR-002 §10.1/§10.4) > ok/err shape 11ms
+ ✓ tests/unit/storage/errors.test.ts > errors.ts typed contract (ADR-002 §10.1/§10.4) > constructors produce the ADR code shapes 3ms
+ ✓ tests/unit/storage/errors.test.ts > errors.ts typed contract (ADR-002 §10.1/§10.4) > classifyUnknown maps DOMException names to typed errors 2ms
+ ✓ tests/unit/portability/recovery-document.test.ts > serializeRecoveryDoc (Decision 7.1) > emits the pinned envelope, verbatim raws and the not-importable format token 8ms
+ ✓ tests/unit/portability/recovery-document.test.ts > serializeRecoveryDoc (Decision 7.1) > buildRecoveryDocumentFile pairs the pinned filename with the document 1ms
+ ✓ tests/unit/portability/recovery-document.test.ts > serializeRecoveryDoc (Decision 7.1) > copies issue arrays so callers cannot mutate the document afterwards 1ms
+ Test Files  21 passed (21)
+      Tests  227 passed (227)
+   Duration  4.71s (environment 75%, setup 13%, tests 6%, import 2%, transform 2%, worker 1%)
+
+Environment  jsdom was created 21 times · 30.13s total, 75% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+

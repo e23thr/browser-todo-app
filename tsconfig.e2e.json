@@ -24,5 +24,10 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["tests/e2e", "playwright.config.ts", "playwright.sw.config.ts"]
+  "include": [
+    "tests/e2e",
+    "playwright.config.ts",
+    "playwright.sw.config.ts",
+    "playwright.data-safety.config.ts"
+  ]
 }

@@ -1,0 +1,15 @@
+
+Running 11 tests using 6 workers
+
+[1/11] [chromium] › tests/e2e/data-safety-journey.spec.ts:592:1 › drill 13: imported snapshot metadata is ignored (payloads are device-local)
+[2/11] [chromium] › tests/e2e/data-safety-journey.spec.ts:271:1 › drill 3: old exports upgrade through the migration chain (failing step = zero side effects)
+[3/11] [chromium] › tests/e2e/data-safety-journey.spec.ts:527:1 › drill 11: a failing pre-import snapshot aborts the apply (opt-in proceeds)
+[4/11] [chromium] › tests/e2e/data-safety-journey.spec.ts:454:1 › drill 9: auto snapshots rotate to the newest 3, manual ones never evict
+[5/11] [chromium] › tests/e2e/data-safety-journey.spec.ts:382:1 › drill 14: the real recovery file is a report — not importable, never persisted
+[6/11] [chromium] › tests/e2e/data-safety-journey.spec.ts:182:1 › drill 1 (acceptance): export -> wipe -> import -> restored byte-equivalent, offline
+[7/11] [chromium] › tests/e2e/data-safety-journey.spec.ts:291:1 › drills 4/7: hostile and malformed files are rejected with zero side effects
+[8/11] [chromium] › tests/e2e/data-safety-journey.spec.ts:419:1 › drills 5/6/8: corrupt records quarantine to the recovery file, valid ones apply
+[9/11] [chromium] › tests/e2e/data-safety-journey.spec.ts:489:1 › drill 10: the pre-import snapshot undoes an import byte-equivalently
+[10/11] [chromium] › tests/e2e/data-safety-journey.spec.ts:551:1 › drill 12: QuotaExceededError aborts the apply atomically; export survives its stamp failure
+[11/11] [chromium] › tests/e2e/data-safety-journey.spec.ts:253:1 › drill 2: two exports with no data change differ only in exportedAt/lastBackupAt
+  11 passed (3.1s)
