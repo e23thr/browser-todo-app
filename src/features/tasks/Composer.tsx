@@ -182,7 +182,7 @@ export function Composer({ variant, onClose }: ComposerProps): JSX.Element {
         aria-describedby={error !== null ? errId : undefined}
         aria-invalid={error !== null ? 'true' : undefined}
         onInput={(event) => {
-          setTitle((event.currentTarget).value);
+          setTitle(event.currentTarget.value);
           if (error !== null) setError(null);
         }}
         onKeyDown={onTitleKeyDown}
@@ -209,7 +209,7 @@ export function Composer({ variant, onClose }: ComposerProps): JSX.Element {
           value={notes}
           disabled={!hasLists}
           onInput={(event) => {
-            setNotes((event.currentTarget).value);
+            setNotes(event.currentTarget.value);
           }}
         />
       </div>

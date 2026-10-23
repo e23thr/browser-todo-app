@@ -41,7 +41,8 @@ function taskIdsOf(rows: readonly ViewRow[]): string[] {
 
 function rowElement(id: string): HTMLLIElement | null {
   for (const el of document.querySelectorAll<HTMLElement>('[data-task-id]')) {
-    if (el.dataset['task-id'] === id && el.closest('ul.task-list') !== null) return el as HTMLLIElement;
+    if (el.dataset['task-id'] === id && el.closest('ul.task-list') !== null)
+      return el as HTMLLIElement;
   }
   return null;
 }
@@ -141,8 +142,9 @@ export function TaskList({
       case ' ': {
         // Space on the row toggles complete and must not scroll the page (§9.1).
         event.preventDefault();
-        const row = rows.find((r): r is Extract<ViewRow, { type: 'task' }> =>
-          r.type === 'task' && r.task.id === currentId,
+        const row = rows.find(
+          (r): r is Extract<ViewRow, { type: 'task' }> =>
+            r.type === 'task' && r.task.id === currentId,
         );
         if (row !== undefined) onToggle(row.task, row.task.status === 'open');
         return;
@@ -170,7 +172,14 @@ export function TaskList({
           return (
             <li class="group-row" role="presentation" key={row.key}>
               <h2 class="group-header">
-                <span class="group-title">{groupTitle(row.label, row.count, today, row.label.kind === 'list' ? listName(row.label.listId) : null)}</span>
+                <span class="group-title">
+                  {groupTitle(
+                    row.label,
+                    row.count,
+                    today,
+                    row.label.kind === 'list' ? listName(row.label.listId) : null,
+                  )}
+                </span>
               </h2>
             </li>
           );

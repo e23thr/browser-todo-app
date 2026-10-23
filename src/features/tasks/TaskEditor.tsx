@@ -177,7 +177,7 @@ export function TaskEditor({ task, lists, onClose }: TaskEditorProps): JSX.Eleme
               aria-invalid={invalid ? 'true' : undefined}
               aria-describedby={invalid ? `${uid}-title-err` : undefined}
               onInput={(event) => {
-                setTitle((event.currentTarget).value);
+                setTitle(event.currentTarget.value);
               }}
               onKeyDown={onTitleEnter}
             />
@@ -199,7 +199,7 @@ export function TaskEditor({ task, lists, onClose }: TaskEditorProps): JSX.Eleme
               maxlength={20000}
               value={notes}
               onInput={(event) => {
-                setNotes((event.currentTarget).value);
+                setNotes(event.currentTarget.value);
               }}
               onKeyDown={onNotesEnter}
             />

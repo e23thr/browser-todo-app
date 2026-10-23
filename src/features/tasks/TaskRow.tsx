@@ -109,11 +109,13 @@ export function TaskRow({
           class="task-check"
           checked={done}
           aria-label={
-            done ? t('a11y.untoggleTask', { title: task.title }) : t('a11y.toggleTask', { title: task.title })
+            done
+              ? t('a11y.untoggleTask', { title: task.title })
+              : t('a11y.toggleTask', { title: task.title })
           }
           tabIndex={innerTabIndex}
           onChange={(event) => {
-            onToggle(task, !(event.currentTarget).checked);
+            onToggle(task, !event.currentTarget.checked);
           }}
         />
 

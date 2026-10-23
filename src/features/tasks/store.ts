@@ -71,10 +71,12 @@ export function getRunner(): MutationRunner | null {
 
 /** Live lists in display order (`(sortOrder, id)`), tombstones excluded. */
 export function liveLists(s: State = state.value): List[] {
-  return [...s.lists.values()].filter((list) => list.deletedAt === null).sort((a, b) => {
-    if (a.sortOrder !== b.sortOrder) return a.sortOrder < b.sortOrder ? -1 : 1;
-    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-  });
+  return [...s.lists.values()]
+    .filter((list) => list.deletedAt === null)
+    .sort((a, b) => {
+      if (a.sortOrder !== b.sortOrder) return a.sortOrder < b.sortOrder ? -1 : 1;
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    });
 }
 
 function mirror(next: State): void {
@@ -97,9 +99,12 @@ function attach(r: MutationRunner): void {
 
 function armMidnight(): void {
   if (rolloverTimer !== null) clearTimeout(rolloverTimer);
-  rolloverTimer = setTimeout(() => {
-    recomputeToday();
-  }, msUntilNextLocalMidnight(clock) + 50);
+  rolloverTimer = setTimeout(
+    () => {
+      recomputeToday();
+    },
+    msUntilNextLocalMidnight(clock) + 50,
+  );
 }
 
 function recomputeToday(): void {
@@ -339,10 +344,7 @@ export function addTask(input: TaskInput): Promise<Result<Task, AppError>> {
  * IS a `move`, never a patch). The optimistic apply paints both before any I/O, so the
  * user sees one atomic save; each write rolls back independently on failure.
  */
-export async function saveTask(
-  id: string,
-  input: TaskInput,
-): Promise<Result<void, AppError>> {
+export async function saveTask(id: string, input: TaskInput): Promise<Result<void, AppError>> {
   const r = runner;
   if (r === null) return noRunner();
   const current = r.getState().tasks.get(id);
@@ -384,10 +386,7 @@ export function setTaskDone(id: string, done: boolean): Promise<Result<Task, App
   return guard(() => r.setDone(id, done));
 }
 
-export function addList(input: {
-  name: string;
-  color: string;
-}): Promise<Result<List, AppError>> {
+export function addList(input: { name: string; color: string }): Promise<Result<List, AppError>> {
   const r = runner;
   if (r === null) return noRunner();
   return guard(() => r.createList(input));
@@ -412,9 +411,7 @@ export function moveList(id: string, delta: -1 | 1): Promise<Result<List, AppErr
   const all = liveLists(r.getState());
   const index = all.findIndex((list) => list.id === id);
   if (index < 0) {
-    return Promise.resolve(
-      err({ code: 'RULE', rule: 'TASK_MISSING', message: `no list ${id}` }),
-    );
+    return Promise.resolve(err({ code: 'RULE', rule: 'TASK_MISSING', message: `no list ${id}` }));
   }
   if ((delta === -1 && index === 0) || (delta === 1 && index === all.length - 1)) {
     return Promise.resolve(

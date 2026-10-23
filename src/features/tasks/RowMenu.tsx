@@ -78,7 +78,7 @@ export function RowMenu({ label, items, class: className, tabIndex }: RowMenuPro
     if (trigger === null) return;
     const scope = trigger.closest('li, section, div');
     const candidates = focusablesIn(
-      scope instanceof HTMLElement ? scope.parentElement ?? document.body : document.body,
+      scope instanceof HTMLElement ? (scope.parentElement ?? document.body) : document.body,
     );
     const at = candidates.indexOf(trigger);
     const next = at >= 0 ? candidates[at + 1] : undefined;

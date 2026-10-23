@@ -21,8 +21,7 @@ import { Dialog } from './Dialog';
 
 /** What the caller must execute when the disposition dialog confirms. */
 export type DispositionValue =
-  | { readonly mode: 'move'; readonly targetListId: string }
-  | { readonly mode: 'delete' };
+  { readonly mode: 'move'; readonly targetListId: string } | { readonly mode: 'delete' };
 
 export interface ConfirmDialogProps {
   readonly titleKey: string;
@@ -69,7 +68,9 @@ export function ConfirmDialog({
 
   const disposition = extra === 'delete-list-disposition';
   const valid =
-    !disposition || mode === 'delete' || (targetId !== '' && targets.some((l) => l.id === targetId));
+    !disposition ||
+    mode === 'delete' ||
+    (targetId !== '' && targets.some((l) => l.id === targetId));
 
   const bodyParams: Readonly<Record<string, string | number>> = {
     ...(params ?? {}),
@@ -134,7 +135,7 @@ export function ConfirmDialog({
                 class="select"
                 value={targetId}
                 onChange={(event) => {
-                  setTargetId((event.currentTarget).value);
+                  setTargetId(event.currentTarget.value);
                 }}
               >
                 {targets.map((list) => (

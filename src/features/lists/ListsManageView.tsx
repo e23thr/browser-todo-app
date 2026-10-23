@@ -58,9 +58,7 @@ function focusViewHeading(): void {
 }
 
 type DialogState =
-  | { readonly kind: 'create' }
-  | { readonly kind: 'rename'; readonly id: string }
-  | null;
+  { readonly kind: 'create' } | { readonly kind: 'rename'; readonly id: string } | null;
 
 export function ListsManageView(): JSX.Element {
   const wide = useMediaQuery(WIDE_QUERY);
@@ -199,11 +197,7 @@ export function ListsManageView(): JSX.Element {
                   />
                 ) : (
                   <>
-                    <span
-                      class="list-dot"
-                      style={{ background: list.color }}
-                      aria-hidden="true"
-                    />
+                    <span class="list-dot" style={{ background: list.color }} aria-hidden="true" />
                     <a class="list-row-link" href={`#/list/${encodeURIComponent(list.id)}`}>
                       <span class="list-row-name">{list.name}</span>
                       <span class="list-row-count">{t('list.item.count', { count })}</span>
@@ -373,7 +367,7 @@ function InlineRename({
         aria-label={t('list.dialog.name')}
         aria-invalid={error !== null ? 'true' : undefined}
         onInput={(event) => {
-          setValue((event.currentTarget).value);
+          setValue(event.currentTarget.value);
         }}
         onKeyDown={(event) => {
           if (event.key === 'Enter') {

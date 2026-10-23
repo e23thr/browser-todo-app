@@ -47,7 +47,9 @@ export function ListDialog({
   const errorId = useId();
   const [name, setName] = useState(initial?.name ?? '');
   const [color, setColor] = useState(
-    initial?.color ?? LIST_COLORS.find((c) => c.value === DEFAULT_LIST_COLOR)?.value ?? DEFAULT_LIST_COLOR,
+    initial?.color ??
+      LIST_COLORS.find((c) => c.value === DEFAULT_LIST_COLOR)?.value ??
+      DEFAULT_LIST_COLOR,
   );
   const [touched, setTouched] = useState(false);
   const nameError = validate(name);
@@ -100,7 +102,7 @@ export function ListDialog({
             aria-describedby={showError ? errorId : undefined}
             aria-invalid={showError ? 'true' : undefined}
             onInput={(event) => {
-              setName((event.currentTarget).value);
+              setName(event.currentTarget.value);
             }}
             onBlur={() => {
               setTouched(true);

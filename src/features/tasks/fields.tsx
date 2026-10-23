@@ -55,7 +55,7 @@ export function DateField({ value, onChange }: DateFieldProps): JSX.Element {
         type="date"
         value={value ?? ''}
         onChange={(event) => {
-          const next = (event.currentTarget).value;
+          const next = event.currentTarget.value;
           onChange(next === '' ? null : next);
         }}
       />
@@ -133,7 +133,7 @@ export function ListSelect({ lists, value, onChange, onCreateList }: ListSelectP
         class="select"
         value={value}
         onChange={(event) => {
-          const next = (event.currentTarget).value;
+          const next = event.currentTarget.value;
           if (next === NEW) {
             onCreateList();
             return;

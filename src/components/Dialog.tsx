@@ -147,9 +147,7 @@ export function Dialog({
           </div>
         ) : null}
         <div class="dialog-body">{children}</div>
-        {footer !== undefined && footer !== null ? (
-          <div class="dialog-foot">{footer}</div>
-        ) : null}
+        {footer !== undefined && footer !== null ? <div class="dialog-foot">{footer}</div> : null}
       </div>
     </div>
   );

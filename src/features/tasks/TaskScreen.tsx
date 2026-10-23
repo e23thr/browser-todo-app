@@ -30,7 +30,16 @@ import type { IconName } from '../../app/icons';
 import { Composer } from './Composer';
 import { TaskEditor } from './TaskEditor';
 import { TaskList } from './TaskList';
-import { deleteTask, liveLists, setTaskDone, state, status, today, bootError, startTaskStore } from './store';
+import {
+  deleteTask,
+  liveLists,
+  setTaskDone,
+  state,
+  status,
+  today,
+  bootError,
+  startTaskStore,
+} from './store';
 import { resetBootSingleton } from '../../storage/boot';
 
 /** Rows just completed stay visible this long so the user sees what they checked (F3). */
@@ -53,7 +62,11 @@ function rowKey(row: ViewRow): string {
 }
 
 /** Re-insert retained rows at their pre-completion anchor (F3 "stays visible"). */
-function withRetained(rows: ViewRow[], retained: readonly Retained[], tasks: ReadonlyMap<string, Task>): ViewRow[] {
+function withRetained(
+  rows: ViewRow[],
+  retained: readonly Retained[],
+  tasks: ReadonlyMap<string, Task>,
+): ViewRow[] {
   if (retained.length === 0) return rows;
   const present = new Set(rows.flatMap((row) => (row.type === 'task' ? [row.task.id] : [])));
   const out = [...rows];
@@ -67,10 +80,7 @@ function withRetained(rows: ViewRow[], retained: readonly Retained[], tasks: Rea
       depth: 0,
       flags: { overdue: task.status === 'open' && (task.dueDate ?? '') < today.value },
     };
-    const at =
-      entry.anchor === null
-        ? -1
-        : out.findIndex((row) => rowKey(row) === entry.anchor);
+    const at = entry.anchor === null ? -1 : out.findIndex((row) => rowKey(row) === entry.anchor);
     if (at >= 0) out.splice(at + 1, 0, synthetic);
     else out.unshift(synthetic);
   }
@@ -256,7 +266,13 @@ export function TaskScreen({
       {body}
 
       {editingTask !== undefined ? (
-        <TaskEditor task={editingTask} lists={lists} onClose={() => { setEditingId(null); }} />
+        <TaskEditor
+          task={editingTask}
+          lists={lists}
+          onClose={() => {
+            setEditingId(null);
+          }}
+        />
       ) : null}
 
       {confirmingTask !== undefined ? (
