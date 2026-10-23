@@ -11,7 +11,14 @@ import {
   validateTask,
 } from '../../../src/storage/validate';
 
-import { makeList, makeMeta, makeSettings, makeSnapshot, makeTask, newUlidSafe } from './fixtures-helpers';
+import {
+  makeList,
+  makeMeta,
+  makeSettings,
+  makeSnapshot,
+  makeTask,
+  newUlidSafe,
+} from './fixtures-helpers';
 
 const issuesOf = (r: { ok: boolean; issues?: string[] }): string[] => r.issues ?? [];
 
@@ -68,11 +75,18 @@ describe('validate.ts (ADR-002 Decision 11)', () => {
   it('validates recurrence strictly', () => {
     expect(validateTask(makeTask({ recurrence: { freq: 'daily', interval: 1 } })).ok).toBe(true);
     expect(
-      validateTask(makeTask({ recurrence: { freq: 'weekly', interval: 2, until: '2026-01-31', count: 3 } })).ok,
+      validateTask(
+        makeTask({ recurrence: { freq: 'weekly', interval: 2, until: '2026-01-31', count: 3 } }),
+      ).ok,
     ).toBe(true);
-    expect(validateTask(makeTask({ recurrence: { freq: 'yearly' as never, interval: 1 } })).ok).toBe(false);
+    expect(
+      validateTask(makeTask({ recurrence: { freq: 'yearly' as never, interval: 1 } })).ok,
+    ).toBe(false);
     expect(validateTask(makeTask({ recurrence: { freq: 'daily', interval: 0 } })).ok).toBe(false);
-    expect(validateTask(makeTask({ recurrence: { freq: 'daily', interval: 1, until: '2026-02-30' } })).ok).toBe(false);
+    expect(
+      validateTask(makeTask({ recurrence: { freq: 'daily', interval: 1, until: '2026-02-30' } }))
+        .ok,
+    ).toBe(false);
     expect(validateTask(makeTask({ recurrence: 'daily' as never })).ok).toBe(false);
   });
 
@@ -108,7 +122,9 @@ describe('validate.ts (ADR-002 Decision 11)', () => {
     expect(validateSettings({ ...makeSettings(), weekStart: 2 as never }).ok).toBe(false);
     expect(validateSettings({ ...makeSettings(), defaultListId: 'nope' }).ok).toBe(false);
     expect(validateSettings({ ...makeSettings(), defaultListId: null }).ok).toBe(true);
-    expect(validateSettings({ ...makeSettings(), notificationsEnabled: 'yes' as never }).ok).toBe(false);
+    expect(validateSettings({ ...makeSettings(), notificationsEnabled: 'yes' as never }).ok).toBe(
+      false,
+    );
     expect(validateSettings({ ...makeSettings(), lastBackupAt: null }).ok).toBe(true);
     expect(validateSettings({ ...makeSettings(), lastBackupAt: 'soon' as never }).ok).toBe(false);
     expect(validateSettings({ ...makeSettings(), locale: 'en-US' }).ok).toBe(true);

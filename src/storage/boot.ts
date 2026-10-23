@@ -175,12 +175,16 @@ async function bootFresh(options: BootOptions): Promise<Result<AppDB, StorageErr
     return ok(undefined);
   });
   if (!bumped.ok) {
-    db.updateReport({ bootWarnings: [...db.bootReport.bootWarnings, { step: 'lastOpenedAt', error: bumped.error }] });
+    db.updateReport({
+      bootWarnings: [...db.bootReport.bootWarnings, { step: 'lastOpenedAt', error: bumped.error }],
+    });
   }
 
   const purged = await purgeTombstones(db, { now: now(), mode: 'auto' });
   if (!purged.ok) {
-    db.updateReport({ bootWarnings: [...db.bootReport.bootWarnings, { step: 'purge', error: purged.error }] });
+    db.updateReport({
+      bootWarnings: [...db.bootReport.bootWarnings, { step: 'purge', error: purged.error }],
+    });
   } else {
     db.updateReport({ purgedTombstones: purged.value });
   }

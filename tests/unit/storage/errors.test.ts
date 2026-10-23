@@ -43,7 +43,12 @@ describe('errors.ts typed contract (ADR-002 §10.1/§10.4)', () => {
     });
     expect(notFound('lists', 'k')).toEqual({ code: 'NOT_FOUND', store: 'lists', key: 'k' });
     expect(migrationFailed(1, 2)).toEqual({ code: 'MIGRATION_FAILED', from: 1, to: 2 });
-    expect(migrationFailed(1, 2, 'c')).toEqual({ code: 'MIGRATION_FAILED', from: 1, to: 2, cause: 'c' });
+    expect(migrationFailed(1, 2, 'c')).toEqual({
+      code: 'MIGRATION_FAILED',
+      from: 1,
+      to: 2,
+      cause: 'c',
+    });
     expect(newerSchema(3, 1)).toEqual({ code: 'NEWER_SCHEMA', found: 3, supported: 1 });
     expect(txAborted().code).toBe('TX_ABORTED');
     expect(txAborted('c')).toEqual({ code: 'TX_ABORTED', cause: 'c' });
@@ -61,10 +66,16 @@ describe('errors.ts typed contract (ADR-002 §10.1/§10.4)', () => {
     expect(classifyUnknown(new DOMException('aborted', 'AbortError')).code).toBe('TX_ABORTED');
     expect(classifyUnknown(new DOMException('old', 'VersionError')).code).toBe('NEWER_SCHEMA');
     expect(classifyUnknown(new DOMException('denied', 'SecurityError')).code).toBe('UNAVAILABLE');
-    expect(classifyUnknown(new DOMException('closed', 'InvalidStateError')).code).toBe('UNAVAILABLE');
-    expect(classifyUnknown(new DOMException('dupe', 'ConstraintError')).code).toBe('INVALID_RECORD');
+    expect(classifyUnknown(new DOMException('closed', 'InvalidStateError')).code).toBe(
+      'UNAVAILABLE',
+    );
+    expect(classifyUnknown(new DOMException('dupe', 'ConstraintError')).code).toBe(
+      'INVALID_RECORD',
+    );
     expect(classifyUnknown(new DOMException('bad data', 'DataError')).code).toBe('INVALID_RECORD');
-    expect(classifyUnknown(new DOMException('clone', 'DataCloneError')).code).toBe('INVALID_RECORD');
+    expect(classifyUnknown(new DOMException('clone', 'DataCloneError')).code).toBe(
+      'INVALID_RECORD',
+    );
     expect(classifyUnknown(new DOMException('?', 'UnknownError')).code).toBe('UNKNOWN');
     expect(classifyUnknown(new Error('plain')).code).toBe('UNKNOWN');
     expect(classifyUnknown('a string').code).toBe('UNKNOWN');

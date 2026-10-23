@@ -72,4 +72,8 @@ export const STORE_NAMES: readonly StoreName[] = [
 ] as const;
 
 /** Stores whose rows are user data covered by export/snapshot payloads (ADR-002 §3.6). */
-export const DATA_STORES: readonly ('lists' | 'tasks' | 'settings')[] = ['lists', 'tasks', 'settings'] as const;
+export const DATA_STORES: readonly ('lists' | 'tasks' | 'settings')[] = [
+  'lists',
+  'tasks',
+  'settings',
+] as const;

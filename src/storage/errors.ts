@@ -28,11 +28,7 @@ export function quotaExceeded(cause?: unknown): StorageError {
   return cause === undefined ? { code: 'QUOTA_EXCEEDED' } : { code: 'QUOTA_EXCEEDED', cause };
 }
 
-export function invalidRecord(
-  store: StoreName,
-  issues: string[],
-  id?: string,
-): StorageError {
+export function invalidRecord(store: StoreName, issues: string[], id?: string): StorageError {
   return id === undefined
     ? { code: 'INVALID_RECORD', store, issues }
     : { code: 'INVALID_RECORD', store, id, issues };

@@ -37,10 +37,7 @@ export function targetVersionOf(registry: MigrationRegistry): number {
   return registry.reduce((max, s) => Math.max(max, s.to), APP_SCHEMA_VERSION);
 }
 
-async function executeStep(
-  t: Tx,
-  step: MigrationStep,
-): Promise<Result<void, StorageError>> {
+async function executeStep(t: Tx, step: MigrationStep): Promise<Result<void, StorageError>> {
   const result = await step.run(t);
   if (!result.ok) return result;
   const meta = await t.get('meta', META_KEY);
@@ -93,7 +90,13 @@ export async function runMigrations(
     const matching = chain.filter((s) => s.to === v);
     if (matching.length !== 1) {
       return err(
-        migrationFailed(from, target, new Error(`migration registry has ${String(matching.length)} steps for version ${String(v)}`)),
+        migrationFailed(
+          from,
+          target,
+          new Error(
+            `migration registry has ${String(matching.length)} steps for version ${String(v)}`,
+          ),
+        ),
       );
     }
   }
@@ -105,13 +108,20 @@ export async function runMigrations(
   }
 
   for (const step of chain) {
-    const stores: StoreName[] = step.stores.includes('meta') ? step.stores : [...step.stores, 'meta'];
+    const stores: StoreName[] = step.stores.includes('meta')
+      ? step.stores
+      : [...step.stores, 'meta'];
     const stepped = await db.tx(stores, 'readwrite', (t) => executeStep(t, step));
     if (!stepped.ok) {
       // Interrupted mid-chain: roll back to the pre-migration snapshot.
       const rollback = await restoreSnapshot(db, snap.value.id, codec);
       if (!rollback.ok) {
-        return err(migrationFailed(from, target, { stepError: stepped.error, rollbackError: rollback.error }));
+        return err(
+          migrationFailed(from, target, {
+            stepError: stepped.error,
+            rollbackError: rollback.error,
+          }),
+        );
       }
       db.setSchemaVersion(from);
       return err(migrationFailed(from, target, stepped.error));
@@ -159,7 +169,14 @@ export class MemoryTx implements Tx {
       for (const row of list) map.set(keyOf(name, row), row);
       this.#stores.set(name, map);
     }
-    for (const name of ['meta', 'lists', 'tasks', 'settings', 'snapshots', 'snapshot_payloads'] as const) {
+    for (const name of [
+      'meta',
+      'lists',
+      'tasks',
+      'settings',
+      'snapshots',
+      'snapshot_payloads',
+    ] as const) {
       if (!this.#stores.has(name)) this.#stores.set(name, new Map<string, unknown>());
     }
   }
@@ -185,7 +202,12 @@ export class MemoryTx implements Tx {
       out = out.filter((row) => {
         const v = valueOf(row);
         if ('eq' in range) return compareKeys(v, range.eq) === 0;
-        const bounds = range as { lower?: IDBValidKey; lowerOpen?: boolean; upper?: IDBValidKey; upperOpen?: boolean };
+        const bounds = range as {
+          lower?: IDBValidKey;
+          lowerOpen?: boolean;
+          upper?: IDBValidKey;
+          upperOpen?: boolean;
+        };
         if (bounds.lower !== undefined) {
           const c = compareKeys(v, bounds.lower);
           if (c < 0 || (c === 0 && bounds.lowerOpen === true)) return false;
@@ -252,7 +274,13 @@ export async function migrateRows(
   const chain = [...registry].sort((a, b) => a.to - b.to).filter((s) => s.to > from && s.to <= to);
   for (let v = from + 1; v <= to; v += 1) {
     if (chain.filter((s) => s.to === v).length !== 1) {
-      return err(migrationFailed(from, to, new Error(`migration registry has no unique step for version ${String(v)}`)));
+      return err(
+        migrationFailed(
+          from,
+          to,
+          new Error(`migration registry has no unique step for version ${String(v)}`),
+        ),
+      );
     }
   }
   const mem = new MemoryTx(rows);

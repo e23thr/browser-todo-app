@@ -739,7 +739,12 @@ describe('Regression P2 (D2): quarantine.purge() never destroys the singletons',
 
     const purged = await db.quarantine.purge();
     expect(purged.ok && purged.value).toBe(1); // the task only
-    expect(db.quarantine.list().map((e) => e.store).sort()).toEqual(['meta', 'settings']);
+    expect(
+      db.quarantine
+        .list()
+        .map((e) => e.store)
+        .sort(),
+    ).toEqual(['meta', 'settings']);
     expect(db.bootReport.quarantined).toBe(2);
 
     const tasks = await db.readUnfiltered('tasks');

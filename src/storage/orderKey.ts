@@ -43,7 +43,10 @@ export function isCanonicalOrderKey(key: unknown): key is string {
 
 function mustBeCanonical(key: string | null, label: string): void {
   if (key !== null && !isCanonicalOrderKey(key)) {
-    throw new OrderKeyError('INVALID_INPUT', `${label} is not a canonical order key: ${JSON.stringify(key)}`);
+    throw new OrderKeyError(
+      'INVALID_INPUT',
+      `${label} is not a canonical order key: ${JSON.stringify(key)}`,
+    );
   }
 }
 
@@ -55,7 +58,10 @@ function finish(result: string): string {
     out = '0h';
   }
   if (out.length > ORDER_KEY_MAX) {
-    throw new OrderKeyError('EXHAUSTED', `no midpoint within ${String(ORDER_KEY_MAX)} chars (rebalance required)`);
+    throw new OrderKeyError(
+      'EXHAUSTED',
+      `no midpoint within ${String(ORDER_KEY_MAX)} chars (rebalance required)`,
+    );
   }
   return out;
 }
@@ -68,7 +74,10 @@ export function orderKeyBetween(a: string | null, b: string | null): string {
   mustBeCanonical(a, 'a');
   mustBeCanonical(b, 'b');
   if (a !== null && b !== null && a >= b) {
-    throw new OrderKeyError('INVALID_INPUT', `a must be < b (got ${JSON.stringify(a)} >= ${JSON.stringify(b)})`);
+    throw new OrderKeyError(
+      'INVALID_INPUT',
+      `a must be < b (got ${JSON.stringify(a)} >= ${JSON.stringify(b)})`,
+    );
   }
   if (a === null && b === null) return FIRST_KEY;
   if (b === null) {

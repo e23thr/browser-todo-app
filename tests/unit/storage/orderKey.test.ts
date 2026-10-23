@@ -87,7 +87,10 @@ describe('order keys (ADR-002 Decision 4.2)', () => {
     const rand = mulberry32(99);
     const pool = ['1', '2', 'h', 'hh', 'hz', '0h', '00h', 'zzzzzz', 'm3d', '0000h'];
     for (let i = 0; i < 100; i += 1) {
-      const [x, y] = [pool[Math.floor(rand() * pool.length)], pool[Math.floor(rand() * pool.length)]];
+      const [x, y] = [
+        pool[Math.floor(rand() * pool.length)],
+        pool[Math.floor(rand() * pool.length)],
+      ];
       if (x === undefined || y === undefined || x === y || x > y) continue;
       expectBetween(x, y, orderKeyBetween(x, y));
     }

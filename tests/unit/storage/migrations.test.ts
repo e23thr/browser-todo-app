@@ -110,7 +110,8 @@ describe('migration chain (ADR-002 Decision 8)', () => {
     opened.push(db);
     const result = await runMigrations(db, { registry: [v2Step], now: fixedNow });
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatchObject({ code: 'NEWER_SCHEMA', found: 5, supported: 2 });
+    if (!result.ok)
+      expect(result.error).toMatchObject({ code: 'NEWER_SCHEMA', found: 5, supported: 2 });
 
     const write = await db.put('tasks', makeTask());
     expect(write.ok).toBe(false);
@@ -140,7 +141,11 @@ describe('migration chain (ADR-002 Decision 8)', () => {
       },
       deserialize: () => err({ code: 'UNKNOWN' as const, cause: 'nope' }),
     };
-    const result = await runMigrations(db, { registry: [v2Step], codec: brokenCodec, now: fixedNow });
+    const result = await runMigrations(db, {
+      registry: [v2Step],
+      codec: brokenCodec,
+      now: fixedNow,
+    });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe('MIGRATION_FAILED');
 
@@ -270,7 +275,10 @@ describe('MemoryTx (in-memory Tx for export upgrades)', () => {
       snapshots: [],
       snapshot_payloads: [],
     });
-    const upper = await mem.getAll('tasks', { index: 'by_updatedAt', range: { upper: 2, upperOpen: true } });
+    const upper = await mem.getAll('tasks', {
+      index: 'by_updatedAt',
+      range: { upper: 2, upperOpen: true },
+    });
     expect(upper.map((t) => t.updatedAt)).toEqual([1]);
     const eq = await mem.getAll('tasks', { index: 'by_updatedAt', range: { eq: 2 } });
     expect(eq.map((t) => t.updatedAt)).toEqual([2]);

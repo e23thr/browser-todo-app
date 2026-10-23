@@ -48,17 +48,23 @@ export {
   STORE_DEFS,
 } from './schema';
 
-export type {
-  AppDB,
-  BootReport,
-  OpenOptions,
-  QuerySpec,
-  Tx,
-} from './db';
+export type { AppDB, BootReport, OpenOptions, QuerySpec, Tx } from './db';
 export { AppDBImpl, openRawAppDB } from './db';
 
-export type { MigrationRegistry, MigrationStep, MigrateOutcome, MigrateRowsOutcome, RunMigrationsOptions } from './migrations';
-export { MemoryTx, migrateRows, productionMigrations, runMigrations, targetVersionOf } from './migrations';
+export type {
+  MigrationRegistry,
+  MigrationStep,
+  MigrateOutcome,
+  MigrateRowsOutcome,
+  RunMigrationsOptions,
+} from './migrations';
+export {
+  MemoryTx,
+  migrateRows,
+  productionMigrations,
+  runMigrations,
+  targetVersionOf,
+} from './migrations';
 
 export type { QuarantineApi, QuarantineEntry, RecoveryFile } from './quarantine';
 export { buildRecoveryFile, runBootValidation } from './quarantine';
