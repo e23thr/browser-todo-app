@@ -97,6 +97,14 @@ collapse), and any literal `t('…')` key in `src/` that `en.json` does not defi
   (`th-TH-u-ca-buddhist`) per ux-foundation §9.4.
 - **Rendering** (system font stack, Thai line-heights, wrapping): ux-foundation §9 + the styles
   cards. No webfont bytes ship with either locale (§9.2).
+- **The static `<title>` / `meta name="description"` in `index.html`** — English **pre-paint
+  fallback only**, not a second source of truth (documented account of QA defect D1,
+  `docs/qa/e5-i18n.md`): the live values are the `app.documentTitle` / `app.metaDescription`
+  catalog keys, applied by `src/i18n/documentMeta.ts` immediately after `initLocale()` and on
+  every locale switch (the effect reads the catalog signal, so a pack that lands after the
+  bounded-boot timeout self-heals the tab too — §5). `document.title = …` in that module is
+  the single deliberate `document.title` write under `src/**` that the QA XSS grep counts; it
+  is a text sink (no HTML parsed) whose value comes from `t()`.
 
 ## 5. Locale loading, boot and tests
 

@@ -18,6 +18,14 @@
       content="default-src 'self'; script-src 'self' 'sha256-__THEME_BOOT_SHA256__'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'"
     />
     <meta name="color-scheme" content="light dark" />
+    <!--
+      The <title> and description below are a STATIC ENGLISH PRE-PAINT FALLBACK, not a second
+      source of truth: app code (src/i18n/documentMeta.ts, wired after initLocale in
+      src/app/main.tsx) overwrites both from the `app.documentTitle` / `app.metaDescription`
+      catalog keys as soon as the locale pack lands, and on every locale switch afterwards.
+      Documented account of QA defect D1 — see docs/i18n/README.md §4. No inline script may
+      do this: the CSP permits only the theme-boot snippet below.
+    -->
     <meta
       name="description"
       content="A local-first, privacy-preserving todo app that runs entirely in your browser."

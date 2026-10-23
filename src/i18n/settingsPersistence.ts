@@ -42,11 +42,21 @@ export function createSettingsLocalePersistence(): LocalePersistence {
     async load(): Promise<Locale | null> {
       try {
         const db = await boot();
-        if (!db.ok) return null;
+        if (!db.ok) {
+          // QA N1: the silent branch — a storage failure used to look identical to "no
+          // stored locale", hiding the D2 reset-on-reload failure class. Local warn only.
+          console.warn('i18n: could not read the stored locale (storage unavailable)', db.error.code);
+          return null;
+        }
         const row = await db.value.get('settings', SETTINGS_KEY);
-        if (!row.ok || row.value === undefined) return null;
+        if (!row.ok) {
+          console.warn('i18n: could not read the stored locale (read failed)', row.error.code);
+          return null;
+        }
+        if (row.value === undefined) return null; // first run — nothing stored yet, not an error
         return isLocale(row.value.locale) ? row.value.locale : null;
-      } catch {
+      } catch (error: unknown) {
+        console.warn('i18n: could not read the stored locale', error);
         return null;
       }
     },

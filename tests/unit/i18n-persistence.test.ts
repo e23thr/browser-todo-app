@@ -73,6 +73,20 @@ describe('createSettingsLocalePersistence — load', () => {
       if (original !== undefined) Object.defineProperty(globalThis, 'indexedDB', original);
     }
   });
+
+  it('logs the silent error branch instead of hiding it (QA N1)', async () => {
+    const warn = vi.spyOn(console, 'warn');
+    const original = Object.getOwnPropertyDescriptor(globalThis, 'indexedDB');
+    Object.defineProperty(globalThis, 'indexedDB', { value: undefined, configurable: true });
+    try {
+      await expect(createSettingsLocalePersistence().load()).resolves.toBeNull();
+      const messages = warn.mock.calls.map((call) => String(call[0] ?? ''));
+      // The failure must be observable (D2 class) — previously this returned null silently.
+      expect(messages.some((m) => m.includes('could not read the stored locale'))).toBe(true);
+    } finally {
+      if (original !== undefined) Object.defineProperty(globalThis, 'indexedDB', original);
+    }
+  });
 });
 
 describe('createSettingsLocalePersistence — save', () => {

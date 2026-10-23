@@ -1,6 +1,8 @@
 {
   "app.name": "Todo",
   "app.tagline": "A local-first todo app — your data stays in this browser.",
+  "app.documentTitle": "Todo — local-first",
+  "app.metaDescription": "A local-first, privacy-preserving todo app that runs entirely in your browser.",
   "a11y.skipToContent": "Skip to main content",
   "a11y.navLabel": "Views and lists",
   "a11y.openMenu": "Open navigation menu",

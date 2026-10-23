@@ -5,6 +5,7 @@ import { registerSettingsPersistence } from './settings';
 import { createIdbSettingsPersistence } from './settingsPersistence';
 import { bootServiceWorker } from './sw-boot';
 import { initLocale, registerLocalePersistence } from '../i18n';
+import { installDocumentMeta } from '../i18n/documentMeta';
 import { createSettingsLocalePersistence } from '../i18n/settingsPersistence';
 import '../styles/global.css';
 
@@ -29,6 +30,10 @@ if (container === null) {
  */
 async function start(root: HTMLElement): Promise<void> {
   await initLocale({ timeoutMs: 2000 });
+  // QA D1: the tab title and meta description are catalog strings too. Applied after
+  // initLocale (active locale known), then kept in step by the catalog signal — a pack
+  // that lands after the bounded-boot timeout self-heals them, as does every switch.
+  installDocumentMeta();
   render(<App />, root);
   // Service-worker registration + update flow (ADR-005) — after first render so the shell is
   // interactive before any SW work; also records the `app:interactive` mark (§9.1 budget).

@@ -1,6 +1,8 @@
 {
   "app.name": "Todo",
   "app.tagline": "แอป Todo แบบ local-first — ข้อมูลของคุณอยู่ในเบราว์เซอร์นี้",
+  "app.documentTitle": "Todo — แอป local-first",
+  "app.metaDescription": "แอป Todo แบบ local-first ที่ปกป้องความเป็นส่วนตัว และทำงานในเบราว์เซอร์ของคุณเท่านั้น",
   "a11y.skipToContent": "ข้ามไปยังเนื้อหาหลัก",
   "a11y.navLabel": "มุมมองและรายการ",
   "a11y.openMenu": "เปิดเมนูนำทาง",
