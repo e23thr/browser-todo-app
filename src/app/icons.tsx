@@ -20,6 +20,9 @@ export type IconName =
   | 'info'
   | 'calendar'
   | 'flag'
+  | 'flag-high'
+  | 'flag-medium'
+  | 'notes'
   | 'file-text'
   | 'more-vertical'
   | 'x'
@@ -87,6 +90,29 @@ const PATHS: Readonly<Record<IconName, JSX.Element>> = {
     <>
       <path d="M6 21V4.5" />
       <path d="M6 5h11l-2.5 4L17 13H6" />
+    </>
+  ),
+  // Priority icons differ BY SHAPE (design D4, §12): high = filled pennant,
+  // medium = half-filled pennant, low = no icon. Fills override the sprite's
+  // `fill="none"` group attribute.
+  'flag-high': (
+    <>
+      <path d="M6 21V4.5" />
+      <path d="M6 5h11l-2.5 4L17 13H6Z" fill="currentColor" stroke="none" />
+      <path d="M6 5h11l-2.5 4L17 13H6" />
+    </>
+  ),
+  'flag-medium': (
+    <>
+      <path d="M6 21V4.5" />
+      <path d="M6 5h5.6L6 13Z" fill="currentColor" stroke="none" />
+      <path d="M6 5h11l-2.5 4L17 13H6" />
+    </>
+  ),
+  notes: (
+    <>
+      <rect x="4.5" y="4.5" width="15" height="15" rx="2" />
+      <path d="M8 9.5h8M8 13h8M8 16.5h5" />
     </>
   ),
   'file-text': (

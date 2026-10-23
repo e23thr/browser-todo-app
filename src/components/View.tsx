@@ -1,4 +1,4 @@
-import type { JSX } from 'preact';
+import type { ComponentChildren, JSX } from 'preact';
 
 import { Icon, type IconName } from '../app/icons';
 
@@ -11,7 +11,7 @@ import { Icon, type IconName } from '../app/icons';
 export interface ViewProps {
   readonly title: string;
   readonly class?: string;
-  readonly children?: JSX.Element | JSX.Element[];
+  readonly children?: ComponentChildren;
 }
 
 export function View({ title, class: className, children }: ViewProps): JSX.Element {
