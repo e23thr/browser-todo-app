@@ -13,7 +13,14 @@ import {
 } from '../../../src/storage/snapshots';
 import type { SnapshotCodec } from '../../../src/storage/snapshots';
 
-import { fixedNow, makeList, makeSettings, makeTask, openFixtureDb, uniqueDbName } from './fixtures';
+import {
+  fixedNow,
+  makeList,
+  makeSettings,
+  makeTask,
+  openFixtureDb,
+  uniqueDbName,
+} from './fixtures';
 
 const opened: AppDBImpl[] = [];
 afterEach(() => {
@@ -61,10 +68,18 @@ describe('snapshots (ADR-002 Decision 9)', () => {
       });
       expect(snap.ok).toBe(true);
     }
-    const manual = await takeSnapshot(db, { kind: 'manual', reason: 'manual', now: () => fixedNow() + 99_000 });
+    const manual = await takeSnapshot(db, {
+      kind: 'manual',
+      reason: 'manual',
+      now: () => fixedNow() + 99_000,
+    });
     expect(manual.ok).toBe(true);
     for (let i = 0; i < 3; i += 1) {
-      await takeSnapshot(db, { kind: 'auto', reason: 'scheduled', now: () => fixedNow() + 100_000 + i });
+      await takeSnapshot(db, {
+        kind: 'auto',
+        reason: 'scheduled',
+        now: () => fixedNow() + 100_000 + i,
+      });
     }
 
     const listed = await listSnapshots(db);
@@ -214,5 +229,66 @@ describe('snapshots (ADR-002 Decision 9)', () => {
     } finally {
       restore();
     }
+  });
+
+  it('evicts retention victims BEFORE the new puts (ADR-004 8.2 evict-then-put)', async () => {
+    const db = await fixture();
+    // Three autos already stored: the 4th write must evict the oldest one first.
+    for (let i = 0; i < AUTO_RETENTION; i += 1) {
+      const prior = await takeSnapshot(db, {
+        kind: 'auto',
+        reason: 'scheduled',
+        now: () => fixedNow() + i,
+      });
+      expect(prior.ok).toBe(true);
+    }
+
+    // Order-spy on the raw object-store write path (idb -> IDBObjectStore).
+    const ops: string[] = [];
+    const proto = IDBObjectStore.prototype as unknown as {
+      put: (...args: unknown[]) => unknown;
+      delete: (...args: unknown[]) => unknown;
+    };
+    const originalPut = proto.put;
+    const originalDelete = proto.delete;
+    proto.put = function spyPut(this: unknown, ...args: unknown[]): unknown {
+      const storeName = (this as { name: string }).name;
+      ops.push(`put:${storeName}`);
+      return originalPut.apply(this, args);
+    };
+    proto.delete = function spyDelete(this: unknown, ...args: unknown[]): unknown {
+      const storeName = (this as { name: string }).name;
+      ops.push(`delete:${storeName}`);
+      return originalDelete.apply(this, args);
+    };
+    try {
+      const snap = await takeSnapshot(db, {
+        kind: 'auto',
+        reason: 'scheduled',
+        now: () => fixedNow() + 1000,
+      });
+      expect(snap.ok).toBe(true);
+    } finally {
+      proto.put = originalPut;
+      proto.delete = originalDelete;
+    }
+
+    // The oldest auto loses metadata + payload first; only then land the new rows.
+    expect(ops).toEqual([
+      'delete:snapshots',
+      'delete:snapshot_payloads',
+      'put:snapshot_payloads',
+      'put:snapshots',
+    ]);
+    const firstPut = ops.findIndex((o) => o.startsWith('put:'));
+    const lastDelete = ops.map((o) => o.startsWith('delete:')).lastIndexOf(true);
+    expect(lastDelete).toBeGreaterThan(-1);
+    expect(lastDelete).toBeLessThan(firstPut); // never hold 4 payloads transiently
+
+    // Retention outcome unchanged: 3 newest autos kept, payload rows match 1:1.
+    const listed = await listSnapshots(db);
+    expect(listed.ok && listed.value).toHaveLength(AUTO_RETENTION);
+    const payloads = await db.getAll('snapshot_payloads');
+    expect(payloads.ok && payloads.value).toHaveLength(AUTO_RETENTION);
   });
 });

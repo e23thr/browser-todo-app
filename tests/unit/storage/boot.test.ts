@@ -124,7 +124,11 @@ describe('boot: acceptance — v1 -> v2 migration roundtrip', () => {
     // The pre-migration snapshot is an auto/pre-migration one and carries v1 data.
     const snaps = await result.value.getAll('snapshots');
     if (snaps.ok) {
-      expect(snaps.value[0]).toMatchObject({ kind: 'auto', reason: 'pre-migration', schemaVersion: 1 });
+      expect(snaps.value[0]).toMatchObject({
+        kind: 'auto',
+        reason: 'pre-migration',
+        schemaVersion: 1,
+      });
     }
 
     // Reboot at the new version: no re-migration.
@@ -193,6 +197,17 @@ describe('boot: acceptance — corrupt records quarantine to a recovery file', (
     const byKey = await db.get('tasks', badDue.id);
     if (byKey.ok) expect(byKey.value).toBeUndefined();
 
+    // Tx.get applies the same denylist — the primary repo read path (ADR-002 Dec. 8 step 4).
+    const viaTx = await db.tx(['tasks'], 'readonly', async (t) => ({
+      ok: true as const,
+      value: { bad: await t.get('tasks', badDue.id), good: await t.get('tasks', good.id) },
+    }));
+    expect(viaTx.ok).toBe(true);
+    if (viaTx.ok) {
+      expect(viaTx.value.bad).toBeUndefined();
+      expect(viaTx.value.good?.title).toBe('fine');
+    }
+
     // Non-destructive: rows are still in the database.
     const raw = await (db as AppDBImpl).readUnfiltered('tasks');
     if (raw.ok) expect(raw.value).toHaveLength(3);
@@ -205,15 +220,32 @@ describe('boot: acceptance — corrupt records quarantine to a recovery file', (
     expect(issues).toContain('title');
 
     const file = db.quarantine.recoveryFile();
-    expect(file.filename).toMatch(/^recovery-\d{8}-\d{6}\.json$/u);
+    expect(file.filename).toMatch(/^local-first-todo-recovery-\d{4}-\d{2}-\d{2}T\d{6}Z\.json$/u);
     const parsed = JSON.parse(file.json) as {
-      quarantine: { key: string; record: { title?: string }; issues: string[] }[];
+      format: string;
+      formatVersion: number;
+      schemaVersion: number;
+      deviceId: string;
+      source: { kind: string; fileName: string | null; fileSchemaVersion: number };
+      entries: { store: string; id: string | null; issues: string[]; raw: { title?: string } }[];
     };
-    expect(parsed.quarantine).toHaveLength(2);
-    const recoveredTitles = parsed.quarantine.map((q) => q.record.title);
+    // ADR-004 Decision 7.1 envelope (boot-validation source), one pinned format.
+    expect(parsed.format).toBe('local-first-todo-recovery');
+    expect(parsed.formatVersion).toBe(1);
+    expect(parsed.deviceId).toBe(db.deviceId);
+    expect(parsed.source).toEqual({
+      kind: 'boot-validation',
+      fileName: null,
+      fileSchemaVersion: 1,
+    });
+    expect(parsed.entries).toHaveLength(2);
+    const recoveredTitles = parsed.entries.map((e) => e.raw.title);
     expect(recoveredTitles).toContain('bad due');
     expect(recoveredTitles).toContain('x'.repeat(1001));
-    for (const q of parsed.quarantine) expect(q.issues.length).toBeGreaterThan(0);
+    for (const e of parsed.entries) {
+      expect(e.store).toBe('tasks');
+      expect(e.issues.length).toBeGreaterThan(0);
+    }
 
     // Explicit purge is the ONLY way records leave the DB.
     const purged = await db.quarantine.purge();

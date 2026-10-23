@@ -69,6 +69,41 @@ describe('wrapper schema conformance (ADR-002 Decision 3)', () => {
       raw.close();
     }
   });
+
+  it('a version bump adds missing indexes to EXISTING stores (no upgrade drift)', async () => {
+    const name = uniqueDbName('schema-drift');
+    const first = await openRawAppDB({ dbName: name, idbVersion: 1 });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    first.value.close();
+
+    // Simulate a future idbVersion bump that extends an EXISTING store.
+    const lists = STORE_DEFS.find((d) => d.name === 'lists');
+    expect(lists).toBeDefined();
+    const originalLength = lists?.indexes.length ?? 0;
+    lists?.indexes.push(
+      { name: 'by_name', keyPath: 'name' },
+      { name: 'by_name_unique', keyPath: 'name', unique: true },
+      { name: 'by_tags_multi', keyPath: 'tags', multiEntry: true },
+    );
+    try {
+      const second = await openRawAppDB({ dbName: name, idbVersion: 2 });
+      expect(second.ok).toBe(true);
+      if (!second.ok) return;
+      const raw = second.value as unknown as IDBDatabase;
+      try {
+        const store = raw.transaction('lists', 'readonly').objectStore('lists');
+        expect([...store.indexNames]).toContain('by_name');
+        // IndexDef flags reach createIndex (never silently dropped).
+        expect(store.index('by_name_unique').unique).toBe(true);
+        expect(store.index('by_tags_multi').multiEntry).toBe(true);
+      } finally {
+        second.value.close();
+      }
+    } finally {
+      lists?.indexes.splice(originalLength);
+    }
+  });
 });
 
 describe('wrapper CRUD + query (ADR-002 §10.2/§10.3)', () => {
@@ -263,7 +298,10 @@ describe('QuotaExceededError surfacing (§5.5 — never a silent write drop)', (
   });
 });
 
-function invalidRecordErr(): Result<never, { code: 'INVALID_RECORD'; store: 'tasks'; issues: string[] }> {
+function invalidRecordErr(): Result<
+  never,
+  { code: 'INVALID_RECORD'; store: 'tasks'; issues: string[] }
+> {
   return { ok: false, error: { code: 'INVALID_RECORD', store: 'tasks', issues: ['nope'] } };
 }
 
@@ -309,9 +347,7 @@ describe('quarantine denylist filtering (Decision 8 step 4)', () => {
     const bad = makeTask();
     await db.put('tasks', good);
     await db.put('tasks', bad);
-    db.setQuarantine([
-      { store: 'tasks', key: bad.id, record: bad, issues: ['title: range'] },
-    ]);
+    db.setQuarantine([{ store: 'tasks', key: bad.id, record: bad, issues: ['title: range'] }]);
 
     const gotBad = await db.get('tasks', bad.id);
     if (gotBad.ok) expect(gotBad.value).toBeUndefined();
@@ -329,5 +365,29 @@ describe('quarantine denylist filtering (Decision 8 step 4)', () => {
 
     const raw = await db.readUnfiltered('tasks');
     if (raw.ok) expect(raw.value).toHaveLength(2); // backup path keeps everything
+  });
+
+  it('Tx.get hides a quarantined row while readUnfiltered still shows it', async () => {
+    const db = await fixture(uniqueDbName('deny-txget'));
+    const good = makeTask();
+    const bad = makeTask();
+    await db.put('tasks', good);
+    await db.put('tasks', bad);
+    db.setQuarantine([{ store: 'tasks', key: bad.id, record: bad, issues: ['title: range'] }]);
+
+    const viaTx = await db.tx(['tasks'], 'readonly', async (t) => ({
+      ok: true as const,
+      value: { bad: await t.get('tasks', bad.id), good: await t.get('tasks', good.id) },
+    }));
+    expect(viaTx.ok).toBe(true);
+    if (viaTx.ok) {
+      expect(viaTx.value.bad).toBeUndefined(); // denied single-row read
+      expect(viaTx.value.good).toEqual(good); // healthy rows unaffected
+    }
+
+    // readUnfiltered is the ONLY unfiltered read — the backup path keeps the row.
+    const raw = await db.readUnfiltered('tasks');
+    expect(raw.ok).toBe(true);
+    if (raw.ok) expect(raw.value.map((r) => r.id).sort()).toEqual([good.id, bad.id].sort());
   });
 });
