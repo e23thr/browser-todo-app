@@ -90,6 +90,8 @@ export default defineConfig({
         // PROJECT_ANALYSIS §9.5: >= 80% on domain / migrations / merge modules.
         './src/domain/**/*.ts': { lines: 80, branches: 80, functions: 80, statements: 80 },
         './src/storage/**/*.ts': { lines: 80, branches: 80, functions: 80, statements: 80 },
+        // E3 (ADR-004): export/import/snapshot engine — same per-file gate.
+        './src/portability/**/*.ts': { lines: 80, branches: 80, functions: 80, statements: 80 },
       },
     },
   },

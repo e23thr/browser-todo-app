@@ -17,6 +17,10 @@ import { err, ok } from './errors';
 import type { Result, StorageError } from './errors';
 import type { AppDBImpl } from './db';
 import { isUlid } from './id';
+import {
+  recoveryFileName as recoveryFileNameFor,
+  serializeRecoveryDoc as serializeAdr004RecoveryDoc,
+} from '../portability/recovery-document';
 import { APP_SCHEMA_VERSION } from './schema';
 import { STORE_NAMES, type StoreName } from './types';
 import { validateRow } from './validate';
@@ -67,7 +71,13 @@ export type QuarantineApi = {
   list(): QuarantineEntry[];
   /** Downloadable recovery JSON: every quarantined record verbatim + issues. */
   recoveryFile(): RecoveryFile;
-  /** Explicit user action only ("Clean up storage"): hard-delete quarantined rows. */
+  /**
+   * Explicit user action only ("Clean up storage"): hard-delete quarantined
+   * rows. NEVER touches the `meta`/`settings` singletons — a quarantined `meta`
+   * carries the device identity and deleting it would silently re-seed a NEW
+   * `deviceId` on the next boot (ADR-002 Decision 3.1). Singleton entries stay
+   * quarantined and downloadable; the returned count is rows actually deleted.
+   */
   purge(): Promise<Result<number, StorageError>>;
 };
 
@@ -100,11 +110,7 @@ export async function runBootValidation(
 
 /** Filename convention shared with ADR-004 Decision 9 (UTC, no colons in the time). */
 export function recoveryFileName(at: Date): string {
-  const pad = (n: number): string => String(n).padStart(2, '0');
-  return (
-    `${RECOVERY_FORMAT}-${String(at.getUTCFullYear())}-${pad(at.getUTCMonth() + 1)}-${pad(at.getUTCDate())}` +
-    `T${pad(at.getUTCHours())}${pad(at.getUTCMinutes())}${pad(at.getUTCSeconds())}Z.json`
-  );
+  return recoveryFileNameFor(at.getTime());
 }
 
 function toDocEntry(entry: QuarantineEntry): RecoveryDocEntry {
@@ -119,28 +125,18 @@ function toDocEntry(entry: QuarantineEntry): RecoveryDocEntry {
 }
 
 /**
- * ADR-004 Decision 7.1 serializer — the ONLY recovery-file writer. E3's
- * `serializeRecoveryDoc(entries, source, meta)` replaces this function body
- * (same signature, same envelope); field names and the format token are pinned
- * so the swap stays trivial and the file stays recognizable as NOT importable.
- * `meta` is the DB `meta` row (or a structural subset of it).
+ * ADR-004 Decision 7.1 serializer — the ONLY recovery-file writer. This is a
+ * thin delegate to `src/portability/recovery-document.ts`'s `serializeRecoveryDoc`
+ * (ADR-004 contract 5: ONE format, ONE writer — E3's import quarantine and this
+ * boot-validation quarantine produce the exact same shape), kept exported under
+ * this name so the storage module's own callers/tests stay stable.
  */
 export function serializeRecoveryDoc(
   entries: readonly RecoveryDocEntry[],
   source: RecoverySource,
   meta: { deviceId: string; schemaVersion: number; createdAt: number },
 ): string {
-  const doc: RecoveryDoc = {
-    format: RECOVERY_FORMAT,
-    formatVersion: RECOVERY_FORMAT_VERSION,
-    schemaVersion: meta.schemaVersion,
-    createdAt: meta.createdAt,
-    deviceId: meta.deviceId,
-    source,
-    entries: [...entries],
-  };
-  // Human-inspectable: pretty-printed JSON per ADR-004 Decision 2.4 convention.
-  return `${JSON.stringify(doc, null, 2)}\n`;
+  return serializeAdr004RecoveryDoc(entries, source, meta);
 }
 
 export function buildRecoveryFile(
@@ -176,14 +172,36 @@ export function makeQuarantineApi(db: AppDBImpl): QuarantineApi {
     },
     async purge() {
       const entries = db.quarantineEntries;
+      const kept: QuarantineEntry[] = [];
       let purged = 0;
+      let failure: StorageError | null = null;
       for (const entry of entries) {
+        if (failure !== null) {
+          kept.push(entry); // stop-at-first-failure: remaining rows stay quarantined
+          continue;
+        }
+        // Identity safety (QA defect D2, ADR-002 Decision 3.1): the singletons
+        // are NEVER destroyed. A corrupt `meta` still carries the profile's
+        // deviceId/createdAt — deleting it makes the next boot silently re-seed
+        // a NEW deviceId. Singletons stay quarantined + downloadable; the user
+        // heals them via snapshot restore / import, never via purge.
+        if (entry.store === 'meta' || entry.store === 'settings') {
+          kept.push(entry);
+          continue;
+        }
         const deleted = await db.delete(entry.store, entry.key);
-        if (!deleted.ok) return err(deleted.error);
+        if (!deleted.ok) {
+          failure = deleted.error;
+          kept.push(entry);
+          continue;
+        }
         purged += 1;
       }
-      db.setQuarantine([]);
-      db.updateReport({ quarantined: 0 });
+      // In-memory state tracks reality: deleted rows leave the denylist even
+      // when a later delete failed part-way through the pass.
+      db.setQuarantine(kept);
+      db.updateReport({ quarantined: kept.length });
+      if (failure !== null) return err(failure);
       return ok(purged);
     },
   };

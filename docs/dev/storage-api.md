@@ -111,7 +111,13 @@ type BootReport = {
 
 Failure semantics: migration failure → `boot()` resolves `err(MIGRATION_FAILED)` **after rolling
 back** (DB restored from the pre-migration snapshot, connection closed). Step-5 failures
-(lastOpenedAt/purge) are non-fatal but recorded in `bootWarnings` (never silent).
+(lastOpenedAt/purge) are non-fatal but recorded in `bootWarnings` (never silent). Meta read/seed
+failures are **classified** (`classifyUnknown`): a first-run `QuotaExceededError` surfaces as
+`QUOTA_EXCEEDED` (the §5.5 dialog hangs off it), never as `UNKNOWN`. A corrupt
+`meta.schemaVersion` (not an integer ≥ 1) is **not a version**: no migration chain runs, no
+pre-migration snapshot is taken, `bootReport.migrated` stays `null`, the NEWER_SCHEMA comparison
+is skipped, and the row is quarantined by step 4 like any invalid record (heal via snapshot
+restore/import — the in-memory `schemaVersion` falls back to the build target).
 
 ## Migration chain (`migrations.ts`) — Decision 8
 
@@ -167,18 +173,26 @@ type QuarantineEntry = { store: StoreName; key: string; record: unknown; issues:
 type QuarantineApi = {
   list(): QuarantineEntry[];                       // invalid rows excluded from app reads
   recoveryFile(): { filename: string; json: string }; // downloadable recovery JSON
-  purge(): Promise<Result<number, StorageError>>;  // explicit user action ONLY
+  purge(): Promise<Result<number, StorageError>>;  // explicit user action ONLY; never the singletons
 };
 runBootValidation(db): Promise<Result<QuarantineEntry[], StorageError>>  // also E3's import pre-check shape
 ```
 
 Non-destructive contract: invalid rows are **never deleted** by the framework — they stay in the
 DB (visible via `readUnfiltered`), hidden from app reads, exported verbatim in the recovery file,
-and hard-deleted only by `quarantine.purge()`.
+and hard-deleted only by `quarantine.purge()`. **Purge never destroys the `meta`/`settings`
+singletons**: a quarantined `meta` carries the device identity and deleting it would silently
+re-seed a NEW `deviceId` on the next boot (ADR-002 Decision 3.1) — so singleton entries are
+skipped by `purge()` and stay in the DB **and** in the recovery file (downloadable). They are
+healed by snapshot restore/import, never by purge; `purge()` returns the count of rows actually
+hard-deleted. A mid-pass delete failure keeps the remaining rows quarantined (state stays
+truthful) and propagates the typed error.
 
 Recovery file (binding): `recoveryFile()` emits **ADR-004 Decision 7.1's** recovery document —
-one format, one writer (`serializeRecoveryDoc(entries, source, meta)`; E3's
-`src/portability/recovery-document.ts` swaps in the shared implementation, same signature):
+one format, one writer: `serializeRecoveryDoc(entries, source, meta)` in
+`src/portability/recovery-document.ts` (ADR-004 contract 5, the only implementation);
+`quarantine.ts`'s same-named export is a thin delegate to it, so boot-validation quarantine and
+E3's import quarantine emit byte-identical documents:
 
 ```json
 {
@@ -207,8 +221,11 @@ forbidden (prototype-pollution defense for E8); real-calendar `YYYY-MM-DD`; stri
 ## Tombstone purge (`purge.ts`) — Decision 6
 
 `purgeTombstones(db, { now, mode: 'auto' | 'explicit' })` → `Result<number, StorageError>`.
-Auto: `deletedAt < now - 90d`, throttled via `meta.lastPurgeAt` (≥24h apart), one readwrite tx
-per store; Explicit: all tombstones, any age ("Clean up storage"). Boot runs the auto pass.
+Auto: `deletedAt < now - 90d`, throttled via `meta.lastPurgeAt` (≥24h apart); Explicit: all
+tombstones, any age ("Clean up storage"). Boot runs the auto pass. The whole pass is **one
+readwrite transaction** (`lists`+`tasks`, plus `meta` for the auto throttle stamp): deletions and
+stamp commit or roll back together, so a stamp failure (quota) purges nothing and the returned
+count is always truthful (ADR-002 Decision 6 amended 2026-10-23, QA defect D6).
 
 ## Pure helpers (E2 domain builds on these)
 
@@ -230,3 +247,14 @@ v1→v2 migration roundtrip (boot + registry level), mid-chain interruption roll
 pre-migration snapshot (byte-equivalent restore), corrupt-record quarantine producing a loadable
 recovery file (never crash, never silent drop), QuotaExceededError propagation (put/tx/snapshot/
 purge/boot surfaces, fault-injected `IDBObjectStore.put`).
+
+## Test evidence (t_dbe04ac6, QA corruption-drill fixes D1–D6)
+
+`tests/unit/storage/` — 114 tests, all green. The contract-deviation probes
+(docs/qa/e1-storage-logs/probe-contract-deviations.txt P1–P4) are pinned as green regression
+drills in `tests/unit/storage/drills-qa.test.ts`: Tx.get denylist end-to-end (D1), purge +
+reboot with a quarantined `meta` keeping `deviceId` (D2), boot meta read/seed quota classified
+`QUOTA_EXCEEDED` (D3), corrupt `meta.schemaVersion` yielding `migrated: null` with no spurious
+snapshot on every boot (D4). Plus: `purgeTombstones` atomic-pass rollback (D6) in
+`purge.test.ts`, and fixture meta read-and-keep + raw-read rollback assertion (D5) in
+`tests/unit/storage/fixtures.ts` / `boot.test.ts`.
