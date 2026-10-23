@@ -64,6 +64,10 @@ export default tseslint.config(
       },
       globals: { ...globals.browser },
     },
+    rules: {
+      // §7.2: no telemetry, local error log only — stray console logging is a defect.
+      'no-console': ['error', { allow: ['error', 'warn'] }],
+    },
   },
 
   // --- Domain purity boundary (ADR-001 §9) ---------------------------------------------------
