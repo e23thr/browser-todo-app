@@ -26,11 +26,27 @@ import tseslint from 'typescript-eslint';
 // compares the accessible name with whole-string equality (`matches()` → `normalizedText ===
 // matcher`), so there is no substring hole to plug there. The text-query half (`getByText`/…)
 // IS substring-by-default in both libraries, so that half runs across all of tests/**.
+// Two shapes of every guard, because both are idiomatic and the first shape alone was provably
+// bypassable (review round 1):
+//   * callee form — `screen.getByRole(...)` / `locator.getByText(...)`, matched via
+//     `callee.property.name`;
+//   * bare-identifier form — Testing Library's destructured `const { getByText } = render(...)`
+//     or `within(dialog)`, matched via `callee.name`. `:is(A, B)` is a union, so a call only has
+//     to look like one of them.
+// Option keys are likewise matched as an identifier (`name:`) or a string literal (`'name':`),
+// for the same bypass reason.
+const calleeShape = (pattern) => `:is([callee.property.name=${pattern}],[callee.name=${pattern}])`;
+const ROLE_PATTERN = '/^(get|query|find)ByRole$/';
+const TEXT_PATTERN =
+  '/^(get|query|find)By(Text|Title|Label|LabelText|Placeholder|PlaceholderText|AltText|DisplayValue)$/';
+const HAS_NAME = 'ObjectExpression > Property[key.name=name],Property[key.value="name"]';
+const HAS_EXACT = 'ObjectExpression > Property[key.name=exact],Property[key.value="exact"]';
+const HAS_EXACT_FALSE =
+  'ObjectExpression > Property[key.name=exact][value.raw="false"],Property[key.value="exact"]' +
+  '[value.raw="false"]';
+
 const ROLE_QUERY_GUARD = {
-  selector:
-    'CallExpression[callee.property.name=/^(get|query|find)ByRole$/]:' +
-    'has(ObjectExpression > Property[key.name=name]):' +
-    'not(:has(ObjectExpression > Property[key.name=exact]))',
+  selector: `CallExpression${calleeShape(ROLE_PATTERN)}:has(${HAS_NAME}):not(:has(${HAS_EXACT}))`,
   message:
     'D1 guard: getByRole(..., { name }) must also pass exact: true — Playwright matches role ' +
     'names by case-insensitive substring by default, which let a broken label pass the smoke gate ' +
@@ -38,10 +54,7 @@ const ROLE_QUERY_GUARD = {
 };
 
 const TEXT_QUERY_GUARD = {
-  selector:
-    'CallExpression[callee.property.name=/^(get|query|find)By(Text|Title|Label|LabelText|' +
-    'Placeholder|PlaceholderText|AltText|DisplayValue)$/]:' +
-    'not(:has(ObjectExpression > Property[key.name=exact]))',
+  selector: `CallExpression${calleeShape(TEXT_PATTERN)}:not(:has(${HAS_EXACT}))`,
   message:
     'D1 guard: getByText/getByTitle/getByLabel/… must pass { exact: true } — a string or regex ' +
     'matcher is a case-insensitive substring match by default in Playwright and Testing Library ' +
@@ -49,14 +62,42 @@ const TEXT_QUERY_GUARD = {
 };
 
 const EXACT_FALSE_GUARD = {
-  selector:
-    'CallExpression[callee.property.name=/^(get|query|find)By(Role|Text|Title|Label|LabelText|' +
-    'Placeholder|PlaceholderText|AltText|DisplayValue)$/]:has(ObjectExpression > ' +
-    'Property[key.name=exact][value.raw="false"])',
+  selector: `CallExpression${calleeShape(
+    '/^(get|query|find)By(Role|Text|Title|Label|LabelText|Placeholder|PlaceholderText|AltText|DisplayValue)$/',
+  )}:has(${HAS_EXACT_FALSE})`,
   message:
     'D1 guard: exact: false is banned in tests/ — substring name matching is exactly the hole that ' +
     'let a broken label pass the gate (docs/qa/e1-scaffold-gates.md D1). Use exact: true.',
 };
+
+// --- ADR-005 safety rails (E9), shared -------------------------------------------------------
+// Extracted from the config block below so that the D1 test blocks can re-spread them: flat
+// config replaces `no-restricted-syntax` per matching block, so a block that re-declares it must
+// carry every selector that should stay live for those files.
+const ADR005_RAILS = [
+  {
+    selector:
+      'CallExpression[callee.object.name="location"][callee.property.name=/^(?:reload|replace|assign)$/]',
+    message:
+      'Only applyUpdate() in src/app/update.ts may reload or navigate the page (ADR-005 Decision 7 / E9).',
+  },
+  {
+    selector:
+      'CallExpression[callee.object.property.name="location"][callee.property.name=/^(?:reload|replace|assign)$/]',
+    message:
+      'Only applyUpdate() in src/app/update.ts may reload or navigate the page (ADR-005 Decision 7 / E9).',
+  },
+  {
+    selector: 'CallExpression[callee.property.name="skipWaiting"]',
+    message:
+      'Only the SKIP_WAITING message handler in src/sw/sw.ts may call skipWaiting() (ADR-005 Decision 5 rule 6).',
+  },
+  {
+    selector: 'CallExpression[callee.name="skipWaiting"]',
+    message:
+      'Only the SKIP_WAITING message handler in src/sw/sw.ts may call skipWaiting() (ADR-005 Decision 5 rule 6).',
+  },
+];
 
 export default tseslint.config(
   {
@@ -184,11 +225,24 @@ export default tseslint.config(
     },
   },
 
+  // --- ADR-005 safety rails: exactly one reload call site, one skipWaiting call site ----------
+  // BLOCK ORDER MATTERS (round-2 fix): flat config REPLACES a rule's configuration wholesale for
+  // every file a later block matches — it never concatenates arrays. This block has no `files`
+  // key, so when it sat after the D1 test blocks below it silently replaced the D1 guards for
+  // every test file (`--print-config` proved it: tests/e2e specs showed only these four
+  // selectors). The rails therefore come first, and every later block that re-declares
+  // `no-restricted-syntax` re-spreads `ADR005_RAILS` so both guard sets stay live.
+  {
+    rules: {
+      'no-restricted-syntax': ['error', ...ADR005_RAILS],
+    },
+  },
+
   // --- D1 guard, all tests: text queries are substring by default in BOTH libraries -----------
   {
     files: ['tests/**/*.ts', 'tests/**/*.tsx'],
     rules: {
-      'no-restricted-syntax': ['error', TEXT_QUERY_GUARD, EXACT_FALSE_GUARD],
+      'no-restricted-syntax': ['error', ...ADR005_RAILS, TEXT_QUERY_GUARD, EXACT_FALSE_GUARD],
     },
   },
 
@@ -198,40 +252,16 @@ export default tseslint.config(
   {
     files: ['tests/e2e/**/*.ts'],
     rules: {
-      'no-restricted-syntax': ['error', ROLE_QUERY_GUARD, TEXT_QUERY_GUARD, EXACT_FALSE_GUARD],
-    },
-  },
-
-  // --- ADR-005 safety rails: exactly one reload call site, one skipWaiting call site ----------
-  {
-    rules: {
       'no-restricted-syntax': [
         'error',
-        {
-          selector:
-            'CallExpression[callee.object.name="location"][callee.property.name=/^(?:reload|replace|assign)$/]',
-          message:
-            'Only applyUpdate() in src/app/update.ts may reload or navigate the page (ADR-005 Decision 7 / E9).',
-        },
-        {
-          selector:
-            'CallExpression[callee.object.property.name="location"][callee.property.name=/^(?:reload|replace|assign)$/]',
-          message:
-            'Only applyUpdate() in src/app/update.ts may reload or navigate the page (ADR-005 Decision 7 / E9).',
-        },
-        {
-          selector: 'CallExpression[callee.property.name="skipWaiting"]',
-          message:
-            'Only the SKIP_WAITING message handler in src/sw/sw.ts may call skipWaiting() (ADR-005 Decision 5 rule 6).',
-        },
-        {
-          selector: 'CallExpression[callee.name="skipWaiting"]',
-          message:
-            'Only the SKIP_WAITING message handler in src/sw/sw.ts may call skipWaiting() (ADR-005 Decision 5 rule 6).',
-        },
+        ...ADR005_RAILS,
+        ROLE_QUERY_GUARD,
+        TEXT_QUERY_GUARD,
+        EXACT_FALSE_GUARD,
       ],
     },
   },
+
   {
     // Documented ADR-005 exceptions:
     // - src/app/update.ts: `applyUpdate()` owns the single deliberate `location.reload()`.

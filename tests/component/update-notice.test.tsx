@@ -24,7 +24,7 @@ describe('UpdateNotice', () => {
     chunkLoadFailed.value = false;
     const { getByRole, getByText, unmount } = render(<UpdateNotice />);
 
-    expect(getByText('Update available')).toBeTruthy();
+    expect(getByText('Update available', { exact: true })).toBeTruthy();
     expect(getByRole('button', { name: 'Apply' })).toBeTruthy();
     expect(getByRole('button', { name: 'Dismiss' })).toBeTruthy();
     const region = getByRole('status');
@@ -36,7 +36,7 @@ describe('UpdateNotice', () => {
     updateState.value = 'applying';
     chunkLoadFailed.value = false;
     const { getByText, unmount } = render(<UpdateNotice />);
-    expect(getByText('Updating…')).toBeTruthy();
+    expect(getByText('Updating…', { exact: true })).toBeTruthy();
     unmount();
   });
 
@@ -44,7 +44,7 @@ describe('UpdateNotice', () => {
     updateState.value = 'applied-elsewhere';
     chunkLoadFailed.value = false;
     const { getByText, getByRole, unmount } = render(<UpdateNotice />);
-    expect(getByText('Updated — refresh when ready')).toBeTruthy();
+    expect(getByText('Updated — refresh when ready', { exact: true })).toBeTruthy();
     expect(getByRole('button', { name: 'Refresh' })).toBeTruthy();
     unmount();
   });
@@ -53,7 +53,9 @@ describe('UpdateNotice', () => {
     updateState.value = 'idle';
     notifyChunkLoadFailure();
     const { getByText, getByRole, unmount } = render(<UpdateNotice />);
-    expect(getByText('The app was updated in another tab — reload to continue here')).toBeTruthy();
+    expect(
+      getByText('The app was updated in another tab — reload to continue here', { exact: true }),
+    ).toBeTruthy();
     expect(getByRole('button', { name: 'Refresh' })).toBeTruthy();
     chunkLoadFailed.value = false;
     unmount();
