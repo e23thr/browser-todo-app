@@ -109,6 +109,8 @@ export default tseslint.config(
       'playwright-report/**',
       'blob-report/**',
       '.vite/**',
+      // ADR-005 Decision 9 harness output: fixture builds + generated precache modules.
+      'tests/e2e/.fixtures/**',
     ],
   },
 
