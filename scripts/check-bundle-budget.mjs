@@ -181,14 +181,19 @@ export function evaluateBundleBudget({ distDir, budgets }) {
   const localeFiles = new Set(locales.map((entry) => entry.file));
   const bootLocaleFiles = locales.filter((entry) => entry.tag === budgets.gates.locales.bootLocale);
 
-  const lazyJsFiles = jsFiles.filter((file) => !initialFiles.has(file) && !localeFiles.has(file));
+  const serviceWorkerFiles = budgets.serviceWorkerFiles.filter((file) => counted.includes(file));
+  // ADR-001 §8 / ADR-005 Decision 1: the service worker counts in the `app-shell` sum — it is
+  // never a "lazy chunk", so it must not be excluded alongside the lazy route chunks.
+  const serviceWorkerSet = new Set(serviceWorkerFiles);
+
+  const lazyJsFiles = jsFiles.filter(
+    (file) => !initialFiles.has(file) && !localeFiles.has(file) && !serviceWorkerSet.has(file),
+  );
   const lazyJsSet = new Set(lazyJsFiles);
   const nonBootLocaleFiles = locales.filter(
     (entry) => entry.tag !== budgets.gates.locales.bootLocale,
   );
   const nonBootLocaleSet = new Set(nonBootLocaleFiles.map((entry) => entry.file));
-
-  const serviceWorkerFiles = budgets.serviceWorkerFiles.filter((file) => counted.includes(file));
 
   const shellFiles = counted.filter((file) => !lazyJsSet.has(file) && !nonBootLocaleSet.has(file));
 

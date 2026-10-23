@@ -21,7 +21,7 @@
     },
     "app-shell": {
       "limitBytes": 204800,
-      "description": "Total app shell: FAIL > 200 KB gz (excl. icons/ manifest/ maps and lazy route+locale chunks)"
+      "description": "Total app shell: FAIL > 200 KB gz (excl. icons/ manifest/ maps and lazy route+locale chunks; the service worker sw.js IS counted per ADR-001 section 8 / ADR-005 Decision 1)"
     },
     "locales": {
       "limitBytes": 20480,
