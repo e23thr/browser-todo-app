@@ -1,15 +1,15 @@
 import type { JSX } from 'preact';
 
+import { View } from '../components/View';
+import { t } from './i18n';
+
 export function NotFoundView({ path }: { readonly path: string }): JSX.Element {
   return (
-    <section>
-      <h2>Page not found</h2>
+    <View title={t('notFound.title')}>
+      <p class="empty-state-body">{t('notFound.body', { path })}</p>
       <p>
-        Nothing is routed at <code>{path}</code>.
+        <a href="#/today">{t('notFound.back')}</a>
       </p>
-      <p>
-        <a href="#/today">Go to Today</a>
-      </p>
-    </section>
+    </View>
   );
 }

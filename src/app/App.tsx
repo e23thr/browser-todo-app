@@ -1,27 +1,51 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentType, JSX } from 'preact';
 
+import { announce } from './announce';
+import { t } from './i18n';
 import { NotFoundView } from './NotFoundView';
 import { createRouter, hashToPath, type RouteMatch } from './router';
+import { Shell } from './Shell';
+import { loadSettings } from './settings';
+import { AllOpenView } from '../features/all/AllOpenView';
+import { CompletedView } from '../features/completed/CompletedView';
+import { ListView } from '../features/lists/ListView';
+import { SearchView } from '../features/search/SearchView';
 import { TodayView } from '../features/today/TodayView';
+import { WeekView } from '../features/week/WeekView';
 
-/** A route view: a component that renders itself with no props. */
-export type ViewComponent = ComponentType;
+/** Props every route view receives; `ListView` reads `params.id`, the rest ignore them. */
+export interface ViewProps {
+  readonly params: Readonly<Record<string, string>>;
+}
+
+/** A route view. */
+export type ViewComponent = ComponentType<ViewProps>;
 
 type RouteEntry =
   | { readonly kind: 'static'; readonly Component: ViewComponent }
   | { readonly kind: 'lazy'; readonly load: () => Promise<{ default: ViewComponent }> };
 
 /**
- * Route table.
+ * Route table (design §2).
  *
- * Only the core loop (`/` → `/today`) is statically imported: it is part of the initial JS
- * closure that the `initial-js` budget gate measures. Everything beyond it is a lazy chunk,
- * which is how the route-level code-splitting requirement of §9.2 is satisfied structurally.
+ * Only the core loop (`/` → `/today` plus its sibling views) is statically imported: that is
+ * the initial-JS closure the §9.2 budget measures. Settings stays a lazy chunk (§9.2
+ * route-level code splitting).
+ *
+ * `/next7` is registered as an alias of `/week`: the two design specs disagree on that path
+ * (ux-foundation §2 says `/week`, core-domain §4.1 says `#/next7`) and the shell serves both
+ * rather than breaking a link — the nav uses `/week`.
  */
 const routes: Readonly<Record<string, RouteEntry>> = {
   '/': { kind: 'static', Component: TodayView },
   '/today': { kind: 'static', Component: TodayView },
+  '/week': { kind: 'static', Component: WeekView },
+  '/next7': { kind: 'static', Component: WeekView },
+  '/all': { kind: 'static', Component: AllOpenView },
+  '/completed': { kind: 'static', Component: CompletedView },
+  '/search': { kind: 'static', Component: SearchView },
+  '/list/:id': { kind: 'static', Component: ListView },
   '/settings': {
     kind: 'lazy',
     load: () => import('../features/settings/SettingsView'),
@@ -31,19 +55,38 @@ const routes: Readonly<Record<string, RouteEntry>> = {
 const routePatterns = Object.keys(routes);
 
 type ViewState =
-  | { readonly kind: 'ready'; readonly Component: ViewComponent }
+  | {
+      readonly kind: 'ready';
+      readonly Component: ViewComponent;
+      readonly params: Readonly<Record<string, string>>;
+    }
   | { readonly kind: 'loading' }
   | { readonly kind: 'error' }
   | { readonly kind: 'not-found'; readonly path: string };
 
-function isCurrentRoute(route: RouteMatch | null, patterns: readonly string[]): boolean {
-  return route !== null && patterns.includes(route.pattern);
-}
-
 export function App(): JSX.Element {
   const [route, setRoute] = useState<RouteMatch | null>(null);
   const [view, setView] = useState<ViewState>({ kind: 'loading' });
+  const [, setLocaleTick] = useState(0);
   const mounted = useRef(true);
+  const firstPaint = useRef(true);
+
+  // Settings boot: mirror first (pre-paint state), then the durable ADR-002 record wins.
+  useEffect(() => {
+    void loadSettings();
+  }, []);
+
+  // The i18n runtime signals a locale switch by setting `document.documentElement.lang`
+  // (fixed contract). Re-rendering the tree is how every `t()` call picks up the new bundle.
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setLocaleTick((tick) => tick + 1);
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     mounted.current = true;
@@ -62,7 +105,7 @@ export function App(): JSX.Element {
         return;
       }
       if (entry.kind === 'static') {
-        setView({ kind: 'ready', Component: entry.Component });
+        setView({ kind: 'ready', Component: entry.Component, params: match.params });
         return;
       }
 
@@ -70,7 +113,9 @@ export function App(): JSX.Element {
       entry
         .load()
         .then((module) => {
-          if (mounted.current) setView({ kind: 'ready', Component: module.default });
+          if (mounted.current) {
+            setView({ kind: 'ready', Component: module.default, params: match.params });
+          }
         })
         .catch(() => {
           if (mounted.current) setView({ kind: 'error' });
@@ -86,21 +131,44 @@ export function App(): JSX.Element {
     };
   }, []);
 
-  const currentView = (() => {
+  // SPA route-change contract (§4.1): move focus to the view's h1 and announce the view.
+  // Skipped on the very first paint so the skip link stays the first focusable element.
+  useEffect(() => {
+    if (view.kind !== 'ready') return;
+    if (firstPaint.current) {
+      firstPaint.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      const heading = document.querySelector<HTMLElement>('main [data-view-title]');
+      if (heading === null) return;
+      heading.focus();
+      announce(t('a11y.viewChanged', { view: heading.textContent.trim() }));
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [route?.path, view.kind]);
+
+  const currentPattern = route?.pattern ?? null;
+
+  const currentView = ((): JSX.Element => {
     switch (view.kind) {
-      case 'ready':
-        return <view.Component />;
+      case 'ready': {
+        const View = view.Component;
+        return <View params={view.params} />;
+      }
       case 'loading':
         return (
           <p role="status" aria-live="polite">
-            Loading…
+            {t('shell.loading')}
           </p>
         );
       case 'error':
         return (
           <p role="alert">
-            This view failed to load. Try refreshing the page, or{' '}
-            <a href="#/today">go back to Today</a>.
+            {t('error.viewLoad.title')} {t('error.viewLoad.body')}
+            <a href="#/today">{t('error.viewLoad.back')}</a>
           </p>
         );
       case 'not-found':
@@ -108,42 +176,5 @@ export function App(): JSX.Element {
     }
   })();
 
-  return (
-    <div class="app">
-      <a class="skip-link" href="#main">
-        Skip to main content
-      </a>
-      <header class="app-header">
-        <h1 class="app-title">
-          <a href="#/today">Todo</a>
-        </h1>
-        <nav class="app-nav" aria-label="Primary">
-          <ul>
-            <li>
-              <a
-                href="#/today"
-                aria-current={isCurrentRoute(route, ['/', '/today']) ? 'page' : undefined}
-              >
-                Today
-              </a>
-            </li>
-            <li>
-              <a
-                href="#/settings"
-                aria-current={isCurrentRoute(route, ['/settings']) ? 'page' : undefined}
-              >
-                Settings
-              </a>
-            </li>
-          </ul>
-        </nav>
-      </header>
-      <main id="main" class="app-main" tabindex={-1}>
-        {currentView}
-      </main>
-      <footer class="app-footer">
-        <p>All data stays on this device.</p>
-      </footer>
-    </div>
-  );
+  return <Shell pattern={currentPattern}>{currentView}</Shell>;
 }
