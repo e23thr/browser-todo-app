@@ -2,7 +2,7 @@ import type { JSX } from 'preact';
 
 import { announce } from '../../app/announce';
 import { Icon, type IconName } from '../../app/icons';
-import { getLocale, setLocale, t, type Locale } from '../../app/i18n';
+import { setLocale, t, useLocale, type Locale } from '../../app/i18n';
 import { useListOptions } from '../../app/lists';
 import {
   setDefaultListId,
@@ -74,7 +74,7 @@ function RadioRow({ id, legend, value, choices, onChange }: RadioRowProps): JSX.
 export default function SettingsView(): JSX.Element {
   const settings = useSettings();
   const lists = useListOptions();
-  const locale = getLocale();
+  const locale = useLocale();
 
   const themeChoices: readonly Choice[] = [
     { value: 'light', label: t('settings.theme.light'), icon: 'sun' },
@@ -120,9 +120,15 @@ export default function SettingsView(): JSX.Element {
           value={locale}
           choices={languageChoices}
           onChange={(value, label) => {
-            void setLocale(value as Locale).then(() => {
-              announce(t('a11y.languageChanged', { language: label }));
-            });
+            void setLocale(value as Locale)
+              .then(() => {
+                announce(t('a11y.languageChanged', { language: label }));
+              })
+              .catch(() => {
+                // Pack failed to load (offline / evicted cache): the active locale is left
+                // untouched (the radio is controlled by it), so just say so — assertively.
+                announce(t('settings.language.error'), 'assertive');
+              });
           }}
         />
       </section>

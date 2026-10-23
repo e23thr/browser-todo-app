@@ -67,25 +67,12 @@ type ViewState =
 export function App(): JSX.Element {
   const [route, setRoute] = useState<RouteMatch | null>(null);
   const [view, setView] = useState<ViewState>({ kind: 'loading' });
-  const [, setLocaleTick] = useState(0);
   const mounted = useRef(true);
   const firstPaint = useRef(true);
 
   // Settings boot: mirror first (pre-paint state), then the durable ADR-002 record wins.
   useEffect(() => {
     void loadSettings();
-  }, []);
-
-  // The i18n runtime signals a locale switch by setting `document.documentElement.lang`
-  // (fixed contract). Re-rendering the tree is how every `t()` call picks up the new bundle.
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setLocaleTick((tick) => tick + 1);
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
-    return () => {
-      observer.disconnect();
-    };
   }, []);
 
   useEffect(() => {

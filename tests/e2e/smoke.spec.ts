@@ -60,6 +60,9 @@ test('an unknown hash renders the not-found view instead of a broken page', asyn
 
 test('the skip link is the first focusable element', async ({ page }) => {
   await page.goto(APP_URL);
+  // The app mounts once initLocale() has settled (it lazy-loads the locale pack before the
+  // first render), so wait for the first view before asserting keyboard order.
+  await expect(page.getByRole('heading', { level: 1, name: 'Today', exact: true })).toBeVisible();
   await page.keyboard.press('Tab');
 
   const skipLink = page.getByRole('link', { name: 'Skip to main content', exact: true });

@@ -96,8 +96,9 @@ describe('language setting', () => {
     await waitFor(() => {
       expect(document.documentElement.lang).toBe('th');
     });
+    // The announcement is made in the language just selected (§9.4), i.e. Thai here.
     await waitFor(() => {
-      expect(polite.textContent).toBe('Language changed to ไทย');
+      expect(polite.textContent).toBe('เปลี่ยนภาษาเป็น ไทย แล้ว');
     });
   });
 });

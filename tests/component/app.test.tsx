@@ -251,22 +251,21 @@ describe('wide pattern (>= 1024 px)', () => {
 });
 
 describe('i18n wiring', () => {
-  it('re-renders every string when setLocale flips html[lang]', async () => {
+  it('re-renders every string from the runtime when setLocale switches to Thai', async () => {
     render(<App />);
     await screen.findByRole('heading', { level: 1, name: 'Today' });
+    expect(document.documentElement.lang).toBe('en');
 
     const { setLocale } = await import('../../src/app/i18n');
     await setLocale('th');
 
-    await waitFor(() => {
-      expect(document.documentElement.lang).toBe('th');
-    });
-    // The shell observes lang and re-renders; with no Thai bundle yet the fallback copy stands.
-    expect(await screen.findByRole('heading', { level: 1, name: 'Today' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'วันนี้' })).toBeTruthy();
+    expect(document.documentElement.lang).toBe('th');
+    // The nav landmark's accessible name is itself translated, so match by role only.
+    expect(screen.getByRole('navigation').textContent).toContain('วันนี้');
 
     await setLocale('en');
-    await waitFor(() => {
-      expect(document.documentElement.lang).toBe('en');
-    });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Today' })).toBeTruthy();
+    expect(document.documentElement.lang).toBe('en');
   });
 });
