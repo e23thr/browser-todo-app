@@ -95,7 +95,7 @@ in §5.1: bundle budget, sync-handle quirks).
 
 ## Decision 3 — Stores, key paths, indexes
 
-Seven object stores in idbVersion 1. All use **in-line key paths** (`id`) except `meta`, which is
+Six object stores in idbVersion 1 (plus the reserved name `tags`, see 3.7). All use **in-line key paths** (`id`) except `meta`, which is
 a singleton under an out-of-line key. All keys are strings (ULIDs, except `meta` = `'meta'`).
 
 ### 3.1 `meta` — singleton app record
