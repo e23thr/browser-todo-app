@@ -38,12 +38,14 @@ describe('settings screen (M14, design §4.9)', () => {
     }
   });
 
-  it('leaves a documented mount point for the E3 storage/backup panel', () => {
+  it('hosts the E3 storage/backup panel at the documented mount point', () => {
     render(<SettingsView />);
 
     const mount = document.querySelector('[data-mount-point="storage-backup"]');
     expect(mount).toBeTruthy();
-    expect(mount?.textContent).toBe('Backup and storage controls are not available yet.');
+    // E3 fills the mount point: the §4.1 card stack renders inside it (h3 section headings).
+    expect(mount?.querySelectorAll('h3').length).toBeGreaterThanOrEqual(5);
+    expect(mount?.textContent).toContain('Storage in this browser');
   });
 });
 

@@ -9,6 +9,7 @@
  * `validateSettings`) — this module never touches `idb` or a raw `IDBDatabase` (ADR-002 §1).
  */
 
+import { bootCodec } from './bootCodec';
 import { boot, err, ok, SETTINGS_KEY, validateSettings } from '../storage';
 import type { AppDB, Result, Settings as SettingsRecord, StorageError } from '../storage';
 import type { AppSettings, SettingsPersistence } from './settings';
@@ -16,7 +17,10 @@ import type { AppSettings, SettingsPersistence } from './settings';
 async function withDb<T>(
   fn: (db: AppDB) => Promise<Result<T, StorageError>>,
 ): Promise<Result<T, StorageError>> {
-  const booted = await boot();
+  // The codec rides on EVERY boot(): the boot singleton is whoever calls first (this load,
+  // the i18n locale load, or the data-safety start), and a pre-migration snapshot must always
+  // be serialized with the ADR-004 codec (E3 composition wiring).
+  const booted = await boot({ codec: await bootCodec() });
   if (!booted.ok) return err(booted.error);
   return fn(booted.value);
 }

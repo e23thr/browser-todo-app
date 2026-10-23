@@ -12,6 +12,7 @@
  */
 
 import { readThemePref } from '../app/theme';
+import { bootCodec } from '../app/bootCodec';
 import { boot } from '../storage/boot';
 import { SETTINGS_KEY } from '../storage/schema';
 import type { Settings } from '../storage/types';
@@ -41,11 +42,15 @@ export function createSettingsLocalePersistence(): LocalePersistence {
   return {
     async load(): Promise<Locale | null> {
       try {
-        const db = await boot();
+        // ADR-004 codec on every boot() call — see `src/app/bootCodec.ts`.
+        const db = await boot({ codec: await bootCodec() });
         if (!db.ok) {
           // QA N1: the silent branch — a storage failure used to look identical to "no
           // stored locale", hiding the D2 reset-on-reload failure class. Local warn only.
-          console.warn('i18n: could not read the stored locale (storage unavailable)', db.error.code);
+          console.warn(
+            'i18n: could not read the stored locale (storage unavailable)',
+            db.error.code,
+          );
           return null;
         }
         const row = await db.value.get('settings', SETTINGS_KEY);
@@ -63,7 +68,7 @@ export function createSettingsLocalePersistence(): LocalePersistence {
 
     async save(next: Locale): Promise<void> {
       try {
-        const db = await boot();
+        const db = await boot({ codec: await bootCodec() });
         if (!db.ok) {
           console.warn('i18n: locale not persisted (storage unavailable)', db.error.code);
           return;

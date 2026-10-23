@@ -12,6 +12,7 @@ import {
   type WeekStart,
 } from '../../app/settings';
 import { View } from '../../components/View';
+import { StoragePanelContainer } from '../data-safety/StoragePanelContainer';
 
 /** One choice inside a radio row. */
 interface Choice {
@@ -177,18 +178,14 @@ export default function SettingsView(): JSX.Element {
         </div>
       </section>
 
-      {/*
-        Storage & backup mount point (M14): the E3 data-safety card renders the quota bar,
-        persistence status, export/import and delete-all controls here. This card owns the
-        section heading only ("do not build its contents").
-      */}
+      {/* Storage & backup mount point (M14, filled by E3). */}
       <section class="settings-section" aria-labelledby="settings-storage">
         <h2 class="settings-heading" id="settings-storage">
           {t('settings.storage')}
         </h2>
-        <p class="settings-pending" data-mount-point="storage-backup">
-          {t('settings.storage.pending')}
-        </p>
+        <div data-mount-point="storage-backup">
+          <StoragePanelContainer />
+        </div>
       </section>
 
       <section class="settings-section" aria-labelledby="settings-about">

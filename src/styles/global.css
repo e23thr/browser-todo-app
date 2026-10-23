@@ -1,6 +1,8 @@
 @import './tokens.css';
 @import './shell.css';
 @import './settings.css';
+@import './data-safety.css';
+@import './tasks.css';
 
 /*
  * Base styles — design §3.2 (typography), §9 (Thai-safe wrapping), §10 (motion),

@@ -4,14 +4,25 @@ import type { ComponentType, JSX } from 'preact';
 import { announce } from './announce';
 import { t } from './i18n';
 import { NotFoundView } from './NotFoundView';
+import { registerQuickAddHandler } from './quickAdd';
 import { createRouter, hashToPath, type RouteMatch } from './router';
 import { Shell } from './Shell';
 import { loadSettings } from './settings';
 import { notifyChunkLoadFailure } from './stale-tab';
 import { AllOpenView } from '../features/all/AllOpenView';
 import { CompletedView } from '../features/completed/CompletedView';
+import { DataSafetyHost } from '../features/data-safety/DataSafetyHost';
+import { markRecoveryStarted, writeOnboardingDone } from '../features/data-safety/flags';
+import { requestImportPick } from '../features/data-safety/importFlow';
+import { Onboarding } from '../features/data-safety/Onboarding';
+import { RecoveryScreen } from '../features/data-safety/RecoveryScreen';
+import { dataSafetyState, patchState } from '../features/data-safety/state';
+import { ListsManageView } from '../features/lists/ListsManageView';
 import { ListView } from '../features/lists/ListView';
 import { SearchView } from '../features/search/SearchView';
+import { Composer, inlineComposerFocus } from '../features/tasks/Composer';
+import { startTaskStore } from '../features/tasks/store';
+import { ToastHost } from '../features/tasks/ToastHost';
 import { TodayView } from '../features/today/TodayView';
 import { WeekView } from '../features/week/WeekView';
 
@@ -47,6 +58,7 @@ const routes: Readonly<Record<string, RouteEntry>> = {
   '/completed': { kind: 'static', Component: CompletedView },
   '/search': { kind: 'static', Component: SearchView },
   '/list/:id': { kind: 'static', Component: ListView },
+  '/lists': { kind: 'static', Component: ListsManageView },
   '/settings': {
     kind: 'lazy',
     load: () => import('../features/settings/SettingsView'),
@@ -68,6 +80,7 @@ type ViewState =
 export function App(): JSX.Element {
   const [route, setRoute] = useState<RouteMatch | null>(null);
   const [view, setView] = useState<ViewState>({ kind: 'loading' });
+  const [composerSheet, setComposerSheet] = useState(false);
   const mounted = useRef(true);
   const firstPaint = useRef(true);
 
@@ -75,6 +88,25 @@ export function App(): JSX.Element {
   useEffect(() => {
     void loadSettings();
   }, []);
+
+  // Core UI (M1–M4): boot the domain store (ADR-002 → repos → MutationRunner) once.
+  useEffect(() => {
+    void startTaskStore();
+  }, []);
+
+  // Quick-add seam (F1 "from any view"): focus the wide inline composer when one is
+  // mounted, otherwise open the compact sheet. Never a dead control.
+  useEffect(
+    () =>
+      registerQuickAddHandler(() => {
+        if (inlineComposerFocus.current !== null) {
+          inlineComposerFocus.current();
+          return;
+        }
+        setComposerSheet(true);
+      }),
+    [],
+  );
 
   useEffect(() => {
     mounted.current = true;
@@ -167,5 +199,58 @@ export function App(): JSX.Element {
     }
   })();
 
-  return <Shell pattern={currentPattern}>{currentView}</Shell>;
+  const safety = dataSafetyState.value;
+
+  // S1 first run (§7 "shown before task UI") and S5 recovery (§6.5) replace the WHOLE shell:
+  // there is no background content for focus or a screen reader to land on.
+  if (safety.onboarding) {
+    return (
+      <Onboarding
+        onDone={() => {
+          writeOnboardingDone();
+          patchState({ onboarding: false });
+        }}
+      />
+    );
+  }
+
+  if (safety.status === 'ready' && safety.classification.kind === 'wiped') {
+    const lastBackupAt = safety.classification.lastBackupAt;
+    const dismiss = (): void => {
+      patchState({ classification: { kind: 'normal' }, onboarding: false });
+    };
+    return (
+      <RecoveryScreen
+        lastBackupAt={lastBackupAt}
+        onRestore={() => {
+          // No acknowledgement here: if the user backs out of the import, the next boot
+          // shows the screen again while the store is still empty (§3.4 honest detection).
+          dismiss();
+          window.location.hash = '#/settings';
+          requestImportPick();
+        }}
+        onStartFresh={() => {
+          markRecoveryStarted();
+          dismiss();
+          window.location.hash = '#/today';
+        }}
+      />
+    );
+  }
+
+  return (
+    <Shell pattern={currentPattern}>
+      <DataSafetyHost />
+      <ToastHost />
+      {currentView}
+      {composerSheet ? (
+        <Composer
+          variant="sheet"
+          onClose={() => {
+            setComposerSheet(false);
+          }}
+        />
+      ) : null}
+    </Shell>
+  );
 }
