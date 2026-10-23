@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Content-Security-Policy per PROJECT_ANALYSIS.md section 7.2, shipped as a <meta> tag
+      because GitHub Pages cannot set custom response headers (section 7.2 / 9.5, PO Q11).
+
+      Documented exception: `frame-ancestors` is dropped — it is ignored inside meta CSP and the
+      app has no cookies or sessions to protect (see README, "CSP exception").
+
+      The `sha256-…` source in `script-src` below is computed at build time from the SHA-256 of
+      the inline theme-boot snippet — the only inline script this policy permits.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'sha256-__THEME_BOOT_SHA256__'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="A local-first, privacy-preserving todo app that runs entirely in your browser."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Todo — local-first</title>
+    <script id="theme-boot">
+      (function () {
+        try {
+          var theme = localStorage.getItem('theme');
+          if (theme === 'light' || theme === 'dark') {
+            document.documentElement.dataset.theme = theme;
+          }
+        } catch (error) {
+          /* storage unavailable: fall back to the system colour scheme */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/app/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "$comment": [
+    "Single source of truth for the PROJECT_ANALYSIS.md section 9.2 bundle budgets, restated as",
+    "CI gate thresholds per ADR-001 section 8. Enforced by scripts/check-bundle-budget.mjs.",
+    "1 KB = 1024 bytes, measured over gzip level 9 of the production build output (dist/),",
+    "excluding *.map (never published)."
+  ],
+  "measurement": {
+    "gzipLevel": 9,
+    "excludeGlobs": ["**/*.map", "**/.vite/manifest.json", "**/icons/**", "**/*.webmanifest"]
+  },
+  "gates": {
+    "initial-js": {
+      "limitBytes": 102400,
+      "warnBytes": 81920,
+      "description": "Initial JS (entry static import closure): FAIL > 100 KB gz, warn >= 80 KB gz"
+    },
+    "css": {
+      "limitBytes": 20480,
+      "description": "All CSS in dist/: FAIL > 20 KB gz"
+    },
+    "app-shell": {
+      "limitBytes": 204800,
+      "description": "Total app shell: FAIL > 200 KB gz (excl. icons/ manifest/ maps and lazy route+locale chunks)"
+    },
+    "locales": {
+      "limitBytes": 20480,
+      "bootLocale": "en",
+      "manifestKeyPattern": "^src/i18n/",
+      "fileNamePattern": "(^|/)locale-",
+      "description": "en+th locale packs: FAIL > 20 KB gz combined, FAIL if a locale pack is inside the initial JS closure (they must be lazy)"
+    },
+    "no-external-refs": {
+      "allowedUrlPrefixes": ["http://www.w3.org/", "https://www.w3.org/"],
+      "description": "Runtime third-party bytes = 0: FAIL on any external http(s):// reference in shipped JS/CSS/HTML/SVG (XML namespaces are not network fetches)"
+    },
+    "no-wasm": {
+      "description": "WASM = 0 in MVP: FAIL on any .wasm in dist/ (a WASM payload requires its own ADR first)"
+    }
+  },
+  "serviceWorkerFiles": ["sw.js", "service-worker.js", "serviceWorker.js"]
+}

@@ -1,0 +1,96 @@
+import { createHash } from 'node:crypto';
+
+import preact from '@preact/preset-vite';
+import { defineConfig, type Plugin } from 'vitest/config';
+
+/**
+ * Configurable base path (ADR-001 §3, PROJECT_ANALYSIS §9.5).
+ *
+ * GitHub Pages *project* pages serve under `/<repo>/`, so every emitted asset URL must be
+ * prefixed with that base. Local dev defaults to `/`. CI sets:
+ *
+ *   BASE_PATH=/<repo>/ npm run build
+ */
+function normalizeBase(raw: string | undefined): string {
+  if (raw === undefined || raw === '') return '/';
+  const trimmed = raw.trim();
+  if (trimmed === '/' || trimmed === './') return trimmed;
+  const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return withLeadingSlash.endsWith('/') ? withLeadingSlash : `${withLeadingSlash}/`;
+}
+
+const BASE = normalizeBase(process.env['BASE_PATH']);
+
+/**
+ * Placeholder replaced at HTML-transform time with the real SHA-256 of the inline theme-boot
+ * snippet, so the CSP `script-src` hash always matches the shipped markup (ADR-001 §3).
+ */
+const THEME_BOOT_HASH_PLACEHOLDER = '__THEME_BOOT_SHA256__';
+const THEME_BOOT_SCRIPT_RE = /<script id="theme-boot">([\s\S]*?)<\/script>/u;
+
+/**
+ * `vite dev` injects styles and the HMR client as inline DOM nodes, which the strict production
+ * CSP (`style-src 'self'`, `script-src 'self'`) would block. Dev therefore relaxes exactly those
+ * two directives; the artifact that ships to GitHub Pages keeps the §7.2 policy untouched.
+ */
+function relaxCspForDev(html: string): string {
+  return html
+    .replace("script-src 'self'", "script-src 'self' 'unsafe-inline'")
+    .replace("style-src 'self'", "style-src 'self' 'unsafe-inline'");
+}
+
+function themeBootCspPlugin(): Plugin {
+  return {
+    name: 'app:theme-boot-csp',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html, ctx) {
+        const match = THEME_BOOT_SCRIPT_RE.exec(html);
+        if (match === null || match[1] === undefined) {
+          throw new Error(
+            'index.html is missing the inline <script id="theme-boot"> snippet required by ADR-001 §3',
+          );
+        }
+        const digest = createHash('sha256').update(match[1], 'utf8').digest('base64');
+        const withHash = html.replaceAll(THEME_BOOT_HASH_PLACEHOLDER, digest);
+        return ctx.server === undefined ? withHash : relaxCspForDev(withHash);
+      },
+    },
+  };
+}
+
+export default defineConfig({
+  base: BASE,
+  plugins: [preact(), themeBootCspPlugin()],
+  build: {
+    target: 'es2022',
+    // Never publish source maps (ADR-001 §3): smaller artifact, no source disclosure.
+    sourcemap: false,
+    // .vite/manifest.json is the input for scripts/check-bundle-budget.mjs (entry closure,
+    // lazy chunks, locale packs). It is build metadata, excluded from the app-shell sum there.
+    manifest: true,
+    assetsInlineLimit: 4096,
+    emptyOutDir: true,
+  },
+  preview: {
+    port: 4173,
+    strictPort: true,
+  },
+  test: {
+    environment: 'jsdom',
+    include: ['tests/unit/**/*.test.ts', 'tests/component/**/*.test.{ts,tsx}'],
+    setupFiles: ['tests/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      reportsDirectory: 'coverage',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.d.ts'],
+      thresholds: {
+        // PROJECT_ANALYSIS §9.5: >= 80% on domain / migrations / merge modules.
+        './src/domain/**/*.ts': { lines: 80, branches: 80, functions: 80, statements: 80 },
+        './src/storage/**/*.ts': { lines: 80, branches: 80, functions: 80, statements: 80 },
+      },
+    },
+  },
+});

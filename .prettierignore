@@ -1,0 +1,15 @@
+# Build / test output
+node_modules
+dist
+dist-ssr
+coverage
+test-results
+playwright-report
+blob-report
+package-lock.json
+
+# Document corpus authored and maintained by its owning cards (analysis, ADRs, design specs).
+# The toolchain formats code and this README; reformatting those documents would create diff
+# churn in files owned by other roles. Content rules still apply — see README "Repo layout".
+PROJECT_ANALYSIS.md
+docs
