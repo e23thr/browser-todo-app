@@ -35,6 +35,23 @@ export type ListPosition = 'first' | 'last' | { afterId: string } | { beforeId: 
 
 export type ListRemoveDisposition = { mode: 'move'; targetListId: string } | { mode: 'tombstone' };
 
+/**
+ * `move()` outcome (pipeline step 4a): the authoritative row the repo wrote,
+ * plus `rebalanced` — true when the order-key exhaustion hatch re-keyed EVERY
+ * row of the sibling group in that transaction (ADR-002 §4.2 rule 4). The flag
+ * is how the group rewrite surfaces to `MutationRunner`, which must then
+ * broadcast `'all'` instead of the moved id (ADR-003 Decision 8.1 rule 2).
+ */
+export type MoveOutcome<T> = { row: T; rebalanced: boolean };
+
+/**
+ * Rows a list-delete transaction wrote (ADR-002 Decision 6): `moved` is
+ * non-empty for `mode:'move'` (retargeted + restamped), `tombstoned` for
+ * `mode:'tombstone'`. Returned so the pipeline can re-anchor / evict the
+ * committed baseline for every touched id (ADR-003 Decision 3 step 4a).
+ */
+export type ListRemoveOutcome = { moved: Task[]; tombstoned: Task[] };
+
 export interface TaskPort {
   loadAll(): Promise<Result<{ tasks: Task[]; lists: List[]; settings: Settings }, AppError>>;
   create(draft: TaskDraft): Promise<Result<Task, AppError>>;
@@ -42,7 +59,7 @@ export interface TaskPort {
   /** `completedAt` stamped on done, cleared on uncomplete (ADR-002 Decision 5). */
   setDone(id: string, done: boolean): Promise<Result<Task, AppError>>;
   /** SINGLE-record write: resolves neighbor keys, one `put` of the moved row. */
-  move(id: string, target: MoveTarget): Promise<Result<Task, AppError>>;
+  move(id: string, target: MoveTarget): Promise<Result<MoveOutcome<Task>, AppError>>;
   /** Tombstone + direct-subtask cascade in ONE transaction; idempotent. */
   remove(id: string): Promise<Result<void, AppError>>;
   /** M11 import path: rows keep their original stamps. */
@@ -56,9 +73,15 @@ export interface ListPort {
   rename(id: string, name: string): Promise<Result<List, AppError>>;
   recolor(id: string, color: string): Promise<Result<List, AppError>>;
   /** Single-record write over the global list group. */
-  move(id: string, position: ListPosition): Promise<Result<List, AppError>>;
-  /** ADR-002 Decision 6 verbatim: move tasks or tombstone them — ONE transaction either way. */
-  remove(id: string, disposition: ListRemoveDisposition): Promise<Result<void, AppError>>;
+  move(id: string, position: ListPosition): Promise<Result<MoveOutcome<List>, AppError>>;
+  /**
+   * ADR-002 Decision 6 verbatim: move tasks or tombstone them — ONE transaction either way.
+   * Resolves with the rows that transaction wrote (see `ListRemoveOutcome`).
+   */
+  remove(
+    id: string,
+    disposition: ListRemoveDisposition,
+  ): Promise<Result<ListRemoveOutcome, AppError>>;
 }
 
 export interface SettingsPort {

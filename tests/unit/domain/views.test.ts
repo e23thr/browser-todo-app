@@ -249,3 +249,28 @@ describe('views: Search (§4.8)', () => {
     expect(result.rows).toEqual([]);
   });
 });
+
+describe('views: orphaned subtask after a parent list move (domain-api §10 note 2)', () => {
+  function depths(rows: ViewRow[]): [string, number][] {
+    return rows
+      .filter((r): r is Extract<ViewRow, { type: 'task' }> => r.type === 'task')
+      .map((r) => [r.task.id, r.depth]);
+  }
+
+  it('renders the left-behind subtask at depth 0 in the old list', () => {
+    const state = stateWith(
+      [
+        makeTask({ id: 'P1', listId: 'L2', createdAt: T0 }),
+        makeTask({ id: 'S1', listId: 'L1', parentTaskId: 'P1', createdAt: T0 + 1 }),
+      ],
+      [
+        makeList({ id: 'L1', name: 'Inbox', sortOrder: 'h' }),
+        makeList({ id: 'L2', name: 'Work', sortOrder: 'i' }),
+      ],
+    );
+    const inOld = selectView(state, { kind: 'list', listId: 'L1' }, { today: TODAY });
+    expect(depths(inOld.rows)).toEqual([['S1', 0]]); // parent is not a member of L1
+    const inNew = selectView(state, { kind: 'list', listId: 'L2' }, { today: TODAY });
+    expect(depths(inNew.rows)).toEqual([['P1', 0]]); // the parent moved alone
+  });
+});

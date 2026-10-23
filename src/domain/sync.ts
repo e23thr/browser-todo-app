@@ -16,12 +16,19 @@ export type TabId = string;
 
 export type ChangeSet = { tasks?: string[]; lists?: string[]; settings?: boolean };
 
+/**
+ * What a commit announces (ADR-003 Decision 8.1 sender rule 2): a targeted id
+ * list for single-record ops, or `'all'` for ops that touched many rows
+ * (list-delete disposition, import, purge, rebalance).
+ */
+export type ChangeAnnouncement = ChangeSet | 'all';
+
 export type BroadcastMessage = {
   v: 1;
   type: 'data-changed';
   origin: TabId;
   at: number;
-  change: ChangeSet | 'all';
+  change: ChangeAnnouncement;
 };
 
 export const TAB_SYNC_CHANNEL = 'local-first-todo:tabs:v1';

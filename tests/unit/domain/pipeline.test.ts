@@ -12,7 +12,7 @@ import type { Task } from '../../../src/domain/model';
 import { MutationRunner, type PipelineErrorInfo } from '../../../src/domain/pipeline';
 import { orderKeyBetween, orderKeyFirst } from '../../../src/storage/orderKey';
 import type { ChangeEvent } from '../../../src/domain/state';
-import type { ChangeSet } from '../../../src/domain/sync';
+import type { ChangeAnnouncement } from '../../../src/domain/sync';
 import {
   FakeListPort,
   FakeRecorder,
@@ -27,7 +27,7 @@ import {
 function makeRunner() {
   const rec = new FakeRecorder();
   const events: ChangeEvent[] = [];
-  const committed: ChangeSet[] = [];
+  const committed: ChangeAnnouncement[] = [];
   const errors: PipelineErrorInfo[] = [];
   let clockNow = 1000;
   let idSeq = 0;
@@ -297,7 +297,10 @@ describe('pipeline: move / remove / setDone specifics', () => {
     const provisional = h.runner.getState().tasks.get('T2') as Task;
     expect(provisional.sortOrder < 'h').toBe(true); // strictly before T1
     await h.tick();
-    h.rec.succeed(makeTaskRow({ id: 'T2', listId: 'L1', sortOrder: 'a' }));
+    h.rec.succeed({
+      row: makeTaskRow({ id: 'T2', listId: 'L1', sortOrder: 'a' }),
+      rebalanced: false,
+    });
     await p;
     expect(h.runner.getState().tasks.get('T2')?.sortOrder).toBe('a');
   });
@@ -395,5 +398,117 @@ describe('pipeline: error hook receives every failure with rolled-back ids', () 
     h.rec.fail(error);
     await p;
     expect(h.errors.at(-1)).toMatchObject({ op: 'patch-task', rolledBack: ['T1'] });
+  });
+});
+
+describe('pipeline: E2 review rework pins (D1/D2/D3 + N3)', () => {
+  it("a rebalance-hatch move announces 'all' (ADR-003 Decision 8.1 rule 2)", async () => {
+    const h = makeRunner();
+    await h.baselined({ tasks: [makeTaskRow({ id: 'T1', listId: 'L1', sortOrder: 'h' })] });
+    const plain = h.runner.moveTask('T1', {
+      group: { listId: 'L1', parentTaskId: null },
+      position: 'last',
+    });
+    await h.tick();
+    h.rec.succeed({
+      row: makeTaskRow({ id: 'T1', listId: 'L1', sortOrder: 'm' }),
+      rebalanced: false,
+    });
+    await plain;
+    expect(h.committed.at(-1)).toEqual({ tasks: ['T1'] }); // single-record op: id list
+
+    const hatch = h.runner.moveTask('T1', {
+      group: { listId: 'L1', parentTaskId: null },
+      position: 'first',
+    });
+    await h.tick();
+    h.rec.succeed({
+      row: makeTaskRow({ id: 'T1', listId: 'L1', sortOrder: 'a' }),
+      rebalanced: true,
+    });
+    await hatch;
+    expect(h.committed.at(-1)).toBe('all'); // the whole group was rewritten
+  });
+
+  it('removeList(move) settle adopts the repo-stamped rows (step 4a authority)', async () => {
+    const h = makeRunner();
+    await h.baselined({
+      tasks: [makeTaskRow({ id: 'T1', listId: 'L1', title: 'old', updatedAt: 1 })],
+    });
+    const p = h.runner.removeList('L1', { mode: 'move', targetListId: 'L2' });
+    await h.tick();
+    h.rec.succeed({
+      moved: [
+        makeTaskRow({
+          id: 'T1',
+          listId: 'L2',
+          title: 'old',
+          updatedAt: 5555,
+          deviceId: 'REPO-DEVICE',
+        }),
+      ],
+      tombstoned: [],
+    });
+    expect((await p).ok).toBe(true);
+    const settled = h.runner.getState().tasks.get('T1');
+    expect(settled?.listId).toBe('L2');
+    expect(settled?.updatedAt).toBe(5555); // repo stamp, not the provisional one
+    expect(settled?.deviceId).toBe('REPO-DEVICE');
+
+    // ... and the committed baseline is THAT image: a later failure re-anchors to it.
+    h.setClock(900);
+    const p2 = h.runner.patchTask('T1', { title: 'new' });
+    await h.tick();
+    h.rec.fail({ code: 'QUOTA_EXCEEDED' });
+    expect((await p2).ok).toBe(false);
+    const after = h.runner.getState().tasks.get('T1');
+    expect(after?.listId).toBe('L2'); // never the pre-move image
+    expect(after?.updatedAt).toBe(5555);
+    expect(after?.title).toBe('old');
+  });
+
+  it('removeList(tombstone) evicts the deleted rows from the committed baseline (D2)', async () => {
+    const h = makeRunner();
+    await h.baselined({ tasks: [makeTaskRow({ id: 'T1', listId: 'L1' })] });
+    const p = h.runner.removeList('L1', { mode: 'tombstone' });
+    await h.tick();
+    h.rec.succeed({
+      moved: [],
+      tombstoned: [makeTaskRow({ id: 'T1', listId: 'L1', deletedAt: 500, updatedAt: 500 })],
+    });
+    expect((await p).ok).toBe(true);
+    expect(h.runner.getState().tasks.has('T1')).toBe(false);
+
+    // A later FAILED import of the deleted id must not resurrect the ghost.
+    const p2 = h.runner.upsertImported([makeTaskRow({ id: 'T1', listId: 'L1', title: 'ghost' })]);
+    await h.tick();
+    h.rec.fail({ code: 'QUOTA_EXCEEDED' });
+    expect((await p2).ok).toBe(false);
+    expect(h.runner.getState().tasks.has('T1')).toBe(false);
+  });
+
+  it('moving a parent to another list leaves its subtasks behind (domain-api §10 note 2)', async () => {
+    const h = makeRunner();
+    await h.baselined({
+      tasks: [
+        makeTaskRow({ id: 'P1', listId: 'L1' }),
+        makeTaskRow({ id: 'S1', listId: 'L1', parentTaskId: 'P1' }),
+      ],
+    });
+    const p = h.runner.moveTask('P1', {
+      group: { listId: 'L2', parentTaskId: null },
+      position: 'last',
+    });
+    // Single-write reorder: only the parent row moves; the subtask is NOT rewritten.
+    expect(h.runner.getState().tasks.get('P1')?.listId).toBe('L2');
+    expect(h.runner.getState().tasks.get('S1')?.listId).toBe('L1');
+    expect(h.runner.getState().tasks.get('S1')?.parentTaskId).toBe('P1');
+    await h.tick();
+    h.rec.succeed({
+      row: makeTaskRow({ id: 'P1', listId: 'L2', sortOrder: 'm' }),
+      rebalanced: false,
+    });
+    expect((await p).ok).toBe(true);
+    expect(h.runner.getState().tasks.get('S1')?.listId).toBe('L1'); // stays orphaned in L1
   });
 });

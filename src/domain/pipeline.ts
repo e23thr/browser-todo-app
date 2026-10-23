@@ -35,6 +35,7 @@ import type {
   ListPort,
   ListPosition,
   ListRemoveDisposition,
+  ListRemoveOutcome,
   MoveTarget,
   OrderKeyOps,
   SettingsPort,
@@ -52,7 +53,7 @@ import {
   type RecordUpdate,
   type State,
 } from './state';
-import type { ChangeSet } from './sync';
+import type { ChangeAnnouncement } from './sync';
 
 export type PipelineErrorInfo = {
   op: MutationKind;
@@ -69,8 +70,12 @@ export type MutationRunnerDeps = {
   ids: IdFactory;
   orderKeys: OrderKeyOps;
   deviceId: string;
-  /** Wired by `app/tabSync.ts`: fired AFTER a write commits, never on failure. */
-  onCommitted?: (change: ChangeSet) => void;
+  /**
+   * Wired by `app/tabSync.ts`: fired AFTER a write commits, never on failure.
+   * `'all'` marks a bulk op (list-delete disposition / import / rebalance) per
+   * ADR-003 Decision 8.1 sender rule 2.
+   */
+  onCommitted?: (change: ChangeAnnouncement) => void;
   /** Structured local error log (ADR-002 §10.4) — every error branch records. */
   onError?: (info: PipelineErrorInfo) => void;
 };
@@ -81,7 +86,7 @@ type Entry = {
   opId: string;
   kind: MutationKind;
   ids: string[];
-  change: ChangeSet;
+  change: ChangeAnnouncement;
   undo: ReturnType<typeof applyOptimistic>['undo'];
   status: EntryStatus;
   resolve: (r: Result<unknown, AppError>) => void;
@@ -275,6 +280,7 @@ export class MutationRunner {
 
   moveTask(id: string, target: MoveTarget): Promise<Result<Task, AppError>> {
     const opId = this.#nextOpId();
+    let rebalanced = false;
     const prev = this.#state.tasks.get(id);
     if (prev === undefined) {
       return this.#rejectSync('move-task', opId, 'TASK_MISSING', `no task ${id}`);
@@ -318,8 +324,15 @@ export class MutationRunner {
       opId,
       { tasks: [next] },
       { tasks: [id] },
-      async () => this.#deps.tasks.move(id, target),
+      async () => {
+        const r = await this.#deps.tasks.move(id, target);
+        if (!r.ok) return r;
+        // A group-rewriting rebalance announces `'all'` (ADR-003 D8.1 rule 2).
+        rebalanced = r.value.rebalanced;
+        return ok(r.value.row);
+      },
       (saved) => ({ tasks: [saved] }),
+      () => (rebalanced ? 'all' : { tasks: [id] }),
     );
   }
 
@@ -338,18 +351,20 @@ export class MutationRunner {
       { evictTasks: [id, ...childIds] },
       { tasks: [id, ...childIds] },
       async () => asUndefined(await this.#deps.tasks.remove(id)),
-      () => ({}),
+      // D2: a successful delete evicts the rows from the COMMITTED baseline too
+      // — otherwise a later failed write would re-anchor the ghost image.
+      () => ({ evictTasks: [id, ...childIds] }),
     );
   }
 
-  /** M11 import path: rows keep their original stamps. */
+  /** M11 import path: rows keep their original stamps. Bulk op -> announces `'all'`. */
   upsertImported(rows: Task[]): Promise<Result<void, AppError>> {
     const opId = this.#nextOpId();
     return this.#run<undefined>(
       'upsert-imported',
       opId,
       { tasks: rows },
-      { tasks: rows.map((t) => t.id) },
+      'all',
       async () => asUndefined(await this.#deps.tasks.upsertImported(rows)),
       () => ({ tasks: rows }),
     );
@@ -397,6 +412,7 @@ export class MutationRunner {
 
   moveList(id: string, position: ListPosition): Promise<Result<List, AppError>> {
     const opId = this.#nextOpId();
+    let rebalanced = false;
     const prev = this.#state.lists.get(id);
     if (prev === undefined) {
       return this.#rejectSync('move-list', opId, 'TASK_MISSING', `no list ${id}`);
@@ -431,8 +447,15 @@ export class MutationRunner {
       opId,
       { lists: [next] },
       { lists: [id] },
-      async () => this.#deps.lists.move(id, position),
+      async () => {
+        const r = await this.#deps.lists.move(id, position);
+        if (!r.ok) return r;
+        // A group-rewriting rebalance announces `'all'` (ADR-003 D8.1 rule 2).
+        rebalanced = r.value.rebalanced;
+        return ok(r.value.row);
+      },
       (saved) => ({ lists: [saved] }),
+      () => (rebalanced ? 'all' : { lists: [id] }),
     );
   }
 
@@ -444,6 +467,15 @@ export class MutationRunner {
       return Promise.resolve(ok(undefined));
     }
     const affected = [...this.#state.tasks.values()].filter((t) => t.listId === id);
+    // Bulk op: the disposition rewrites/tombstones every row of the list in ONE
+    // transaction -> announces `'all'` (ADR-003 Decision 8.1 sender rule 2).
+    let written: ListRemoveOutcome | undefined;
+    const readWritten = async (): Promise<Result<undefined, AppError>> => {
+      const r = await this.#deps.lists.remove(id, disposition);
+      if (!r.ok) return r;
+      written = r.value;
+      return ok(undefined);
+    };
     if (disposition.mode === 'move') {
       const target = this.#state.lists.get(disposition.targetListId);
       if (target === undefined || target.deletedAt !== null || disposition.targetListId === id) {
@@ -465,18 +497,31 @@ export class MutationRunner {
         'remove-list',
         opId,
         { evictLists: [id], tasks: moved },
-        { lists: [id], tasks: moved.map((t) => t.id) },
-        async () => asUndefined(await this.#deps.lists.remove(id, disposition)),
-        () => ({}),
+        'all',
+        readWritten,
+        // D1: the committed baseline must follow EVERY touched id — the moved
+        // rows to their new image (repo rows are authoritative, step 4a) and the
+        // deleted list to an eviction. A void-resolving port falls back to the
+        // optimistic image so the baseline can never stay pre-move.
+        () => ({
+          evictLists: [id],
+          tasks: written !== undefined && written.moved.length > 0 ? written.moved : moved,
+        }),
       );
     }
+    const affectedIds = affected.map((t) => t.id);
     return this.#run<undefined>(
       'remove-list',
       opId,
-      { evictLists: [id], evictTasks: affected.map((t) => t.id) },
-      { lists: [id], tasks: affected.map((t) => t.id) },
-      async () => asUndefined(await this.#deps.lists.remove(id, disposition)),
-      () => ({}),
+      { evictLists: [id], evictTasks: affectedIds },
+      'all',
+      readWritten,
+      // D2: a successful tombstone evicts the rows from the committed baseline —
+      // a later FAILED import of a previously deleted id must not resurrect it.
+      () => ({
+        evictLists: [id],
+        evictTasks: [...new Set([...affectedIds, ...(written?.tombstoned.map((t) => t.id) ?? [])])],
+      }),
     );
   }
 
@@ -571,9 +616,15 @@ export class MutationRunner {
     kind: MutationKind,
     opId: string,
     optimistic: RecordUpdate,
-    change: ChangeSet,
+    change: ChangeAnnouncement,
     write: () => Promise<Result<TReturn, AppError>>,
     settle: (value: TReturn) => RecordUpdate,
+    /**
+     * Settle-time announcement override: a write whose transaction touched many
+     * rows (rebalance hatch) must announce `'all'` instead of the op's id list
+     * (ADR-003 Decision 8.1 sender rule 2). Evaluated ONLY on success.
+     */
+    announceFor?: (value: TReturn) => ChangeAnnouncement,
   ): Promise<Result<TReturn, AppError>> {
     // Steps 1-2: pure apply + synchronous notify (no await before this point).
     const { next, undo } = applyOptimistic(this.#state, optimistic);
@@ -612,7 +663,7 @@ export class MutationRunner {
         this.#rememberCommitted(authoritative);
         this.#emit(recordsEvent(authoritative));
         this.#emit({ kind: 'settled', opId });
-        this.#deps.onCommitted?.(change);
+        this.#deps.onCommitted?.(announceFor?.(result.value) ?? entry.change);
         entry.resolve(result);
       } else {
         // Step 4b: cancel queued ops on the affected ids, roll back, report.
@@ -629,10 +680,23 @@ export class MutationRunner {
     this.#state = next;
   }
 
+  /**
+   * Clear a record's `pending` entry ONLY when no other live op still
+   * references it (N1): two queued ops on one record keep it pending until the
+   * LAST one settles, so `reconcile`'s in-flight skip stays correct for the
+   * second op.
+   */
   #clearPending(entry: Entry): void {
+    const stillLive = new Set<string>();
+    for (const live of this.#live) {
+      if (live.status !== 'queued' && live.status !== 'running') continue;
+      for (const id of live.ids) stillLive.add(id);
+    }
+    const clear = entry.ids.filter((id) => !stillLive.has(id));
+    if (clear.length === 0) return;
     this.#state = withPending(
       this.#state,
-      entry.ids.map((id) => [id, null] as const),
+      clear.map((id) => [id, null] as const),
     );
   }
 
@@ -675,7 +739,10 @@ export class MutationRunner {
     if (lists.length > 0) reAnchor.lists = lists;
     if (this.#committedSettings !== null || this.#state.settings !== null) {
       // Settings touched by a rolled-back op restore to committed (or absent).
-      const touchedSettings = rolledBack.some((e) => e.change.settings === true);
+      // `'all'` announcements are bulk data ops — they never touch settings.
+      const touchedSettings = rolledBack.some(
+        (e) => e.change !== 'all' && e.change.settings === true,
+      );
       if (touchedSettings) reAnchor.settings = this.#committedSettings;
     }
     if (

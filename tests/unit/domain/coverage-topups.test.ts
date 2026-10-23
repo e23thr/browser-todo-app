@@ -133,7 +133,10 @@ describe('pipeline: order-key minting fallbacks (provisional keys are best-effor
     });
     expect(h.runner.getState().tasks.get('T1')?.sortOrder).toBe('abc'); // unchanged
     await h.tick();
-    h.rec.succeed(makeTaskRow({ id: 'T1', listId: 'L1', sortOrder: 'zz' }));
+    h.rec.succeed({
+      row: makeTaskRow({ id: 'T1', listId: 'L1', sortOrder: 'zz' }),
+      rebalanced: false,
+    });
     expect((await p).ok).toBe(true);
     expect(h.runner.getState().tasks.get('T1')?.sortOrder).toBe('zz');
   });
@@ -152,7 +155,10 @@ describe('pipeline: neighbor resolution edge positions', () => {
     });
     expect(h.runner.getState().tasks.get('T2')?.sortOrder).toBe('k:null:a');
     await h.tick();
-    h.rec.succeed(makeTaskRow({ id: 'T2', listId: 'L1', sortOrder: 'k' }));
+    h.rec.succeed({
+      row: makeTaskRow({ id: 'T2', listId: 'L1', sortOrder: 'k' }),
+      rebalanced: false,
+    });
     await p1;
     const p2 = h.runner.moveTask('T1', {
       group: { listId: 'L1', parentTaskId: null },
@@ -160,7 +166,10 @@ describe('pipeline: neighbor resolution edge positions', () => {
     });
     expect(h.runner.getState().tasks.get('T1')?.sortOrder).toBe('k:k:null');
     await h.tick();
-    h.rec.succeed(makeTaskRow({ id: 'T1', listId: 'L1', sortOrder: 'z' }));
+    h.rec.succeed({
+      row: makeTaskRow({ id: 'T1', listId: 'L1', sortOrder: 'z' }),
+      rebalanced: false,
+    });
     expect((await p2).ok).toBe(true);
   });
 
@@ -180,9 +189,10 @@ describe('pipeline: neighbor resolution edge positions', () => {
       position: 'last',
     });
     await h.tick();
-    h.rec.succeed(
-      makeTaskRow({ id: 'T1', listId: 'L1', parentTaskId: 'NOT-LOADED', sortOrder: 'm' }),
-    );
+    h.rec.succeed({
+      row: makeTaskRow({ id: 'T1', listId: 'L1', parentTaskId: 'NOT-LOADED', sortOrder: 'm' }),
+      rebalanced: false,
+    });
     expect((await p).ok).toBe(true);
     expect(h.runner.getState().tasks.get('T1')?.parentTaskId).toBe('NOT-LOADED');
   });

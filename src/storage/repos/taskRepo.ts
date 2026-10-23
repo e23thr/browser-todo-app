@@ -9,7 +9,7 @@
 import { err, ok, ruleError, type AppError, type Result } from '../../domain/kernel';
 import type { List, Settings, Task, TaskDraft, TaskPatch } from '../../domain/model';
 import { DEFAULT_SETTINGS } from '../../domain/model';
-import type { MoveTarget, TaskPort } from '../../domain/ports';
+import type { MoveTarget, MoveOutcome, TaskPort } from '../../domain/ports';
 import { invalidRecord } from '../errors';
 import { logAppError } from '../errorLog';
 import { OrderKeyError, orderKeyBetween, orderKeyFirst } from '../orderKey';
@@ -126,7 +126,7 @@ export class TaskRepo implements TaskPort {
     });
   }
 
-  move(id: string, target: MoveTarget): Promise<Result<Task, AppError>> {
+  move(id: string, target: MoveTarget): Promise<Result<MoveOutcome<Task>, AppError>> {
     const { clock, db, errorLog } = this.#deps;
     return txApp(db, ['tasks'], 'readwrite', async (t) => {
       const row = await t.get('tasks', id);
@@ -171,7 +171,7 @@ export class TaskRepo implements TaskPort {
         const validated = this.#validate(moved);
         if (!validated.ok) return validated;
         await t.put('tasks', moved); // SINGLE-record write
-        return ok(moved);
+        return ok({ row: moved, rebalanced: false });
       } catch (e) {
         if (!(e instanceof OrderKeyError) || e.code !== 'EXHAUSTED') throw e;
         // ADR-002 rebalance hatch: fresh evenly-spaced keys for the whole
@@ -269,14 +269,14 @@ export class TaskRepo implements TaskPort {
     }
   }
 
-  /** Rebalance hatch: re-key the whole sibling group in ONE transaction. */
+  /** Rebalance hatch: re-key the whole sibling group in ONE transaction (`rebalanced: true`). */
   async #rebalance(
     t: Tx,
     rows: Task[],
     insertAt: number,
     movedRow: Task,
     group: SiblingGroup,
-  ): Promise<Result<Task, AppError>> {
+  ): Promise<Result<MoveOutcome<Task>, AppError>> {
     const ordered = [...rows];
     ordered.splice(Math.min(Math.max(0, insertAt), ordered.length), 0, movedRow);
     const keys = evenOrderKeys(ordered.length);
@@ -302,13 +302,15 @@ export class TaskRepo implements TaskPort {
       await t.put('tasks', next);
       if (isMoved) settledRow = next;
     }
-    return ok(
-      settledRow ??
+    return ok({
+      row:
+        settledRow ??
         this.#withGroup(movedRow, group, {
           sortOrder: orderKeyFirst(),
           updatedAt: now,
           deviceId: this.#deps.db.deviceId,
         }),
-    );
+      rebalanced: true,
+    });
   }
 }

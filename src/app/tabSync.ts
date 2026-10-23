@@ -4,6 +4,13 @@
  * — receivers re-read from IDB (the single source of truth) via `reconcile`,
  * never write on receipt, and never rebroadcast what they received.
  *
+ * WATERMARK RULE (review finding D4, Decision 8.2 corrected): the watermark
+ * advances ONLY after a full sweep, to the max `updatedAt` actually observed in
+ * it. Own commits (`announce`) and targeted refreshes (`refresh`) must NOT move
+ * it — a bump there would leapfrog rows written by another tab with an older
+ * `updatedAt`, hiding them from `changedSince(> watermark)` forever and
+ * breaking eventual consistency under interleaved activity.
+ *
  * Wiring (composition root):
  *   const runner = new MutationRunner({ ..., onCommitted: (c) => tabSync.announce(c) });
  *   const tabSync = createTabSync({ runner, reads, clock, tabId, channelFactory? });
@@ -20,7 +27,7 @@ import {
   reconcile,
   TAB_SYNC_CHANNEL,
   type BroadcastMessage,
-  type ChangeSet,
+  type ChangeAnnouncement,
   type FreshRows,
   type TabId,
 } from '../domain/sync';
@@ -57,7 +64,7 @@ export type TabSync = {
   start(): void;
   stop(): void;
   /** Broadcast AFTER commit (wired via `MutationRunner.onCommitted`). */
-  announce(change: ChangeSet): void;
+  announce(change: ChangeAnnouncement): void;
   /** Watermark sweep (also bound to `visibilitychange -> visible` while started). */
   sweep(): Promise<void>;
   readonly watermark: number;
@@ -96,6 +103,9 @@ export function createTabSync(deps: TabSyncDeps): TabSync {
   }
 
   async function refresh(msg: BroadcastMessage): Promise<void> {
+    // NOTE (D4): a receive never advances the watermark — it only re-reads the
+    // rows the sender named (or the whole store for `'all'`), which says
+    // nothing about rows this tab has NOT observed.
     if (msg.change === 'all') {
       const all = await reads.loadAll();
       if (!all.ok) return; // read failure: keep local state; next sweep retries
@@ -105,7 +115,6 @@ export function createTabSync(deps: TabSyncDeps): TabSync {
         settings: all.value.settings,
       };
       apply({ rows, msg });
-      watermark = Math.max(watermark, clock());
       return;
     }
     const ids = await reads.readRows(msg.change.tasks ?? [], msg.change.lists ?? []);
@@ -124,13 +133,6 @@ export function createTabSync(deps: TabSyncDeps): TabSync {
       },
       msg,
     });
-    for (const t of ids.value.tasks.values()) {
-      if (t != null) watermark = Math.max(watermark, t.updatedAt);
-    }
-    for (const l of ids.value.lists.values()) {
-      if (l != null) watermark = Math.max(watermark, l.updatedAt);
-    }
-    watermark = Math.max(watermark, clock());
   }
 
   async function sweep(): Promise<void> {
@@ -157,6 +159,9 @@ export function createTabSync(deps: TabSyncDeps): TabSync {
       lists: new Map(listRows.map((l) => [l.id, l.deletedAt !== null ? null : l])),
     };
     apply({ rows, msg });
+    // D4: the ONLY place the watermark moves. A full sweep observed every row
+    // with `updatedAt > watermark`, so everything at or below the max observed
+    // row has been seen — anything newer stays visible to the next sweep.
     for (const t of taskRows) watermark = Math.max(watermark, t.updatedAt);
     for (const l of listRows) watermark = Math.max(watermark, l.updatedAt);
   }
@@ -188,8 +193,9 @@ export function createTabSync(deps: TabSyncDeps): TabSync {
         document.removeEventListener('visibilitychange', onVisibility);
       }
     },
-    announce(change: ChangeSet) {
+    announce(change: ChangeAnnouncement): void {
       if (
+        change !== 'all' &&
         (change.tasks?.length ?? 0) === 0 &&
         (change.lists?.length ?? 0) === 0 &&
         change.settings !== true
@@ -203,7 +209,8 @@ export function createTabSync(deps: TabSyncDeps): TabSync {
         at: clock(),
         change,
       } satisfies BroadcastMessage);
-      watermark = Math.max(watermark, clock());
+      // D4: NO watermark bump — this tab's own commit says nothing about rows
+      // written by other tabs that it has not observed yet.
     },
     sweep,
     get watermark() {

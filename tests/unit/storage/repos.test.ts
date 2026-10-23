@@ -22,7 +22,7 @@ import { SettingsRepo } from '../../../src/storage/repos/settingsRepo';
 import { TaskRepo } from '../../../src/storage/repos/taskRepo';
 import { purgeTombstones, TOMBSTONE_TTL_MS } from '../../../src/storage/purge';
 import type { Row, StoreName } from '../../../src/storage/types';
-import { makeTask, T0, uniqueDbName } from './fixtures';
+import { makeList, makeTask, T0, uniqueDbName } from './fixtures';
 
 /** View-level order: `(sortOrder, id)` (ADR-002 Decision 4.2). */
 function bySortOrder(
@@ -366,7 +366,8 @@ describe('TaskRepo: reorder writes exactly ONE record (ADR-003 Decision 4)', () 
     for (let i = 1; i < keys.length; i += 1) {
       expect((keys[i] as string) > (keys[i - 1] as string)).toBe(true);
     }
-    expect(r.value.sortOrder).toBe(keys.at(-1)); // moved row settles last
+    expect(r.value.row.sortOrder).toBe(keys.at(-1)); // moved row settles last
+    expect(r.value.rebalanced).toBe(true); // surfaces the group rewrite to the runner
   });
 });
 
@@ -395,7 +396,7 @@ describe('TaskRepo: patch-RMW merge across tabs (E5)', () => {
     if (!all.ok) throw new Error('load failed');
     const row = all.value.tasks.find((t) => t.id === a.value.id);
     expect(row?.title).toBe('tab-B-title'); // B's field
-    expect(row?.sortOrder).toBe(moved.ok ? moved.value.sortOrder : ''); // A's field kept
+    expect(row?.sortOrder).toBe(moved.ok ? moved.value.row.sortOrder : ''); // A's field kept
   });
 });
 
@@ -463,9 +464,41 @@ describe('ListRepo: disposition + group management (ADR-002 Decision 6)', () => 
     const moved = await h.lists.move(l2.value.id, { beforeId: l1.id });
     expect(moved.ok).toBe(true);
     expect(h.db.puts).toBe(1);
+    if (moved.ok) expect(moved.value.rebalanced).toBe(false); // single-record path
     const lists = await h.lists.loadAll();
     if (!lists.ok) throw new Error('load failed');
     expect(lists.value.map((l) => l.name)).toEqual(['Work', 'Renamed']);
+  });
+
+  it('rebalances the list group on order-key exhaustion (observable in the error log)', async () => {
+    const h = await setup('list-rebalance');
+    await seedList(h); // sortOrder 'h'
+    const l2 = await h.lists.create({ name: 'Work', color: '#aa0000' });
+    if (!l2.ok) throw new Error('create failed');
+    // A pathological 32-char last key: orderKeyAfter() must exceed the cap.
+    await h.inner.put(
+      'lists',
+      makeList({ id: newUlid(T0), name: 'tail', sortOrder: 'h'.repeat(32) }),
+    );
+    h.db.puts = 0;
+    const r = await h.lists.move(l2.value.id, 'last');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.rebalanced).toBe(true); // the runner announces 'all' from this flag
+    expect(h.db.puts).toBe(3); // whole group re-keyed in ONE transaction
+    const rebalance = h.errorLog.list().find((e) => e.op === 'reorder-rebalance');
+    expect(rebalance).toBeDefined(); // ADR-003 Decision 4 observability (N2)
+    expect(rebalance?.detail).toBe('lists (global group)');
+    const all = await h.lists.loadAll();
+    if (!all.ok) throw new Error('load failed');
+    const keys = [...all.value].sort(bySortOrder).map((l) => l.sortOrder);
+    expect(keys.every((k) => isCanonicalOrderKey(k))).toBe(true);
+    for (let i = 1; i < keys.length; i += 1) {
+      expect((keys[i] as string) > (keys[i - 1] as string)).toBe(true);
+    }
+    expect(r.value.row.id).toBe(l2.value.id);
+    expect(r.value.row.sortOrder).toBe(keys.at(-1)); // moved row settles last
+    expect(all.value.map((l) => l.name).sort()).toEqual(['Inbox', 'Work', 'tail']);
   });
 });
 

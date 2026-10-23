@@ -221,11 +221,17 @@ sweep (`tabSync.test.ts`), search-index perf at 10k with measured numbers (`sear
 
 1. **`TaskDraft.id` / `ListPort.create.id` (optional)** — the ADR sketch has no id on the draft
    but Decision 3.2 requires final ULIDs minted up front ("no id churn"). The optional pre-minted
-   id reconciles both; repos mint when absent. Persisted shapes unchanged.
+   id reconciles both; repos mint when absent. Persisted shapes unchanged. **The runner is the
+   minter of record** *[E2 review N3 note 1]*: `createTask`/`createList` always mint from the
+   injected `IdFactory` and pass that id to the port, so a caller-supplied `draft.id` /
+   `input.id` is silently overridden at the runner seam (direct port callers keep the honor path).
 2. **Reorder is strictly one `put`** (Decision 4). `moveTask` may change group membership
    (move-to-list clears `parentTaskId` per Decision 2.2.4) as that same single write. Its direct
    subtasks are NOT rewritten (the single-write invariant wins); moving a subtask to another list
-   clears its `parentTaskId` (it becomes top-level there).
+   clears its `parentTaskId` (it becomes top-level there). **Corollary pinned *[E2 review N3
+   note 2]*: moving a PARENT to another list orphans its direct subtasks in the old list**, where
+   they render at depth 0 — pinned by `pipeline.test.ts` + `views.test.ts` and recorded as an
+   ADR-003 Decision 4 amendment.
 3. **Subtask nesting** — one uniform rule (see §4) instead of per-view special cases.
 4. **Search rank** — 0/1/2 by how much of the query the TITLE covers (all/some/none); the ADR's
    "title word-prefix / title word / notes only" triad is degenerate for exact-word matches.

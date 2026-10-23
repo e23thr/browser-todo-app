@@ -7,9 +7,16 @@
  */
 
 import { err, ok, ruleError, type AppError, type Result } from '../../domain/kernel';
-import type { List } from '../../domain/model';
-import type { ListPort, ListPosition, ListRemoveDisposition } from '../../domain/ports';
+import type { List, Task } from '../../domain/model';
+import type {
+  ListPort,
+  ListPosition,
+  ListRemoveDisposition,
+  ListRemoveOutcome,
+  MoveOutcome,
+} from '../../domain/ports';
 import { invalidRecord } from '../errors';
+import { logAppError } from '../errorLog';
 import { OrderKeyError, orderKeyBetween, orderKeyFirst } from '../orderKey';
 import { validateList } from '../validate';
 import { evenOrderKeys, listGroupRows, neighborsAround, txApp, type RepoDeps } from './support';
@@ -64,8 +71,8 @@ export class ListRepo implements ListPort {
     return this.#patch(id, { color });
   }
 
-  move(id: string, position: ListPosition): Promise<Result<List, AppError>> {
-    const { clock, db } = this.#deps;
+  move(id: string, position: ListPosition): Promise<Result<MoveOutcome<List>, AppError>> {
+    const { clock, db, errorLog } = this.#deps;
     return txApp(db, ['lists'], 'readwrite', async (t) => {
       const row = await t.get('lists', id);
       if (row === undefined || row.deletedAt !== null) return err(listMissing(id));
@@ -87,23 +94,41 @@ export class ListRepo implements ListPort {
           updatedAt: clock(),
           deviceId: db.deviceId,
         };
-        return await this.#validatePut(t, moved); // SINGLE-record write
+        const put = await this.#validatePut(t, moved); // SINGLE-record write
+        return put.ok ? ok({ row: put.value, rebalanced: false }) : put;
       } catch (e) {
         if (!(e instanceof OrderKeyError) || e.code !== 'EXHAUSTED') throw e;
+        // ADR-003 Decision 4: the list-group rebalance is observable in the local
+        // error log, exactly like the task sibling-group hatch.
+        logAppError(
+          errorLog,
+          'repos',
+          'reorder-rebalance',
+          { code: 'UNKNOWN', cause: e },
+          'lists (global group)',
+        );
         return this.#rebalance(t, rows, row, position);
       }
     });
   }
 
-  remove(id: string, disposition: ListRemoveDisposition): Promise<Result<void, AppError>> {
+  remove(
+    id: string,
+    disposition: ListRemoveDisposition,
+  ): Promise<Result<ListRemoveOutcome, AppError>> {
     const { clock, db } = this.#deps;
     return txApp(db, ['lists', 'tasks'], 'readwrite', async (t) => {
       const row = await t.get('lists', id);
-      if (row === undefined || row.deletedAt !== null) return ok(undefined); // idempotent
+      if (row === undefined || row.deletedAt !== null) {
+        // Idempotent: nothing was written, so nothing moved or was tombstoned.
+        return ok({ moved: [], tombstoned: [] });
+      }
       const tasks = (await t.getAll('tasks', { index: 'by_listId', range: { eq: id } })).filter(
         (r) => r.deletedAt === null,
       );
       const now = clock();
+      const moved: Task[] = [];
+      const tombstoned: Task[] = [];
       if (disposition.mode === 'move') {
         const target = await t.get('lists', disposition.targetListId);
         if (target === undefined || target.deletedAt !== null || disposition.targetListId === id) {
@@ -115,20 +140,29 @@ export class ListRepo implements ListPort {
           );
         }
         for (const task of tasks) {
-          await t.put('tasks', {
+          const written: Task = {
             ...task,
             listId: disposition.targetListId,
             updatedAt: now,
             deviceId: db.deviceId,
-          });
+          };
+          await t.put('tasks', written);
+          moved.push(written);
         }
       } else {
         for (const task of tasks) {
-          await t.put('tasks', { ...task, deletedAt: now, updatedAt: now, deviceId: db.deviceId });
+          const written: Task = {
+            ...task,
+            deletedAt: now,
+            updatedAt: now,
+            deviceId: db.deviceId,
+          };
+          await t.put('tasks', written);
+          tombstoned.push(written);
         }
       }
       await t.put('lists', { ...row, deletedAt: now, updatedAt: now, deviceId: db.deviceId });
-      return ok(undefined);
+      return ok({ moved, tombstoned });
     });
   }
 
@@ -165,13 +199,13 @@ export class ListRepo implements ListPort {
     return ok(row);
   }
 
-  /** Rebalance hatch: re-key the whole list group in ONE transaction. */
+  /** Rebalance hatch: re-key the whole list group in ONE transaction (`rebalanced: true`). */
   async #rebalance(
     t: { put: (store: 'lists', row: List) => Promise<void> },
     rows: List[],
     movedRow: List,
     position: ListPosition,
-  ): Promise<Result<List, AppError>> {
+  ): Promise<Result<MoveOutcome<List>, AppError>> {
     const insertAt =
       position === 'first'
         ? 0
@@ -198,6 +232,6 @@ export class ListRepo implements ListPort {
       await t.put('lists', next);
       if (row.id === movedRow.id) settledRow = next;
     }
-    return ok(settledRow ?? movedRow);
+    return ok({ row: settledRow ?? movedRow, rebalanced: true });
   }
 }

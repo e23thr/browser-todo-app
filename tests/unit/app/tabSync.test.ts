@@ -15,7 +15,7 @@ import {
   type BroadcastChannelLike,
   type TabSyncReads,
 } from '../../../src/app/tabSync';
-import type { ChangeSet } from '../../../src/domain/sync';
+import type { ChangeAnnouncement } from '../../../src/domain/sync';
 import type { Task } from '../../../src/domain/model';
 import { MutationRunner } from '../../../src/domain/pipeline';
 import { readRows, type RepoDeps } from '../../../src/storage/repos/support';
@@ -81,7 +81,7 @@ type Tab = {
   id: string;
   runner: MutationRunner;
   writes: number;
-  committed: ChangeSet[];
+  committed: ChangeAnnouncement[];
   reads: TabSyncReads;
 };
 
@@ -121,7 +121,7 @@ async function makeTab(
     },
   });
 
-  const committed: ChangeSet[] = [];
+  const committed: ChangeAnnouncement[] = [];
   const syncRef: { current: ReturnType<typeof createTabSync> | null } = { current: null };
   const runner = new MutationRunner({
     tasks: countingTasks,
@@ -286,5 +286,52 @@ describe('two-tab concurrency (acceptance scenario)', () => {
     await flush();
     const inB = h.tabB.runner.getState().tasks.get(created.value.id);
     expect(inB?.title).toBe('renamed-bulk');
+  });
+});
+
+describe('watermark discipline (review finding D4)', () => {
+  it('advances ONLY on a sweep — own commits and receives must not leapfrog', async () => {
+    const h = await setup('tabs-watermark');
+    const list = await h.seed();
+    await flush();
+    const tabSync = createTabSync({
+      runner: h.tabB.runner,
+      reads: h.tabB.reads,
+      clock: () => T0,
+      tabId: 'TAB-B',
+      channelFactory: (name) => new FakeChannel(h.bus, name),
+    });
+    tabSync.start();
+    const start = tabSync.watermark;
+    expect(start).toBe(T0);
+
+    // 1. own commit (announce) must NOT move it
+    tabSync.announce({ tasks: ['GHOST'] });
+    expect(tabSync.watermark).toBe(start);
+
+    // 2. a received targeted message must NOT move it either
+    const foreign = h.bus.create('local-first-todo:tabs:v1');
+    foreign.postMessage({
+      v: 1,
+      type: 'data-changed',
+      origin: 'TAB-X',
+      at: T0,
+      change: { tasks: [list.id] },
+    });
+    await flush();
+    expect(tabSync.watermark).toBe(start);
+
+    // 3. a peer write lands at t=T0+100 and its broadcast is received — still no bump
+    h.setNow(T0 + 100);
+    const created = await h.tabA.runner.createTask(draft(list.id, 'peer row'));
+    await flush();
+    if (!created.ok) throw new Error('create failed');
+    expect(h.tabB.runner.getState().tasks.has(created.value.id)).toBe(true);
+    expect(tabSync.watermark).toBe(start);
+
+    // 4. the sweep observes it and advances to the max updatedAt it actually saw
+    await tabSync.sweep();
+    expect(tabSync.watermark).toBe(T0 + 100);
+    tabSync.stop();
   });
 });

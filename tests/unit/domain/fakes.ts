@@ -11,6 +11,8 @@ import type {
   ListPort,
   ListPosition,
   ListRemoveDisposition,
+  ListRemoveOutcome,
+  MoveOutcome,
   MoveTarget,
   SettingsPort,
   TaskPort,
@@ -141,8 +143,8 @@ export class FakeTaskPort implements TaskPort {
     return this.rec.record<Task>('setDone', [id, done]);
   }
 
-  move(id: string, target: MoveTarget): Promise<Result<Task, AppError>> {
-    return this.rec.record<Task>('move', [id, target]);
+  move(id: string, target: MoveTarget): Promise<Result<MoveOutcome<Task>, AppError>> {
+    return this.rec.record<MoveOutcome<Task>>('move', [id, target]);
   }
 
   remove(id: string): Promise<Result<void, AppError>> {
@@ -177,12 +179,15 @@ export class FakeListPort implements ListPort {
     return this.rec.record<List>('recolor', [id, color]);
   }
 
-  move(id: string, position: ListPosition): Promise<Result<List, AppError>> {
-    return this.rec.record<List>('moveList', [id, position]);
+  move(id: string, position: ListPosition): Promise<Result<MoveOutcome<List>, AppError>> {
+    return this.rec.record<MoveOutcome<List>>('moveList', [id, position]);
   }
 
-  remove(id: string, disposition: ListRemoveDisposition): Promise<Result<void, AppError>> {
-    return this.rec.record<undefined>('removeList', [id, disposition]);
+  remove(
+    id: string,
+    disposition: ListRemoveDisposition,
+  ): Promise<Result<ListRemoveOutcome, AppError>> {
+    return this.rec.record<ListRemoveOutcome>('removeList', [id, disposition]);
   }
 }
 
