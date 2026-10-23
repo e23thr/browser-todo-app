@@ -1,0 +1,14 @@
+{
+  "format": "local-first-todo-backup",
+  "formatVersion": 1,
+  "schemaVersion": 1,
+  "kind": "export",
+  "exportedAt": 1700000000000,
+  "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000",
+  "counts": { "lists": 0, "tasks": 0, "snapshots": 0 },
+  "data": {
+    "lists": [],
+    "tasks": [],
+    "snapshots": []
+  }
+}

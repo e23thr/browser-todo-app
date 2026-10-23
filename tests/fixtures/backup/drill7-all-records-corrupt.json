@@ -1,0 +1,49 @@
+{
+  "format": "local-first-todo-backup",
+  "formatVersion": 1,
+  "schemaVersion": 1,
+  "kind": "export",
+  "exportedAt": 1700000000000,
+  "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000",
+  "counts": { "lists": 1, "tasks": 1, "snapshots": 0 },
+  "data": {
+    "settings": {
+      "id": "settings",
+      "theme": "no-such-theme",
+      "locale": "en",
+      "weekStart": 0,
+      "defaultListId": null,
+      "notificationsEnabled": false,
+      "lastBackupAt": null
+    },
+    "lists": [
+      {
+        "id": "01ARZ3NDEKTSV4RRFFQ6000002",
+        "name": "",
+        "color": "#336699",
+        "sortOrder": "h",
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000,
+        "deletedAt": null,
+        "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "01ARZ3NDEKTSV4RRFFQ6000001",
+        "listId": "01ARZ3NDEKTSV4RRFFQ6000002",
+        "title": { "not": "a string" },
+        "notes": null,
+        "status": "open",
+        "priority": 0,
+        "tags": [],
+        "sortOrder": "h",
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000,
+        "deletedAt": null,
+        "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000"
+      }
+    ],
+    "snapshots": []
+  }
+}

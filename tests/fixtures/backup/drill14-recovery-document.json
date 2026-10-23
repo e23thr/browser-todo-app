@@ -1,0 +1,33 @@
+{
+  "format": "local-first-todo-recovery",
+  "formatVersion": 1,
+  "schemaVersion": 1,
+  "createdAt": 1700000000000,
+  "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000",
+  "source": {
+    "kind": "import",
+    "fileName": "local-first-todo-backup-2026-10-23T183700Z.json",
+    "fileSchemaVersion": 1
+  },
+  "entries": [
+    {
+      "store": "tasks",
+      "id": "01ARZ3NDEKTSV4RRFFQ6000001",
+      "issues": ["title: must be 1..1000 chars (trimmed min)"],
+      "raw": {
+        "id": "01ARZ3NDEKTSV4RRFFQ6000001",
+        "listId": "01ARZ3NDEKTSV4RRFFQ6000002",
+        "title": "",
+        "notes": null,
+        "status": "open",
+        "priority": 0,
+        "tags": [],
+        "sortOrder": "h",
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000,
+        "deletedAt": null,
+        "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000"
+      }
+    }
+  ]
+}

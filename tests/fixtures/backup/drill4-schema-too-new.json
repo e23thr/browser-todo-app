@@ -1,0 +1,23 @@
+{
+  "format": "local-first-todo-backup",
+  "formatVersion": 1,
+  "schemaVersion": 99,
+  "kind": "export",
+  "exportedAt": 1700000000000,
+  "deviceId": "01ARZ3NDEKTSV4RRFFQ6000000",
+  "counts": { "lists": 0, "tasks": 0, "snapshots": 0 },
+  "data": {
+    "settings": {
+      "id": "settings",
+      "theme": "system",
+      "locale": "en",
+      "weekStart": 0,
+      "defaultListId": null,
+      "notificationsEnabled": false,
+      "lastBackupAt": null
+    },
+    "lists": [],
+    "tasks": [],
+    "snapshots": []
+  }
+}
