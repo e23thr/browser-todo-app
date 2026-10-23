@@ -1,0 +1,89 @@
+name: Nightly
+
+# ADR-001 §7: `e2e-full` runs the cross-browser matrix plus the Thai-locale pass, and a weekly
+# scheduled full dependency audit runs over every dependency (prod gate stays in ci.yml).
+on:
+  schedule:
+    - cron: '17 3 * * *' # nightly
+    - cron: '30 4 * * 1' # weekly, Monday
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CI: 'true'
+  BASE_PATH: /${{ github.event.repository.name }}/
+
+jobs:
+  e2e-full:
+    name: e2e-full (${{ matrix.browser }})
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 3 * * *'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
+      - run: npm ci
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Full E2E suite
+        run: npx playwright test --project=${{ matrix.browser }}
+
+  e2e-thai-locale:
+    name: e2e-full (th-TH locale)
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 3 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium-${{ hashFiles('package-lock.json') }}
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Thai-locale pass (§8 — string translations arrive with the i18n epic, M15)
+        run: npx playwright test --project=chromium-th
+
+  full-audit:
+    name: full-audit
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '30 4 * * 1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Production gate (fails on high/critical)
+        run: npm run audit:gate
+      - name: Full report over every dependency (informational)
+        run: |
+          set +e
+          npm audit --audit-level=low > audit-report.txt 2>&1
+          status=$?
+          {
+            echo "## Full dependency audit"
+            echo
+            echo '```'
+            cat audit-report.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "npm audit exit code: $status (informational — dev advisories warn only, §7.2)"
+          exit 0

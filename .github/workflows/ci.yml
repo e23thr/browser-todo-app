@@ -1,0 +1,198 @@
+name: CI
+
+# Every PR and every push to main runs the full quality-gate matrix of ADR-001 §7
+# (lint, typecheck, unit, build, bundle-budget, e2e-smoke, a11y-axe, audit) and only a green
+# main may deploy to GitHub Pages (§9.5).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CI: 'true'
+  # GitHub Pages *project* pages serve under /<repo>/ — the base path the build must honour (§9.5).
+  BASE_PATH: /${{ github.event.repository.name }}/
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: ESLint (zero warnings)
+        run: npm run lint
+      - name: Prettier check
+        run: npm run format:check
+
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: tsc -b (strict)
+        run: npm run typecheck
+
+  unit:
+    name: unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Vitest with coverage (>= 80% on src/domain, src/storage)
+        run: npm run test:coverage
+      - name: Coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Build under the Pages base path
+        run: npm run build
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+          # .vite/manifest.json is the budget gate's input — hidden files are excluded by default.
+          include-hidden-files: true
+
+  bundle-budget:
+    name: bundle-budget
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Enforce section 9.2 budgets
+        run: node scripts/check-bundle-budget.mjs --dist dist
+
+  e2e-smoke:
+    name: e2e-smoke
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: E2E smoke (base path, hash routes, CSP listener, zero third-party)
+        run: npm run e2e:smoke
+
+  a11y-axe:
+    name: a11y-axe
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: axe-core scans (serious/critical fail the build)
+        run: npm run e2e:a11y
+
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Production dependencies (fails on high/critical)
+        run: npm run audit:gate
+      - name: Development dependencies (warn only, per ADR-001 §4)
+        run: npm audit
+        continue-on-error: true
+
+  deploy:
+    name: deploy
+    needs:
+      - lint
+      - typecheck
+      - unit
+      - build
+      - bundle-budget
+      - e2e-smoke
+      - a11y-axe
+      - audit
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4
