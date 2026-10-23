@@ -18,12 +18,13 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "budget": "node scripts/check-bundle-budget.mjs",
+    "i18n:check": "node scripts/check-i18n.mjs",
     "audit:gate": "npm audit --omit=dev --audit-level=high",
     "e2e:install": "playwright install chromium",
     "e2e": "playwright test --project=chromium",
     "e2e:smoke": "playwright test --project=chromium tests/e2e/smoke.spec.ts",
     "e2e:a11y": "playwright test --project=chromium tests/e2e/a11y.spec.ts",
-    "ci": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage && npm run build && npm run budget"
+    "ci": "npm run format:check && npm run lint && npm run typecheck && npm run i18n:check && npm run test:coverage && npm run build && npm run budget"
   },
   "dependencies": {
     "@preact/signals": "^2.11.3",
