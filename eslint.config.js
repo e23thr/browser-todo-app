@@ -202,5 +202,47 @@ export default tseslint.config(
     },
   },
 
+  // --- ADR-005 safety rails: exactly one reload call site, one skipWaiting call site ----------
+  {
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'CallExpression[callee.object.name="location"][callee.property.name=/^(?:reload|replace|assign)$/]',
+          message:
+            'Only applyUpdate() in src/app/update.ts may reload or navigate the page (ADR-005 Decision 7 / E9).',
+        },
+        {
+          selector:
+            'CallExpression[callee.object.property.name="location"][callee.property.name=/^(?:reload|replace|assign)$/]',
+          message:
+            'Only applyUpdate() in src/app/update.ts may reload or navigate the page (ADR-005 Decision 7 / E9).',
+        },
+        {
+          selector: 'CallExpression[callee.property.name="skipWaiting"]',
+          message:
+            'Only the SKIP_WAITING message handler in src/sw/sw.ts may call skipWaiting() (ADR-005 Decision 5 rule 6).',
+        },
+        {
+          selector: 'CallExpression[callee.name="skipWaiting"]',
+          message:
+            'Only the SKIP_WAITING message handler in src/sw/sw.ts may call skipWaiting() (ADR-005 Decision 5 rule 6).',
+        },
+      ],
+    },
+  },
+  {
+    // Documented ADR-005 exceptions:
+    // - src/app/update.ts: `applyUpdate()` owns the single deliberate `location.reload()`.
+    // - src/app/router.ts: `location.replace(hash)` only swaps the hash fragment — same document,
+    //   no reload; it is how `replace: true` navigation has always worked (ADR-001 scaffold).
+    // - src/sw/sw.ts: the `SKIP_WAITING` message handler is the single `skipWaiting()` call site.
+    files: ['src/app/update.ts', 'src/app/router.ts', 'src/sw/sw.ts'],
+    rules: {
+      'no-restricted-syntax': 'off',
+    },
+  },
+
   prettierConfig,
 );

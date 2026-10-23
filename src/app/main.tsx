@@ -3,6 +3,7 @@ import { render } from 'preact';
 import { App } from './App';
 import { registerSettingsPersistence } from './settings';
 import { createIdbSettingsPersistence } from './settingsPersistence';
+import { bootServiceWorker } from './sw-boot';
 import { initLocale, registerLocalePersistence } from '../i18n';
 import { createSettingsLocalePersistence } from '../i18n/settingsPersistence';
 import '../styles/global.css';
@@ -26,9 +27,12 @@ if (container === null) {
  * block paint — if it times out the UI mounts with key fallbacks and the strings self-heal
  * when the pack lands.
  */
-async function start(): Promise<void> {
+async function start(root: HTMLElement): Promise<void> {
   await initLocale({ timeoutMs: 2000 });
-  render(<App />, container);
+  render(<App />, root);
+  // Service-worker registration + update flow (ADR-005) — after first render so the shell is
+  // interactive before any SW work; also records the `app:interactive` mark (§9.1 budget).
+  bootServiceWorker();
 }
 
-void start();
+void start(container);

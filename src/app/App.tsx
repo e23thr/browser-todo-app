@@ -7,6 +7,7 @@ import { NotFoundView } from './NotFoundView';
 import { createRouter, hashToPath, type RouteMatch } from './router';
 import { Shell } from './Shell';
 import { loadSettings } from './settings';
+import { notifyChunkLoadFailure } from './stale-tab';
 import { AllOpenView } from '../features/all/AllOpenView';
 import { CompletedView } from '../features/completed/CompletedView';
 import { ListView } from '../features/lists/ListView';
@@ -105,6 +106,9 @@ export function App(): JSX.Element {
           }
         })
         .catch(() => {
+          // ADR-005 Decision 3 (stale-tab guard): when a lazy chunk vanished because an update
+          // was applied in another tab, show the explained refresh notice — never auto-reload (E9).
+          notifyChunkLoadFailure();
           if (mounted.current) setView({ kind: 'error' });
         });
     };
