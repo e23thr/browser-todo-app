@@ -151,6 +151,29 @@ jobs:
       - name: axe-core scans (serious/critical fail the build)
         run: npm run e2e:a11y
 
+  e2e-sw:
+    name: e2e:sw
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium-${{ hashFiles('package-lock.json') }}
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # The workflow-level `env.CI` is inherited here (forbidOnly/retries/reporter), and
+      # playwright.sw.config.ts ships a single `chromium` project — so this is the PR-gate
+      # offline/update/robustness run (ADR-005 Decision 9), at the loose 1500 ms boot guard;
+      # the 300 ms §9.1 line is held by the nightly e2e-full job (nightly.yml).
+      - name: SW offline/update suites (PR gate)
+        run: npm run e2e:sw
+
   audit:
     name: audit
     runs-on: ubuntu-latest

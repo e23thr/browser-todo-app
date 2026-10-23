@@ -20,6 +20,11 @@ jobs:
     name: e2e-full (${{ matrix.browser }})
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 3 * * *'
     runs-on: ubuntu-latest
+    env:
+      # §9.1 boot budget: this job runs the offline/update/SW suites (tests/e2e/*.spec.ts under
+      # the main config), so it holds the real 300 ms start-to-interactive line. Without this
+      # variable tests/e2e/sw-utils.ts falls back to the loose 1500 ms flake guard.
+      E2E_BOOT_BUDGET_MS: '300'
     strategy:
       fail-fast: false
       matrix:

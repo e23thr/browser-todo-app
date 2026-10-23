@@ -11,9 +11,10 @@ import { expect, type Frame, type Page } from '@playwright/test';
 import { createStaticServer, type StaticServer } from './fixtures/static-server.mjs';
 
 /**
- * Boot budget assertion for warm/offline start-to-interactive (§9.1). The PR suite holds a loose
- * flake guard; the nightly job and this card's completion run set `E2E_BOOT_BUDGET_MS=300` to
- * hold the real line (ADR-005 Decision 9, test 2).
+ * Boot budget assertion for warm/offline start-to-interactive (§9.1). The `e2e-full` job in
+ * .github/workflows/nightly.yml sets `E2E_BOOT_BUDGET_MS: '300'` in its job env to hold the real
+ * line (ADR-005 Decision 9, test 2); any run without that variable — the PR gate's `e2e:sw` job
+ * in ci.yml and local runs — falls back to the loose 1500 ms flake guard below.
  */
 export const BOOT_BUDGET_MS = Number(process.env['E2E_BOOT_BUDGET_MS'] ?? '1500');
 
