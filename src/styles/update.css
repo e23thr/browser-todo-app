@@ -1,0 +1,71 @@
+/*
+ * Update-flow surfaces (ADR-005 Decision 5 / E5 token set). Fixed-position stack, ≥ 44 px
+ * action targets (§8), no motion beyond a plain fade (prefers-reduced-motion safe), and no
+ * external bytes of any kind (§7.2).
+ */
+
+.update-notice-stack {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: min(24rem, calc(100vw - 2 * var(--space-4)));
+}
+
+.update-notice {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 18%);
+}
+
+.update-notice-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.update-notice-body,
+.update-notice-error {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+}
+
+.update-notice-error {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.update-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.update-action {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.update-action-primary {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.update-action:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
