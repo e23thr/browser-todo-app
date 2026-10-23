@@ -10,6 +10,20 @@
  * 2. The TASK journey (add -> complete -> reload -> data present) needs the E2 core-UI task
  *    editor (card t_a2c647e1), which does not exist yet — this file therefore self-skips that
  *    test with an explicit reason until the composer lands, and then runs unchanged.
+ *
+ * QA note (card t_be7f0810): the task journey is written to the BINDING design contract
+ * (docs/design/core-domain.md) — S2 view membership, S3 composer states, F1 defaults, F3
+ * completion semantics — because four contract details decide whether it can run at all:
+ *
+ *   a. zero lists -> the composer is DISABLED (`composer.needsList` + `list.action.new`), so a
+ *      fresh profile must create a list first (S3 states);
+ *   b. an undated capture lands in the "No due date" group of the All-open view — the Today view
+ *      only lists `dueDate <= today` (S2 membership matrix), so the journey captures on `#/all`;
+ *   c. the row checkbox's accessible name is `a11y.toggleTask` ("Mark \"{title}\" as complete"),
+ *      NOT the bare title (S2 a11y), so the row is located by its visible title text and the
+ *      checkbox scoped to it;
+ *   d. completing a task collapses it out of open views after ~900 ms (F3), so "data present"
+ *      after the reload is asserted in the Completed view, checked.
  */
 
 import { expect, test } from '@playwright/test';
@@ -70,16 +84,34 @@ test('offline task journey: add -> complete -> reload -> data present (E2 core U
 
   await context.setOffline(true);
 
+  // (a) A fresh profile has no lists and the composer is disabled until one exists
+  //     (S3: `composer.needsList` hint + `list.action.new` button; dialog per S6/ListDialog).
+  const newListButton = page.getByRole('button', { name: 'New list', exact: true });
+  if ((await newListButton.count()) > 0) {
+    await newListButton.first().click();
+    await page.getByLabel('List name', { exact: true }).fill('QA List');
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+  }
+
+  // (b) Capture on the All-open view: an undated task is a member of its "No due date" group
+  //     there (S2) — the Today view would never show it.
+  await page.goto(`${appUrl}#/all`);
   await composer.fill('Offline journey task');
   await page.getByRole('button', { name: 'Add', exact: true }).click();
-  const row = page.getByText('Offline journey task', { exact: true });
+
+  // (c) Row-scoped lookups: the checkbox is named `a11y.toggleTask` ("Mark \"…\" as complete"),
+  //     so it is found through its row, never by an exact title name.
+  const row = page.getByRole('listitem').filter({ hasText: 'Offline journey task' });
   await expect(row).toBeVisible();
 
-  await page.getByRole('checkbox', { name: 'Offline journey task', exact: true }).check();
+  // (d) Complete (optimistic) — F3: the row collapses out of the open view after ~900 ms…
+  await row.getByRole('checkbox').check();
+  await expect(row).toBeHidden({ timeout: 5_000 });
 
+  // …reload offline and the data is present: the task is still completed.
   await page.reload();
-  await expect(row).toBeVisible();
-  await expect(
-    page.getByRole('checkbox', { name: 'Offline journey task', exact: true }),
-  ).toBeChecked();
+  await page.goto(`${appUrl}#/completed`);
+  const completedRow = page.getByRole('listitem').filter({ hasText: 'Offline journey task' });
+  await expect(completedRow).toBeVisible();
+  await expect(completedRow.getByRole('checkbox')).toBeChecked();
 });

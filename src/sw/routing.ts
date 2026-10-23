@@ -86,9 +86,17 @@ export function shellCacheName(baseSlug: string, shellVersion: string): string {
   return `${SHELL_CACHE_PREFIX}${baseSlug}:v:${shellVersion}`;
 }
 
-/** True when a CacheStorage name belongs to this app (i.e. is purgeable on activate). */
-export function isShellCacheName(name: string): boolean {
-  return name.startsWith(SHELL_CACHE_PREFIX);
+/**
+ * True when a CacheStorage name is a shell cache of THIS app — `todo-shell:<baseSlug>:v:<version>`
+ * (ADR-005 Decision 3). Purgeable on activate (minus the current version).
+ *
+ * The match is exact on the slug: slugs never contain `:` (see `baseSlugFromScope`), so a sibling
+ * project page's cache on the shared origin (`todo-shell:other-app:v:…`) — or a slug that merely
+ * shares a prefix (`todo-shell:<slug>-extra:v:…`) — never matches and is never purged.
+ */
+export function isShellCacheNameForSlug(name: string, baseSlug: string): boolean {
+  const prefix = `${SHELL_CACHE_PREFIX}${baseSlug}:v:`;
+  return name.startsWith(prefix) && name.length > prefix.length;
 }
 
 /**

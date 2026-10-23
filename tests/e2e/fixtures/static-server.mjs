@@ -36,37 +36,71 @@ export function createStaticServer(options) {
   /** @type {string | null} */
   let root = null;
   let failingSw = false;
+  /** @type {boolean} */
+  let failingAll = false;
+  /** @type {number} */
+  let latencyMs = 0;
+
+  /**
+   * Send a response, honouring the configured artificial latency (degraded-network probes).
+   * @param {import('node:http').ServerResponse} response
+   * @param {() => void} write
+   */
+  const send = (response, write) => {
+    if (latencyMs > 0) {
+      const timer = setTimeout(write, latencyMs);
+      response.on('close', () => clearTimeout(timer));
+      return;
+    }
+    write();
+  };
 
   const server = createServer((request, response) => {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
     const pathname = decodeURIComponent(url.pathname);
 
+    if (failingAll) {
+      send(response, () => {
+        response.writeHead(500, { 'content-type': 'text/plain' });
+        response.end('degraded-network probe: failing');
+      });
+      return;
+    }
+
     if (failingSw && pathname.endsWith('/sw.js')) {
-      response.writeHead(500, { 'content-type': 'text/plain' });
-      response.end('sw update probe: failing');
+      send(response, () => {
+        response.writeHead(500, { 'content-type': 'text/plain' });
+        response.end('sw update probe: failing');
+      });
       return;
     }
 
     const inMount = pathname === mount.slice(0, -1) || pathname.startsWith(mount);
-    if (root === null || !inMount) {
-      response.writeHead(404, { 'content-type': 'text/plain' });
-      response.end('not found');
-      return;
-    }
+    send(response, () => {
+      if (root === null || !inMount) {
+        response.writeHead(404, { 'content-type': 'text/plain' });
+        response.end('not found');
+        return;
+      }
 
-    const relative = pathname.startsWith(mount) ? pathname.slice(mount.length) : 'index.html';
-    const file = normalize(join(root, relative === '' ? 'index.html' : relative));
-    if (!file.startsWith(normalize(root + sep)) || !existsSync(file) || !statSync(file).isFile()) {
-      response.writeHead(404, { 'content-type': 'text/plain' });
-      response.end('not found');
-      return;
-    }
+      const relative = pathname.startsWith(mount) ? pathname.slice(mount.length) : 'index.html';
+      const file = normalize(join(root, relative === '' ? 'index.html' : relative));
+      if (
+        !file.startsWith(normalize(root + sep)) ||
+        !existsSync(file) ||
+        !statSync(file).isFile()
+      ) {
+        response.writeHead(404, { 'content-type': 'text/plain' });
+        response.end('not found');
+        return;
+      }
 
-    response.writeHead(200, {
-      'content-type': MIME.get(extname(file)) ?? 'application/octet-stream',
-      'cache-control': 'no-cache',
+      response.writeHead(200, {
+        'content-type': MIME.get(extname(file)) ?? 'application/octet-stream',
+        'cache-control': 'no-cache',
+      });
+      createReadStream(file).pipe(response);
     });
-    createReadStream(file).pipe(response);
   });
 
   return {
@@ -77,6 +111,14 @@ export function createStaticServer(options) {
     },
     setFailingSw: (failing) => {
       failingSw = failing;
+    },
+    /** Degraded-network probes: fail EVERY response (a dead upstream), not just `sw.js`. */
+    setFailingAll: (failing) => {
+      failingAll = failing;
+    },
+    /** Degraded-network probes: add artificial per-response latency (0 = off). */
+    setLatency: (ms) => {
+      latencyMs = ms;
     },
     listen: () =>
       new Promise((res, rej) => {

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   baseSlugFromScope,
   cacheKeyFor,
-  isShellCacheName,
+  isShellCacheNameForSlug,
   routeRequest,
   shellCacheName,
 } from '../../src/sw/routing';
@@ -159,11 +159,49 @@ describe('cache naming (ADR-005 Decisions 3 and 8)', () => {
     );
   });
 
-  it('recognises only its own caches as purgeable', () => {
-    expect(isShellCacheName('todo-shell:root:v:1')).toBe(true);
-    expect(isShellCacheName('todo-shell:browser-todo-app:v:2')).toBe(true);
-    expect(isShellCacheName('workbox-precache-v2-https://example.test/')).toBe(false);
-    expect(isShellCacheName('other-cache')).toBe(false);
+  it("recognises only THIS app's caches as purgeable (activate purge scoping)", () => {
+    expect(isShellCacheNameForSlug('todo-shell:root:v:1', 'root')).toBe(true);
+    expect(isShellCacheNameForSlug('todo-shell:browser-todo-app:v:2', 'browser-todo-app')).toBe(
+      true,
+    );
+    expect(
+      isShellCacheNameForSlug('workbox-precache-v2-https://example.test/', 'browser-todo-app'),
+    ).toBe(false);
+    expect(isShellCacheNameForSlug('other-cache', 'browser-todo-app')).toBe(false);
+  });
+
+  it("never matches a sibling app's cache on the shared origin (QA defect D1 regression)", () => {
+    // The exact names from the D1 evidence (QA card t_be7f0810) — the sibling must survive.
+    expect(
+      isShellCacheNameForSlug('todo-shell:other-app:v:1111111111111111', 'browser-todo-app'),
+    ).toBe(false);
+    expect(
+      isShellCacheNameForSlug('todo-shell:browser-todo-app:v:a421e35055099eb7', 'browser-todo-app'),
+    ).toBe(true);
+    // A slug that merely shares the string prefix is a different app and must not match.
+    expect(
+      isShellCacheNameForSlug(
+        'todo-shell:browser-todo-app-extra:v:0000000000000000',
+        'browser-todo-app',
+      ),
+    ).toBe(false);
+    // A root-hosted sibling on the same origin is not this app either.
+    expect(isShellCacheNameForSlug('todo-shell:root:v:1', 'browser-todo-app')).toBe(false);
+  });
+
+  it('requires the `todo-shell:<slug>:v:<version>` shape (no empty version segment)', () => {
+    expect(isShellCacheNameForSlug('todo-shell:browser-todo-app:v:', 'browser-todo-app')).toBe(
+      false,
+    );
+    expect(isShellCacheNameForSlug('todo-shell:browser-todo-app:', 'browser-todo-app')).toBe(false);
+    expect(isShellCacheNameForSlug('todo-shell:browser-todo-app', 'browser-todo-app')).toBe(false);
+    // The current cache name itself still matches — the purge subtracts it (`name !== shellCache`).
+    expect(
+      isShellCacheNameForSlug(
+        shellCacheName('browser-todo-app', 'a421e35055099eb7'),
+        'browser-todo-app',
+      ),
+    ).toBe(true);
   });
 
   it('normalises cache keys to origin + pathname', () => {

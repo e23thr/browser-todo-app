@@ -5,6 +5,10 @@ export interface StaticServer {
   readonly mountPath: string;
   setRoot(dir: string): void;
   setFailingSw(failing: boolean): void;
+  /** Degraded-network probes: fail every response (not just `sw.js`). */
+  setFailingAll(failing: boolean): void;
+  /** Degraded-network probes: artificial per-response latency in ms (0 = off). */
+  setLatency(ms: number): void;
   listen(): Promise<void>;
   close(): Promise<void>;
 }

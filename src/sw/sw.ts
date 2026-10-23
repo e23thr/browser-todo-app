@@ -4,8 +4,9 @@
  *
  * - install: atomically populate the versioned shell cache from the generated precache manifest
  *   (all-or-nothing — a failed entry fails the install and the previous version keeps serving).
- * - activate: `clients.claim()` + purge every other `todo-shell:*` cache (old versions, and
- *   cross-app caches are protected by the base-path slug in the name).
+ * - activate: `clients.claim()` + purge this app's OTHER `todo-shell:<slug>:v:*` caches (old
+ *   versions). The purge is scoped to the base-path slug in the name (ADR-005 Decision 3), so a
+ *   sibling project page's cache on the shared origin is never touched.
  * - fetch: cache-first for everything in scope (Decision 4 table, implemented in `routing.ts`),
  *   write-through only on the rare cache miss; `sw.js` itself and everything out of scope passes
  *   through to the network. The ONLY intentional network use is the browser's own update check
@@ -17,7 +18,7 @@
 import { PRECACHE_ENTRIES, SHELL_VERSION } from './precache-manifest';
 import {
   baseSlugFromScope,
-  isShellCacheName,
+  isShellCacheNameForSlug,
   routeRequest,
   shellCacheName,
   type RouteDecision,
@@ -27,7 +28,8 @@ declare const self: ServiceWorkerGlobalScope;
 
 /** The registration scope is the base path (`/<repo>/` on GitHub Pages) — ADR-005 Decision 8. */
 const scope = self.registration.scope;
-const shellCache = shellCacheName(baseSlugFromScope(scope), SHELL_VERSION);
+const baseSlug = baseSlugFromScope(scope);
+const shellCache = shellCacheName(baseSlug, SHELL_VERSION);
 
 function precacheUrl(entryUrl: string): string {
   return new URL(entryUrl, scope).href;
@@ -39,12 +41,17 @@ async function installShell(): Promise<void> {
   await cache.addAll(PRECACHE_ENTRIES.map((entry) => precacheUrl(entry.url)));
 }
 
-/** Activate (after the user applied, or first install): claim + purge every other shell cache. */
+/**
+ * Activate (after the user applied, or first install): claim + purge this app's OTHER shell
+ * caches. The purge is scoped to the current base slug (ADR-005 Decision 3): only
+ * `todo-shell:<thisSlug>:v:*` names other than the current cache are deleted, so a sibling
+ * project page's cache on the shared origin survives this app's update.
+ */
 async function activateShell(): Promise<void> {
   const names = await caches.keys();
   await Promise.all(
     names
-      .filter((name) => isShellCacheName(name) && name !== shellCache)
+      .filter((name) => isShellCacheNameForSlug(name, baseSlug) && name !== shellCache)
       .map((name) => caches.delete(name)),
   );
   await self.clients.claim();
