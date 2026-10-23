@@ -10,6 +10,7 @@ import { prepareImport } from '../../../src/portability/import';
 import type { MigrationStep } from '../../../src/storage/migrations';
 import { serializeRecoveryDoc } from '../../../src/portability/recovery-document';
 import { listSnapshots } from '../../../src/portability/snapshots-api';
+import { validateRow } from '../../../src/storage/validate';
 import { openFixtureDb, uniqueDbName, makeSettings, makeList, makeTask } from '../storage/fixtures';
 import {
   fakeFile,
@@ -122,6 +123,56 @@ describe('prepareImport — whole-file rejects (drill 4: zero side effects)', ()
       ok: false,
       error: { code: 'LIMIT_EXCEEDED', limit: 'data.tasks', found: 100_001, cap: 100_000 },
     });
+  });
+});
+
+describe('NOTHING_TO_IMPORT gate — snapshot metadata is informational (drill 7 variant)', () => {
+  const file = 'drill7-all-corrupt-with-snapshot-metadata.json';
+
+  it('rejects all-corrupt content even when a snapshot-metadata row is valid (Decision 5.1)', async () => {
+    const db = await openSeeded();
+    // The fixture's snapshot-metadata row IS valid (informational-only on
+    // import, Decisions 2.3/8) — it must not keep a fully corrupt file alive.
+    const doc = JSON.parse(fixture(file)) as { data: { snapshots: unknown[] } };
+    expect(validateRow('snapshots', doc.data.snapshots[0]).ok).toBe(true);
+
+    const prepared = await prepareImport(fixture(file), { fileName: file });
+    expect(prepared).toMatchObject({
+      ok: false,
+      error: { code: 'NOTHING_TO_IMPORT', quarantined: 3 },
+    });
+    await expectUntouched(db); // never plans, never applies — zero side effects
+  });
+
+  it('offers the recovery document on the NOTHING_TO_IMPORT reject (Decision 5.1)', async () => {
+    const prepared = await prepareImport(fixture(file), { fileName: file });
+    expect(prepared.ok).toBe(false);
+    if (prepared.ok || prepared.error.code !== 'NOTHING_TO_IMPORT') return;
+    const error = prepared.error;
+
+    // The built recovery document rides the error — the UX can offer the file.
+    expect(error.recoveryFile?.filename).toMatch(
+      /^local-first-todo-recovery-\d{4}-\d{2}-\d{2}T\d{6}Z\.json$/u,
+    );
+    const recoveryDoc = JSON.parse(error.recoveryFile?.json ?? '{}') as {
+      entries: { store: string; id: string | null; issues: string[]; raw: unknown }[];
+      source: unknown;
+    };
+    expect(recoveryDoc.source).toMatchObject({ kind: 'import', fileName: file });
+    expect(recoveryDoc.entries).toHaveLength(3);
+    expect(recoveryDoc.entries.map((e) => e.store).sort()).toEqual([
+      'lists',
+      'settings',
+      'tasks',
+    ]);
+    // Entries are retrievable for hand-repair: raw rides verbatim with issues.
+    const listEntry = recoveryDoc.entries.find((e) => e.store === 'lists');
+    expect(listEntry?.raw).toMatchObject({ id: fixtureId(2), name: '' });
+    expect(listEntry?.issues.join(' ')).toContain('name');
+    const taskEntry = recoveryDoc.entries.find((e) => e.store === 'tasks');
+    expect(taskEntry?.issues.join(' ')).toContain('title');
+    const settingsEntry = recoveryDoc.entries.find((e) => e.store === 'settings');
+    expect(settingsEntry?.issues.join(' ')).toContain('theme');
   });
 });
 

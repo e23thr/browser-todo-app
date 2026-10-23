@@ -20,15 +20,17 @@ const FORBIDDEN_KEYS = ['__proto__', 'constructor', 'prototype'] as const;
 const MAX_NAME = 200;
 const MAX_TITLE = 1000;
 const MAX_NOTES = 20_000;
-const MAX_TAG_LEN = 64;
+// Caps are the ADR-004 §6.2 binding table (ADR-002 Decision 11 left tags,
+// color tokens and locale open — that table governs).
+const MAX_TAG_LEN = 100;
 const MAX_TAGS = 50;
-const MAX_LOCALE = 16;
+const MAX_LOCALE = 35;
 const MIN_EPOCH_MS = 0;
-// Year 9999 in epoch ms — anything beyond is a corrupt timestamp.
-const MAX_EPOCH_MS = 253_402_300_799_999;
 
+// ADR-004 §6.2: timestamps are non-negative safe integers (epoch ms UTC) —
+// no upper year cap (any safe integer passes).
 function isEpochMs(v: unknown): v is number {
-  return typeof v === 'number' && Number.isSafeInteger(v) && v >= MIN_EPOCH_MS && v <= MAX_EPOCH_MS;
+  return typeof v === 'number' && Number.isSafeInteger(v) && v >= MIN_EPOCH_MS;
 }
 
 /** `YYYY-MM-DD` against a real calendar — rejects `2026-02-30` (ADR-002 Decision 5). */
@@ -48,7 +50,8 @@ export function isLocalDateString(v: unknown): v is string {
 
 function isColor(v: unknown): v is string {
   if (typeof v !== 'string') return false;
-  return /^#[0-9a-fA-F]{6}$/u.test(v) || /^[a-z][a-z0-9-]{0,63}$/iu.test(v);
+  // ADR-004 §6.2: `#rrggbb` or theme token `^[a-z][a-z0-9-]{0,31}$`.
+  return /^#[0-9a-fA-F]{6}$/u.test(v) || /^[a-z][a-z0-9-]{0,31}$/u.test(v);
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -361,11 +364,11 @@ export function validateSettings(value: unknown): ValidationResult {
     issues,
     'locale',
     typeof fields['locale'] === 'string' &&
-      fields['locale'].length >= 2 &&
+      fields['locale'].length >= 1 &&
       fields['locale'].length <= MAX_LOCALE &&
-      /^[a-z]{2}(-[A-Za-z0-9]{2,8})?$/u.test(fields['locale']),
+      /^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$/u.test(fields['locale']),
     'format',
-    'BCP-47-ish primary language',
+    `BCP-47-ish language tag (1..${String(MAX_LOCALE)} chars)`,
   );
   push(
     issues,

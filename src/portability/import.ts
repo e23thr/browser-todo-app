@@ -86,27 +86,6 @@ export async function prepareImport(
   const stageB = validateRecords(upgraded.value);
   const raw = parsed.value;
 
-  const accepted =
-    (stageB.settings === null ? 0 : 1) +
-    stageB.lists.length +
-    stageB.tasks.length +
-    stageB.snapshots.length;
-  if (accepted === 0) {
-    // A file whose entire payload is corrupt is a corrupt file, not an empty
-    // backup (Decision 5.1) — reject with zero side effects, recovery offered.
-    return err({ code: 'NOTHING_TO_IMPORT', quarantined: stageB.entries.length });
-  }
-
-  const warnings = [...raw.warnings];
-  if (raw.snapshots.length > 0) {
-    warnings.push('snapshot metadata ignored — snapshot payloads are device-local');
-  }
-  if (raw.lists.length + raw.tasks.length > 0 && stageB.lists.length + stageB.tasks.length === 0) {
-    warnings.push(
-      'every declared list/task record was quarantined — this import replaces your data with none',
-    );
-  }
-
   const fileName = opts.fileName ?? (typeof input === 'string' ? 'inline-import.json' : input.name);
   const recovery =
     stageB.entries.length > 0
@@ -120,6 +99,32 @@ export async function prepareImport(
           },
         )
       : null;
+
+  // Decision 5.1: 0 accepted = the file's entire restoreable payload is corrupt
+  // — a corrupt file, not an empty backup. Snapshot metadata is informational-
+  // only on import (Decisions 2.3/8 — never restored), so it must NOT count
+  // toward the gate; accepted = settings + lists + tasks only.
+  const accepted =
+    (stageB.settings === null ? 0 : 1) + stageB.lists.length + stageB.tasks.length;
+  if (accepted === 0) {
+    // Reject with zero side effects; the recovery document rides the error so
+    // the UX can offer the download (Decision 5.1 — quarantine is never silent).
+    return err({
+      code: 'NOTHING_TO_IMPORT',
+      quarantined: stageB.entries.length,
+      recoveryFile: recovery,
+    });
+  }
+
+  const warnings = [...raw.warnings];
+  if (raw.snapshots.length > 0) {
+    warnings.push('snapshot metadata ignored — snapshot payloads are device-local');
+  }
+  if (raw.lists.length + raw.tasks.length > 0 && stageB.lists.length + stageB.tasks.length === 0) {
+    warnings.push(
+      'every declared list/task record was quarantined — this import replaces your data with none',
+    );
+  }
 
   return ok({
     fileSummary: {

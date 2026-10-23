@@ -42,7 +42,13 @@ export type ImportError =
   | { code: 'UPGRADE_FAILED'; from: number; to: number; cause?: unknown }
   | { code: 'MALICIOUS_SHAPE'; message: string }
   | { code: 'LIMIT_EXCEEDED'; limit: string; found: number; cap: number }
-  | { code: 'NOTHING_TO_IMPORT'; quarantined: number }
+  /**
+   * Decision 5.1: every restoreable record quarantined (0 accepted — snapshot
+   * metadata is informational-only and never counts). The rejection has zero
+   * side effects AND the recovery file rides the error so the UX can offer the
+   * download (additive field, same pattern as `ImportReport.recoveryFile`).
+   */
+  | { code: 'NOTHING_TO_IMPORT'; quarantined: number; recoveryFile: RecoveryFile | null }
   | { code: 'SNAPSHOT_FAILED'; cause?: unknown }
   | { code: 'QUOTA_EXCEEDED'; cause?: unknown }
   | { code: 'TX_ABORTED'; cause?: unknown }

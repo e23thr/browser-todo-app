@@ -98,8 +98,11 @@ Import pipeline behavior worth knowing:
 - Old exports (`schemaVersion` < target) upgrade through the SAME migration registry over the
   in-memory adapter (injectable via `opts.migrations`); failure = `UPGRADE_FAILED`, zero side
   effects.
-- `NOTHING_TO_IMPORT` when every record quarantined (0 accepted) — a corrupt file is not an
-  empty backup; a legit empty backup imports fine (replace-with-empty).
+- `NOTHING_TO_IMPORT` when every restoreable record is quarantined (0 accepted — accepted counts
+  `settings` + `lists` + `tasks` only; `data.snapshots` metadata is informational and never
+  counts) — a corrupt file is not an empty backup; a legit empty backup imports fine
+  (replace-with-empty). The error carries `recoveryFile` (same shape as `ImportReport.recoveryFile`)
+  so the reject can still offer the quarantine download — offer it in the UX.
 - Apply = ONE `readwrite` tx over `['lists','tasks','settings']`: hard-delete every existing row
   (quarantine-denylisted rows included — collected via `readUnfiltered`), then raw verbatim `put`.
   No re-stamping (future LWW depends on it). `meta` untouched (target `deviceId` wins). Snapshot
@@ -167,6 +170,10 @@ type ExportError = QUOTA_EXCEEDED | TX_ABORTED | UNAVAILABLE | UNKNOWN;
 `applyImport` maps storage errors onto this union (`MIGRATION_FAILED` → `UPGRADE_FAILED`,
 `NEWER_SCHEMA` passes through, the rest keep their code; unmapped codes surface as `UNKNOWN`
 with the `StorageError` preserved as `cause` — nothing is swallowed).
+
+`NOTHING_TO_IMPORT` is the one error with a payload: `{ code, quarantined, recoveryFile }` where
+`recoveryFile: { filename, json } | null` is the downloadable quarantine document (Decision 5.1
+— reject with zero side effects AND the recovery file offered).
 
 ## Cross-tab / theme side effects (Decision 3)
 

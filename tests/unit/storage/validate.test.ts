@@ -53,8 +53,25 @@ describe('validate.ts (ADR-002 Decision 11)', () => {
     expect(validateTask(makeTask({ title: 'x'.repeat(1001) })).ok).toBe(false);
     expect(validateTask(makeTask({ notes: 'x'.repeat(20_001) })).ok).toBe(false);
     expect(validateTask(makeTask({ notes: null })).ok).toBe(true);
-    expect(validateTask(makeTask({ tags: ['x'.repeat(65)] })).ok).toBe(false);
+    expect(validateTask(makeTask({ tags: ['x'.repeat(101)] })).ok).toBe(false);
     expect(validateTask(makeTask({ tags: Array.from({ length: 51 }, () => 't') })).ok).toBe(false);
+  });
+
+  it('enforces the ADR-004 §6.2 caps at exact boundaries', () => {
+    // Task.tags: each 1..100 chars (ADR-002 left the cap open — §6.2 table rules).
+    expect(validateTask(makeTask({ tags: ['x'.repeat(100)] })).ok).toBe(true);
+    expect(validateTask(makeTask({ tags: ['x'.repeat(101)] })).ok).toBe(false);
+    expect(validateTask(makeTask({ tags: ['x'.repeat(80)] })).ok).toBe(true); // spec-valid probe
+    // List.color theme token: ^[a-z][a-z0-9-]{0,31}$ (32 chars incl. first).
+    expect(validateList(makeList({ color: 'a'.padEnd(32, 'b') })).ok).toBe(true);
+    expect(validateList(makeList({ color: 'a'.padEnd(33, 'b') })).ok).toBe(false);
+    expect(validateList(makeList({ color: 'Accent-Red' })).ok).toBe(false); // lowercase-only
+    // Settings.locale: 1..35 chars, BCP-47-ish (multi-subtag allowed).
+    expect(validateSettings(makeSettings({ locale: 'x'.repeat(35) })).ok).toBe(true);
+    expect(validateSettings(makeSettings({ locale: 'x'.repeat(36) })).ok).toBe(false);
+    expect(validateSettings(makeSettings({ locale: 'zh-Hant-TW' })).ok).toBe(true); // spec-valid probe
+    // Timestamps: non-negative safe integers — no year-9999 ceiling (§6.2).
+    expect(validateTask(makeTask({ createdAt: Number.MAX_SAFE_INTEGER })).ok).toBe(true);
   });
 
   it('rejects wrong types, ranges, and formats', () => {
