@@ -13,6 +13,15 @@ afterEach(() => {
 });
 
 /**
+ * A real (in-memory) IndexedDB from the first render on: the core-UI card boots the
+ * ADR-002 store in `App`, so every component suite — not just the storage ones — needs a
+ * working `indexedDB` or the views would render their boot-error panel instead of the
+ * behaviour under test. `fake-indexeddb/auto` is idempotent for suites that already
+ * import it themselves.
+ */
+import 'fake-indexeddb/auto';
+
+/**
  * Locale packs are lazy (§9.2), so without priming, `t()` in a freshly rendered component
  * would resolve to raw keys. Prime the boot catalog before every test and hand each test a
  * deterministic locale, even after a test switched to `th`.

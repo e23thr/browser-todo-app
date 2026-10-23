@@ -1,36 +1,33 @@
 import type { JSX } from 'preact';
 
 import { t } from '../../app/i18n';
-import { useListOptions } from '../../app/lists';
-import { startQuickAdd } from '../../app/quickAdd';
-import { EmptyState, View } from '../../components/View';
+import { state } from '../tasks/store';
+import { TaskScreen, useResolvedList } from '../tasks/TaskScreen';
 
 /**
- * List view (`/list/:id`) — shell scaffolding (design §4.6).
- *
- * The heading shows the resolved list name once the domain layer is wired through
- * `setListOptions()`; without it, the generic `view.list` title is used so the destination is
- * still a real, labelled screen. Rows, manual order and the row menu land with M2/M6.
+ * Per-list view (`/list/:id`) — design §7 S2 (M3): flat manual order of one list's
+ * open tasks, heading = the list name (the M6 card adds drag handles and `Alt+↑/↓`
+ * here, D1). An unknown id (deep link, or the list deleted in another tab) redirects
+ * to Today with a polite announcement (§14).
  */
 export function ListView({
   params,
 }: {
   readonly params: Readonly<Record<string, string>>;
 }): JSX.Element {
-  const lists = useListOptions();
   const id = params['id'] ?? '';
-  const list = lists.find((option) => option.id === id);
+  const resolved = useResolvedList(id);
+  const list = state.value.lists.get(id);
   const title = list?.name ?? t('view.list');
 
   return (
-    <View title={title}>
-      <EmptyState
-        icon="folder"
-        title={t('list.empty.tasks')}
-        body={t('all.empty.body')}
-        actionLabel={t('task.action.add')}
-        onAction={startQuickAdd}
-      />
-    </View>
+    <TaskScreen
+      view={{ kind: 'list', listId: id }}
+      title={title}
+      emptyIcon="folder"
+      emptyTitle={t('list.empty.tasks')}
+      emptyBody={t('all.empty.body')}
+      listResolved={resolved}
+    />
   );
 }

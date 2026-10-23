@@ -1,23 +1,17 @@
 import type { JSX } from 'preact';
 
 import { t } from '../../app/i18n';
-import { startQuickAdd } from '../../app/quickAdd';
-import { EmptyState, View } from '../../components/View';
+import { TaskScreen } from '../tasks/TaskScreen';
 
-/**
- * Next 7 days (`/week`, alias `/next7`) — shell scaffolding (design §4.4).
- * Day groups and per-task rows land with the core-UI card.
- */
+/** Next 7 days (`/week`, alias `/next7`) — design §7 S2 (M3); day groups from the domain. */
 export function WeekView(): JSX.Element {
   return (
-    <View title={t('view.next7days')}>
-      <EmptyState
-        icon="calendar"
-        title={t('next7.empty.title')}
-        body={t('next7.empty.body')}
-        actionLabel={t('task.action.add')}
-        onAction={startQuickAdd}
-      />
-    </View>
+    <TaskScreen
+      view={{ kind: 'week' }}
+      title={t('view.next7days')}
+      emptyIcon="calendar"
+      emptyTitle={t('next7.empty.title')}
+      emptyBody={t('next7.empty.body')}
+    />
   );
 }

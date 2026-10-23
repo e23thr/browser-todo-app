@@ -329,7 +329,8 @@ export function Composer({ variant, onClose }: ComposerProps): JSX.Element {
             </>
           }
         >
-          {!hasLists ? noLists : titleField}
+          {!hasLists ? noLists : null}
+          {titleField}
           {detailFields}
         </Dialog>
         {discardConfirm}
@@ -342,7 +343,8 @@ export function Composer({ variant, onClose }: ComposerProps): JSX.Element {
     <section class="composer composer-inline" aria-label={t('task.action.add')}>
       <div class="composer-row">
         <div class="composer-fields">
-          {!hasLists ? noLists : titleField}
+          {!hasLists ? noLists : null}
+          {titleField}
           {detailFields}
         </div>
         {expander}

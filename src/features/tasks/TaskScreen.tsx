@@ -252,6 +252,7 @@ export function TaskScreen({
         today={day}
         lists={lists}
         showListBadge={showListBadge}
+        retainedIds={retained.map((entry) => entry.id)}
         onToggle={onToggle}
         onOpen={onOpen}
         onDelete={onDelete}
@@ -303,10 +304,13 @@ export function useResolvedList(listId: string): boolean {
   // Today with a polite announcement (§14 per-list error row).
   useEffect(() => {
     if (phase !== 'ready' || exists) return;
+    // Guard: only redirect while THIS route is still the active hash — the user may
+    // already have navigated on between render and this effect (never stomp a new route).
+    if (!window.location.hash.includes(encodeURIComponent(listId))) return;
     setResolved(false);
     announce(t('error.taskGone'));
     window.location.hash = '#/today';
-  }, [phase, exists]);
+  }, [phase, exists, listId]);
 
   return resolved;
 }

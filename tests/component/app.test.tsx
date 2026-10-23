@@ -63,7 +63,11 @@ describe('shell landmarks & heading structure', () => {
     await screen.findByRole('heading', { level: 1, name: 'Today' });
 
     expect(document.querySelectorAll('main h1')).toHaveLength(1);
-    expect(screen.getByRole('heading', { level: 2, name: 'Nothing due today' })).toBeTruthy();
+    // Core UI (M1–M4): the view renders its loading skeleton until the domain store
+    // boots, then the empty state — findBy (not getBy) waits for that hand-off.
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Nothing due today' }),
+    ).toBeTruthy();
   });
 
   it('mounts the two persistent live regions of §11.2', async () => {

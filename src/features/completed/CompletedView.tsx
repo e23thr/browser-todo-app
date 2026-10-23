@@ -1,20 +1,21 @@
 import type { JSX } from 'preact';
 
 import { t } from '../../app/i18n';
-import { EmptyState, View } from '../../components/View';
+import { TaskScreen } from '../tasks/TaskScreen';
 
 /**
- * Completed (`/completed`) — shell scaffolding (design §4.7).
- * The completed list and reopen/delete row menus land with the core-UI card.
+ * Completed (`/completed`) — design §7 S2 (M3), flat `completedAt desc`
+ * (ux-foundation §4.7 / ADR-003 selector). Uncompleting is the checked checkbox on the
+ * row (F3.3); completed rows stay fully editable via the row menu.
  */
 export function CompletedView(): JSX.Element {
   return (
-    <View title={t('view.completed')}>
-      <EmptyState
-        icon="check-circle"
-        title={t('completed.empty.title')}
-        body={t('completed.empty.body')}
-      />
-    </View>
+    <TaskScreen
+      view={{ kind: 'completed' }}
+      title={t('view.completed')}
+      emptyIcon="check-circle"
+      emptyTitle={t('completed.empty.title')}
+      emptyBody={t('completed.empty.body')}
+    />
   );
 }

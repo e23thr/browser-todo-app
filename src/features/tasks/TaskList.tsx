@@ -30,6 +30,8 @@ export interface TaskListProps {
   readonly today: string;
   readonly lists: readonly List[];
   readonly showListBadge: boolean;
+  /** Just-completed rows held in place for 900 ms (F3) — rendered checked + dimmed. */
+  readonly retainedIds?: readonly string[];
   readonly onToggle: (task: Task, done: boolean) => void;
   readonly onOpen: (id: string) => void;
   readonly onDelete: (id: string) => void;
@@ -41,7 +43,7 @@ function taskIdsOf(rows: readonly ViewRow[]): string[] {
 
 function rowElement(id: string): HTMLLIElement | null {
   for (const el of document.querySelectorAll<HTMLElement>('[data-task-id]')) {
-    if (el.dataset['task-id'] === id && el.closest('ul.task-list') !== null)
+    if (el.dataset['taskId'] === id && el.closest('ul.task-list') !== null)
       return el as HTMLLIElement;
   }
   return null;
@@ -57,6 +59,7 @@ export function TaskList({
   today,
   lists,
   showListBadge,
+  retainedIds,
   onToggle,
   onOpen,
   onDelete,
@@ -98,7 +101,7 @@ export function TaskList({
     setCurrentId(id);
     const el = rowElement(id);
     el?.focus();
-    el?.scrollIntoView({ block: 'nearest' });
+    if (typeof el?.scrollIntoView === 'function') el.scrollIntoView({ block: 'nearest' });
   };
 
   const onRowFocus = (id: string): void => {
@@ -194,6 +197,7 @@ export function TaskList({
             showListBadge={showListBadge}
             listName={listName(row.task.listId)}
             today={today}
+            retained={retainedIds?.includes(row.task.id) === true}
             onToggle={onToggle}
             onOpen={onOpen}
             onDelete={onDelete}

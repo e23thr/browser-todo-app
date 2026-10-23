@@ -1,0 +1,291 @@
+/**
+ * Core UI component tests — composer (design §7 S3 / flow F1) and task editor (§7 S4 / F2).
+ *
+ * Everything runs against a real `MutationRunner` over in-memory ports (fixtures.ts), so the
+ * optimistic-then-settle path, rollback and announcements are the production ones. Announcements
+ * are asserted through the mounted live regions after the 60 ms region delay.
+ */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/preact';
+
+import { Composer } from '../../src/features/tasks/Composer';
+import { TaskEditor } from '../../src/features/tasks/TaskEditor';
+import {
+  bindRunnerForTest,
+  liveLists,
+  resetTaskStore,
+  state,
+} from '../../src/features/tasks/store';
+import { clearToasts } from '../../src/features/tasks/toasts';
+import {
+  makeList,
+  makeTask,
+  makeTestRunner,
+  regions,
+  seed,
+  setUpCoreUi,
+  tearDownCoreUi,
+} from './core-ui-harness';
+
+beforeEach(() => {
+  setUpCoreUi();
+});
+
+afterEach(() => {
+  tearDownCoreUi();
+  resetTaskStore();
+  clearToasts();
+});
+
+describe('S3 composer — F1 capture', () => {
+  it('saves on Enter, clears and stays focused, and announces the task', async () => {
+    await seed({ lists: [makeList({ id: 'L1', name: 'Personal' })] });
+    const view = render(<Composer variant="inline" />);
+
+    const title = screen.getByLabelText<HTMLInputElement>('Title', { exact: true });
+    title.focus();
+    fireEvent.input(title, { target: { value: 'Buy milk' } });
+    fireEvent.keyDown(title, { key: 'Enter' });
+
+    // Optimistic: the record is in state before any write settles (add -> visible < 100 ms).
+    const added = [...state.value.tasks.values()].find((task) => task.title === 'Buy milk');
+    expect(added).toBeTruthy();
+    expect(added?.listId).toBe('L1');
+
+    // D6: input cleared synchronously and focus kept for back-to-back capture.
+    expect(title.value).toBe('');
+    expect(document.activeElement).toBe(title);
+
+    await waitFor(() => {
+      expect(regions.polite?.textContent).toBe('Task added: Buy milk');
+    });
+    // Write settles: pending cleared, authoritative row present in state.
+    await waitFor(() => {
+      expect(state.value.pending.size).toBe(0);
+    });
+    view.unmount();
+  });
+
+  it('shows the linked validation error for an empty title', async () => {
+    await seed({ lists: [makeList({ id: 'L1' })] });
+    render(<Composer variant="inline" />);
+
+    const title = screen.getByLabelText<HTMLInputElement>('Title', { exact: true });
+    fireEvent.keyDown(title, { key: 'Enter' });
+
+    const error = screen.getByText('Enter a title', { exact: true });
+    expect(error.getAttribute('role')).toBe('alert');
+    expect(title.getAttribute('aria-describedby')).toBe(error.id);
+    expect(title.getAttribute('aria-invalid')).toBe('true');
+    expect(state.value.tasks.size).toBe(0);
+  });
+
+  it('disables every input when no list exists and offers "New list"', async () => {
+    await seed({ lists: [] });
+    render(<Composer variant="inline" />);
+
+    expect(screen.getByLabelText<HTMLInputElement>('Title', { exact: true }).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Add' })).toHaveProperty('disabled', true);
+    expect(
+      screen.getByText('Create a list first — tasks live in lists.', { exact: true }),
+    ).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'New list' }).length).toBeGreaterThan(0);
+  });
+
+  it('expands to the detail fields and Shift+Enter saves and collapses', async () => {
+    await seed({ lists: [makeList({ id: 'L1', name: 'Personal' })] });
+    render(<Composer variant="inline" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }));
+    expect(screen.getByLabelText('Notes', { exact: true })).toBeTruthy();
+    expect(screen.getByLabelText('Due date', { exact: true })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Priority' })).toBeTruthy();
+
+    fireEvent.input(screen.getByLabelText<HTMLInputElement>('Title', { exact: true }), {
+      target: { value: 'Ship it' },
+    });
+    fireEvent.keyDown(screen.getByLabelText<HTMLInputElement>('Title', { exact: true }), {
+      key: 'Enter',
+      shiftKey: true,
+    });
+
+    expect([...state.value.tasks.values()].some((task) => task.title === 'Ship it')).toBe(true);
+    expect(screen.getByRole('button', { name: 'Details' })).toBeTruthy();
+    expect(screen.queryByLabelText('Notes', { exact: true })).toBeNull();
+  });
+
+  it('asks the discard confirm when Escape is pressed with a dirty draft (S7.3)', async () => {
+    await seed({ lists: [makeList({ id: 'L1' })] });
+    render(<Composer variant="inline" />);
+
+    const title = screen.getByLabelText<HTMLInputElement>('Title', { exact: true });
+    fireEvent.input(title, { target: { value: 'draft' } });
+    fireEvent.keyDown(title, { key: 'Escape' });
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Discard changes?' })).toBeTruthy();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    expect(title.value).toBe('draft');
+
+    fireEvent.keyDown(title, { key: 'Escape' });
+    const again = await screen.findByRole('dialog');
+    fireEvent.click(within(again).getByRole('button', { name: 'Discard' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    expect(state.value.tasks.size).toBe(0);
+  });
+});
+
+describe('S4 task editor — F2 edit', () => {
+  it('saves every field in one action, closes and announces "Task saved"', async () => {
+    await seed({
+      lists: [makeList({ id: 'L1', name: 'Personal' }), makeList({ id: 'L2', name: 'Work' })],
+      tasks: [makeTask({ id: 'T1', listId: 'L1', title: 'Old title', notes: 'old' })],
+    });
+    const task = state.value.tasks.get('T1');
+    expect(task).toBeTruthy();
+
+    const onClose = vi.fn();
+    render(<TaskEditor task={task!} lists={liveLists(state.value)} onClose={onClose} />);
+
+    const title = screen.getByLabelText<HTMLInputElement>('Title', { exact: true });
+    expect(title.value).toBe('Old title');
+
+    fireEvent.input(title, { target: { value: 'New title' } });
+    fireEvent.input(screen.getByLabelText<HTMLTextAreaElement>('Notes', { exact: true }), {
+      target: { value: 'fresh notes' },
+    });
+    // A list change rides the same Save (two domain writes, one optimistic paint).
+    fireEvent.change(screen.getByLabelText<HTMLSelectElement>('List', { exact: true }), {
+      target: { value: 'L2' },
+    });
+    fireEvent.click(screen.getByRole('radio', { name: 'High' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    const saved = state.value.tasks.get('T1');
+    expect(saved?.title).toBe('New title');
+    expect(saved?.notes).toBe('fresh notes');
+    expect(saved?.listId).toBe('L2');
+    expect(saved?.priority).toBe(2);
+    await waitFor(() => {
+      expect(regions.polite?.textContent).toBe('Task saved');
+    });
+  });
+
+  it('blocks Save while the title is empty and links the error', async () => {
+    await seed({ lists: [makeList({ id: 'L1' })], tasks: [makeTask({ id: 'T1', title: 'x' })] });
+    const task = state.value.tasks.get('T1');
+    render(<TaskEditor task={task!} lists={liveLists(state.value)} onClose={vi.fn()} />);
+
+    const title = screen.getByLabelText<HTMLInputElement>('Title', { exact: true });
+    fireEvent.input(title, { target: { value: '   ' } });
+
+    const editor = screen.getByRole('dialog', { name: 'Edit task' });
+    const error = within(editor).getByRole('alert');
+    expect(error.textContent).toBe('Enter a title');
+    expect(title.getAttribute('aria-describedby')).toBe(error.id);
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
+  });
+
+  it('asks S7.3 before closing dirty, and Discard closes without saving', async () => {
+    await seed({
+      lists: [makeList({ id: 'L1' })],
+      tasks: [makeTask({ id: 'T1', title: 'keep me' })],
+    });
+    const task = state.value.tasks.get('T1');
+    const onClose = vi.fn();
+    render(<TaskEditor task={task!} lists={liveLists(state.value)} onClose={onClose} />);
+
+    fireEvent.input(screen.getByLabelText<HTMLInputElement>('Title', { exact: true }), {
+      target: { value: 'changed' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    const confirm = await screen.findByRole('dialog', { name: 'Discard changes?' });
+    expect(within(confirm).getByRole('button', { name: 'Keep editing' })).toBeTruthy();
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Keep editing' }));
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    const second = await screen.findByRole('dialog', { name: 'Discard changes?' });
+    fireEvent.click(within(second).getByRole('button', { name: 'Discard' }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+    expect(state.value.tasks.get('T1')?.title).toBe('keep me');
+  });
+
+  it('deletes through the S7.1 confirm naming the task', async () => {
+    await seed({
+      lists: [makeList({ id: 'L1' })],
+      tasks: [makeTask({ id: 'T1', title: 'Buy milk' })],
+    });
+    const task = state.value.tasks.get('T1');
+    const onClose = vi.fn();
+    render(<TaskEditor task={task!} lists={liveLists(state.value)} onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete task' }));
+    const confirm = await screen.findByRole('dialog', { name: 'Delete task?' });
+    expect(
+      within(confirm).getByText('"Buy milk" will be deleted. This can\'t be undone.', {
+        exact: true,
+      }),
+    ).toBeTruthy();
+
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => {
+      expect(state.value.tasks.has('T1')).toBe(false);
+    });
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(regions.polite?.textContent).toBe('Task deleted');
+    });
+  });
+
+  it('shows read-only completion info on a completed task and still allows saving', async () => {
+    await seed({
+      lists: [makeList({ id: 'L1' })],
+      tasks: [makeTask({ id: 'T1', title: 'Done thing', status: 'done', completedAt: Date.now() })],
+    });
+    const task = state.value.tasks.get('T1');
+    render(<TaskEditor task={task!} lists={liveLists(state.value)} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('completed-on').textContent).toMatch(/^Completed on /u);
+
+    fireEvent.input(screen.getByLabelText<HTMLInputElement>('Title', { exact: true }), {
+      target: { value: 'Renamed done' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(state.value.tasks.get('T1')?.title).toBe('Renamed done');
+    });
+  });
+
+  it('disables Save with error.taskGone when the task vanished (other tab)', async () => {
+    await seed({ lists: [makeList({ id: 'L1' })], tasks: [makeTask({ id: 'T1', title: 'gone' })] });
+    const task = state.value.tasks.get('T1')!;
+    render(<TaskEditor task={task} lists={liveLists(state.value)} onClose={vi.fn()} />);
+
+    // Concurrent delete in another tab: rebind to a store snapshot without the record.
+    bindRunnerForTest(makeTestRunner({ lists: [makeList({ id: 'L1' })], tasks: [] }).runner);
+
+    // Signal-driven re-renders flush on a microtask — waitFor both the message and Save.
+    await waitFor(() => {
+      const editor = screen.getByRole('dialog', { name: 'Edit task' });
+      expect(within(editor).getByRole('alert').textContent).toBe('This task no longer exists');
+    });
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
+  });
+});

@@ -202,6 +202,14 @@ export function Shell({ pattern, children }: ShellProps): JSX.Element {
               </ul>
               <ul class="nav-list">
                 <li>
+                  <a href="#/lists" aria-current={currentAttr(pattern === '/lists')}>
+                    <Icon name="folder" size={18} />
+                    <span class="nav-label">{t('list.manage')}</span>
+                  </a>
+                </li>
+              </ul>
+              <ul class="nav-list">
+                <li>
                   <a href="#/settings" aria-current={currentAttr(pattern === '/settings')}>
                     <span class="nav-label">{t('nav.settings')}</span>
                   </a>
@@ -321,6 +329,20 @@ export function Shell({ pattern, children }: ShellProps): JSX.Element {
                     closeDrawer(false);
                   }}
                 />
+              </ul>
+              <ul class="nav-list">
+                <li>
+                  <a
+                    href="#/lists"
+                    aria-current={currentAttr(pattern === '/lists')}
+                    onClick={() => {
+                      closeDrawer(false);
+                    }}
+                  >
+                    <Icon name="folder" size={18} />
+                    <span class="nav-label">{t('list.manage')}</span>
+                  </a>
+                </li>
               </ul>
               <ul class="nav-list">
                 <li>

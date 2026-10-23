@@ -115,7 +115,8 @@ export function TaskRow({
           }
           tabIndex={innerTabIndex}
           onChange={(event) => {
-            onToggle(task, !event.currentTarget.checked);
+            // The native control's post-click state IS the desired state (F3).
+            onToggle(task, event.currentTarget.checked);
           }}
         />
 
