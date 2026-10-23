@@ -33,7 +33,7 @@ test('boots under a non-root base path with no failed asset requests', async ({ 
 
   await page.goto(APP_URL);
 
-  await expect(page.getByRole('heading', { name: 'Today', level: 2, exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Today', level: 1, exact: true })).toBeVisible();
   expect(failed).toEqual([]);
 });
 
@@ -41,13 +41,13 @@ test('hash deep links resolve without a server rewrite', async ({ page }) => {
   await page.goto(`${APP_URL}#/settings`);
 
   await expect(
-    page.getByRole('heading', { name: 'Settings', level: 2, exact: true }),
+    page.getByRole('heading', { name: 'Settings', level: 1, exact: true }),
   ).toBeVisible();
   await expect(page).toHaveURL(`${APP_URL}#/settings`);
 
   // The settings route is a lazy chunk: navigating it must not require a full page reload.
   await page.getByRole('link', { name: 'Today', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Today', level: 2, exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Today', level: 1, exact: true })).toBeVisible();
   await expect(page).toHaveURL(`${APP_URL}#/today`);
 });
 
@@ -81,10 +81,10 @@ test('no CSP violation fires while the app boots and navigates', async ({ page }
   await page.goto(APP_URL);
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await expect(
-    page.getByRole('heading', { name: 'Settings', level: 2, exact: true }),
+    page.getByRole('heading', { name: 'Settings', level: 1, exact: true }),
   ).toBeVisible();
   await page.getByRole('link', { name: 'Today', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Today', level: 2, exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Today', level: 1, exact: true })).toBeVisible();
 
   const violations = await page.evaluate(
     () => (window as WindowWithDiagnostics).__cspViolations ?? [],
@@ -98,7 +98,7 @@ test('makes zero third-party requests at runtime', async ({ page }) => {
   await page.goto(APP_URL);
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await expect(
-    page.getByRole('heading', { name: 'Settings', level: 2, exact: true }),
+    page.getByRole('heading', { name: 'Settings', level: 1, exact: true }),
   ).toBeVisible();
 
   const foreign = requestOrigins().filter((origin) => origin !== APP_ORIGIN);
