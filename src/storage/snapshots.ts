@@ -14,11 +14,22 @@ import { err, ok, unknownError } from './errors';
 import type { Result, StorageError } from './errors';
 import { newUlid } from './id';
 import type { AppDBImpl } from './db';
-import { DATA_STORES, type Snapshot, type SnapshotKind, type SnapshotReason, type StoreRows } from './types';
+import {
+  DATA_STORES,
+  type Snapshot,
+  type SnapshotKind,
+  type SnapshotReason,
+  type StoreRows,
+} from './types';
 
 export type SnapshotSource = {
   schemaVersion: number;
   stores: StoreRows;
+  /**
+   * Capture time (ADR-004 §8.1: the document's `exportedAt` == `Snapshot.takenAt`).
+   * Set by `takeSnapshot` right before `serialize`; codecs may fall back to now.
+   */
+  takenAt?: number;
 };
 
 export type SnapshotCodec = {
@@ -62,13 +73,21 @@ export const fallbackRawCodec: SnapshotCodec = {
 };
 
 /** Unfiltered on purpose: backups must never lose rows (quarantine is non-destructive). */
-export async function readSnapshotSource(db: AppDBImpl): Promise<Result<SnapshotSource, StorageError>> {
+export async function readSnapshotSource(
+  db: AppDBImpl,
+): Promise<Result<SnapshotSource, StorageError>> {
   const stores = {} as StoreRows;
   for (const name of DATA_STORES) {
     const rows = await db.readUnfiltered(name);
     if (!rows.ok) return err(rows.error);
     stores[name] = rows.value as never;
   }
+  // Snapshot METADATA rides the document for provenance (ADR-004 §2.3); payloads
+  // stay out of scope and `snapshot_payloads` remains empty on this substrate.
+  const snapshotRows = await db.readUnfiltered('snapshots');
+  if (!snapshotRows.ok) return err(snapshotRows.error);
+  stores.snapshots = snapshotRows.value;
+  stores.snapshot_payloads = [];
   const meta = await db.get('meta', 'meta');
   if (!meta.ok) return err(meta.error);
   return ok({ schemaVersion: meta.value?.schemaVersion ?? 1, stores });
@@ -82,8 +101,9 @@ export type TakeSnapshotOptions = {
 };
 
 /**
- * Serialize → put payload → put metadata → prune retention, per ADR-002 §9.
- * Payload + metadata + pruning land in ONE readwrite transaction.
+ * Serialize → prune retention victims → put payload + metadata, per ADR-002 §9
+ * and ADR-004 Decision 8.2 (normative): EVICT-THEN-PUT. Payload + metadata +
+ * pruning land in ONE readwrite transaction.
  */
 export async function takeSnapshot(
   db: AppDBImpl,
@@ -112,18 +132,26 @@ export async function takeSnapshot(
   };
 
   const written = await db.tx(['snapshot_payloads', 'snapshots'], 'readwrite', async (t) => {
-    await t.put('snapshot_payloads', { id, payload });
-    await t.put('snapshots', snapshot);
+    // ADR-004 Decision 8.2 (normative): victims are deleted FIRST, then the new
+    // payload + metadata rows are put — same transaction, strict order. Deleting
+    // first is what buys quota headroom: the store never transiently holds
+    // retention+1 payloads, so a near-quota user succeeds where put-first fails.
     if (snapshot.kind === 'auto') {
-      const all = await t.getAll('snapshots');
-      const autos = all
-        .filter((s) => s.kind === 'auto')
-        .sort((a, b) => b.takenAt - a.takenAt || (a.id < b.id ? 1 : -1));
+      const existing = await t.getAll('snapshots');
+      // Victim set = autos ordered (takenAt, id) DESC, newest 3 kept — with the
+      // row being written included in the ordering (8.2 step 1).
+      const autos = [...existing.filter((s) => s.kind === 'auto'), snapshot].sort(
+        (a, b) => b.takenAt - a.takenAt || (a.id < b.id ? 1 : -1),
+      );
       for (const stale of autos.slice(AUTO_RETENTION)) {
+        // 8.2 step 2 puts the new rows unconditionally — never evict them here.
+        if (stale.id === id) continue;
         await t.delete('snapshots', stale.id);
         await t.delete('snapshot_payloads', stale.payloadRef);
       }
     }
+    await t.put('snapshot_payloads', { id, payload });
+    await t.put('snapshots', snapshot);
     return ok(undefined);
   });
   if (!written.ok) return err(written.error);
@@ -148,7 +176,10 @@ export async function getSnapshotPayload(
   return ok(row.value?.payload);
 }
 
-export async function deleteSnapshot(db: AppDBImpl, id: string): Promise<Result<void, StorageError>> {
+export async function deleteSnapshot(
+  db: AppDBImpl,
+  id: string,
+): Promise<Result<void, StorageError>> {
   return db.tx(['snapshots', 'snapshot_payloads'], 'readwrite', async (t) => {
     await t.delete('snapshots', id);
     await t.delete('snapshot_payloads', id);

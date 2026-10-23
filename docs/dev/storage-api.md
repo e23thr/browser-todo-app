@@ -174,8 +174,28 @@ runBootValidation(db): Promise<Result<QuarantineEntry[], StorageError>>  // also
 
 Non-destructive contract: invalid rows are **never deleted** by the framework — they stay in the
 DB (visible via `readUnfiltered`), hidden from app reads, exported verbatim in the recovery file,
-and hard-deleted only by `quarantine.purge()`. The recovery JSON carries `generatedAt`,
-`schemaVersion`, and every entry with its `record` verbatim + `issues`.
+and hard-deleted only by `quarantine.purge()`.
+
+Recovery file (binding): `recoveryFile()` emits **ADR-004 Decision 7.1's** recovery document —
+one format, one writer (`serializeRecoveryDoc(entries, source, meta)`; E3's
+`src/portability/recovery-document.ts` swaps in the shared implementation, same signature):
+
+```json
+{
+  "format": "local-first-todo-recovery",
+  "formatVersion": 1,
+  "schemaVersion": 1,
+  "createdAt": 1792755100000,
+  "deviceId": "01J8Q4M6ZK7YV3N2R5T8W1X9AB",
+  "source": { "kind": "boot-validation", "fileName": null, "fileSchemaVersion": 1 },
+  "entries": [{ "store": "tasks", "id": "01J8Q6P8BN9AX5Q4T7V0Z3A1CD", "issues": ["title: ..."], "raw": { "...": "the DB row exactly as read" } }]
+}
+```
+
+`entries[].id` is the record's `id` when present and parseable (a ULID), else `null`. The
+`local-first-todo-recovery` format token marks the file as deliberately **not importable**
+(`NOT_A_BACKUP` on attempt). Filename `local-first-todo-recovery-YYYY-MM-DDTHHmmssZ.json`
+(ADR-004 Decision 9 timestamp convention).
 
 ## Validation (`validate.ts`) — Decision 11 (boot + import share it)
 

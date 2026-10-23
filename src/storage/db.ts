@@ -21,7 +21,14 @@ import {
 } from './errors';
 import type { Result, StorageError } from './errors';
 import { isUlid } from './id';
-import { APP_SCHEMA_VERSION, IDB_VERSION, META_KEY, SETTINGS_KEY, STORE_DEFS, DB_NAME } from './schema';
+import {
+  APP_SCHEMA_VERSION,
+  IDB_VERSION,
+  META_KEY,
+  SETTINGS_KEY,
+  STORE_DEFS,
+  DB_NAME,
+} from './schema';
 import type { QuarantineApi, QuarantineEntry } from './quarantine';
 import { makeQuarantineApi } from './quarantine';
 import type { Row, RowMap, StoreName } from './types';
@@ -95,7 +102,10 @@ export interface AppDB {
     fn: (t: Tx) => Promise<Result<T, StorageError>>,
   ): Promise<Result<T, StorageError>>;
 
-  get<K extends StoreName>(store: K, key: string): Promise<Result<Row<K> | undefined, StorageError>>;
+  get<K extends StoreName>(
+    store: K,
+    key: string,
+  ): Promise<Result<Row<K> | undefined, StorageError>>;
   getAll<K extends StoreName>(store: K, spec?: QuerySpec): Promise<Result<Row<K>[], StorageError>>;
   put<K extends StoreName>(store: K, row: Row<K>): Promise<Result<void, StorageError>>;
   query<K extends StoreName>(store: K, spec: QuerySpec): Promise<Result<Row<K>[], StorageError>>;
@@ -118,7 +128,8 @@ function buildRange(spec: QuerySpec['range']): IDBKeyRange | null {
   const lowerOpen = bounds.lowerOpen ?? false;
   const upperOpen = bounds.upperOpen ?? false;
   const { lower, upper } = bounds;
-  if (lower !== undefined && upper !== undefined) return IDBKeyRange.bound(lower, upper, lowerOpen, upperOpen);
+  if (lower !== undefined && upper !== undefined)
+    return IDBKeyRange.bound(lower, upper, lowerOpen, upperOpen);
   if (lower !== undefined) return IDBKeyRange.lowerBound(lower, lowerOpen);
   if (upper !== undefined) return IDBKeyRange.upperBound(upper, upperOpen);
   return null;
@@ -141,11 +152,7 @@ async function collect(source: RawSource, spec: QuerySpec | undefined): Promise<
 function primaryKeyOk(store: StoreName, row: unknown): boolean {
   if (store === 'meta') return typeof row === 'object' && row !== null;
   if (store === 'settings') {
-    return (
-      typeof row === 'object' &&
-      row !== null &&
-      (row as { id?: unknown }).id === SETTINGS_KEY
-    );
+    return typeof row === 'object' && row !== null && (row as { id?: unknown }).id === SETTINGS_KEY;
   }
   return isUlid((row as { id?: unknown } | null)?.id);
 }
@@ -287,10 +294,10 @@ export class AppDBImpl implements AppDB {
     key: string,
   ): Promise<Result<Row<K> | undefined, StorageError>> {
     if (this.#closed) return err(unknownError(new Error('AppDB is closed')));
-    if (this.#denied.has(denyKey(store, key))) return ok(undefined);
+    const k = store === 'meta' ? META_KEY : key;
+    if (this.#denied.has(denyKey(store, k))) return ok(undefined);
     try {
-      const key2 = store === 'meta' ? META_KEY : key;
-      const value = (await this.#db.get(store, key2)) as Row<K> | undefined;
+      const value = (await this.#db.get(store, k)) as Row<K> | undefined;
       return ok(value);
     } catch (e) {
       return err(classifyUnknown(e));
@@ -312,9 +319,7 @@ export class AppDBImpl implements AppDB {
     try {
       const base = this.#db.transaction([store], 'readonly') as unknown as RawTx;
       const src: RawSource =
-        spec.index === undefined
-          ? rawStore(base, store)
-          : rawStore(base, store).index(spec.index);
+        spec.index === undefined ? rawStore(base, store) : rawStore(base, store).index(spec.index);
       const rows = (await collect(src, spec)) as Row<K>[];
       await base.done;
       return ok(rows.filter((r) => !this.#denied.has(denyKey(store, rowKey(store, r)))));
@@ -370,6 +375,9 @@ class TxImpl implements Tx {
 
   async get<K extends StoreName>(store: K, key: string): Promise<Row<K> | undefined> {
     const k = store === 'meta' ? META_KEY : key;
+    // ADR-002 Decision 8 step 4: the denylist applies to EVERY app read —
+    // single-row Tx reads included (readUnfiltered is the only unfiltered read).
+    if (this.#denied.has(denyKey(store, k))) return undefined;
     return (await rawStore(this.#tx, store).get(k)) as Row<K> | undefined;
   }
 
@@ -406,7 +414,9 @@ export type OpenOptions = {
  * one atomic `versionchange` transaction, purely additive). Does NOT seed meta,
  * migrate, or validate — that is `boot()`'s job.
  */
-export async function openRawAppDB(options: OpenOptions = {}): Promise<Result<RawDB, StorageError>> {
+export async function openRawAppDB(
+  options: OpenOptions = {},
+): Promise<Result<RawDB, StorageError>> {
   const name = options.dbName ?? DB_NAME;
   const version = options.idbVersion ?? IDB_VERSION;
   const factory = globalThis.indexedDB as IDBFactory | undefined;
@@ -420,27 +430,36 @@ export async function openRawAppDB(options: OpenOptions = {}): Promise<Result<Ra
   });
 
   const openPromise = openDB(name, version, {
-    upgrade(db) {
+    upgrade(db, _oldVersion, _newVersion, versionTx) {
       for (const def of STORE_DEFS) {
-        if (db.objectStoreNames.contains(def.name)) continue;
-        const store =
-          def.keyPath === null
+        const created = !db.objectStoreNames.contains(def.name);
+        const store = created
+          ? def.keyPath === null
             ? db.createObjectStore(def.name)
-            : db.createObjectStore(def.name, { keyPath: def.keyPath });
+            : db.createObjectStore(def.name, { keyPath: def.keyPath })
+          : versionTx.objectStore(def.name);
         for (const idx of def.indexes) {
-          store.createIndex(idx.name, idx.keyPath);
+          // Indexes are additive too: a version bump may add an index to an
+          // EXISTING store — an already-present name is skipped, a missing one
+          // is created (the old `continue` above the index loop silently
+          // dropped such additions).
+          if (!created && store.indexNames.contains(idx.name)) continue;
+          store.createIndex(idx.name, idx.keyPath, {
+            unique: idx.unique ?? false,
+            multiEntry: idx.multiEntry ?? false,
+          });
         }
       }
     },
     blocked() {
-      resolveBlocked(
-        blocked(`database "${name}" is held open by another tab at an older version`),
-      );
+      resolveBlocked(blocked(`database "${name}" is held open by another tab at an older version`));
     },
   });
 
   const raced = await Promise.race([
-    openPromise.then((db): { db: RawDB } | { blocked: StorageError } => ({ db: db as unknown as RawDB })),
+    openPromise.then((db): { db: RawDB } | { blocked: StorageError } => ({
+      db: db as unknown as RawDB,
+    })),
     blockedSignal.then((e): { db: RawDB } | { blocked: StorageError } => ({ blocked: e })),
   ]);
 
@@ -457,7 +476,9 @@ export async function openRawAppDB(options: OpenOptions = {}): Promise<Result<Ra
 }
 
 /** Convenience used by tests and boot: open + wrap without boot steps. */
-export async function openForTests(options: OpenOptions = {}): Promise<Result<AppDBImpl, StorageError>> {
+export async function openForTests(
+  options: OpenOptions = {},
+): Promise<Result<AppDBImpl, StorageError>> {
   const opened = await openRawAppDB(options);
   if (!opened.ok) return err(opened.error);
   const report: BootReport = {
@@ -469,10 +490,16 @@ export async function openForTests(options: OpenOptions = {}): Promise<Result<Ap
     newerSchema: null,
     bootWarnings: [],
   };
-  return ok(new AppDBImpl(opened.value, {
-    schemaVersion: APP_SCHEMA_VERSION,
-    deviceId: '0'.repeat(26),
-    createdAt: 0,
-    lastOpenedAt: 0,
-  }, report));
+  return ok(
+    new AppDBImpl(
+      opened.value,
+      {
+        schemaVersion: APP_SCHEMA_VERSION,
+        deviceId: '0'.repeat(26),
+        createdAt: 0,
+        lastOpenedAt: 0,
+      },
+      report,
+    ),
+  );
 }
