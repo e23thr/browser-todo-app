@@ -6,8 +6,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { AppDBImpl } from '../../../src/storage/db';
-import { getSnapshotPayload } from '../../../src/storage/snapshots';
 import {
+  getSnapshotPayload,
+  restoreSnapshot as frameworkRestoreSnapshot,
+} from '../../../src/storage/snapshots';
+import {
+  adr004Codec,
   deleteSnapshot,
   downloadSnapshot,
   listSnapshots,
@@ -197,5 +201,89 @@ describe('error contract (nothing swallowed)', () => {
     expect(unbound).toMatchObject({ ok: false, error: { code: 'UNAVAILABLE' } });
     const listed = await listSnapshots();
     expect(listed).toMatchObject({ ok: false, error: { code: 'UNAVAILABLE' } });
+  });
+});
+
+describe('rollback validates stored rows (review finding 4)', () => {
+  it('deserialize refuses the WHOLE payload when a single row is invalid', () => {
+    const codec = makeAdr004Codec({ deviceId: fixtureId(1), now: () => T0 });
+    const corpus = seedCorpus();
+    const text = codec.serialize({
+      schemaVersion: 1,
+      takenAt: T0,
+      stores: {
+        meta: [],
+        settings: [corpus.settings],
+        lists: corpus.lists,
+        tasks: corpus.tasks,
+        snapshots: corpus.snapshots,
+        snapshot_payloads: [],
+      },
+    });
+
+    // Healthy payload still round-trips (nothing changes for valid data).
+    const good = codec.deserialize(text);
+    expect(good.ok).toBe(true);
+    if (good.ok) expect(good.value.stores.tasks).toHaveLength(corpus.tasks.length);
+
+    // Corrupt ONE row (parseable JSON, invalid record): the whole payload is
+    // refused with a typed error — no partial store, no silently dropped rows.
+    const doc = JSON.parse(text) as { data: { tasks: Record<string, unknown>[] } };
+    const victim = doc.data.tasks[0];
+    if (victim === undefined) throw new Error('fixture task missing');
+    victim['sortOrder'] = 'h0'; // non-canonical order key (trailing zero)
+    const rejected = codec.deserialize(JSON.stringify(doc));
+    expect(rejected.ok).toBe(false);
+    if (!rejected.ok) {
+      expect(rejected.error).toMatchObject({
+        code: 'INVALID_RECORD',
+        store: 'tasks',
+        id: victim['id'],
+      });
+    }
+  });
+
+  it('makes restoreSnapshot fail WITHOUT writing when the stored payload has one invalid row', async () => {
+    const db = await openSeeded();
+    const snap = await takeSnapshot('manual', { db, now: () => T0 });
+    if (!snap.ok) throw new Error('snapshot failed');
+
+    // Corrupt one row inside the STORED payload (still a parseable document).
+    const stored = await getSnapshotPayload(db, snap.value.id);
+    if (!stored.ok || stored.value === undefined) throw new Error('snapshot payload missing');
+    const doc = JSON.parse(stored.value) as { data: { tasks: Record<string, unknown>[] } };
+    const victim = doc.data.tasks[0];
+    if (victim === undefined) throw new Error('fixture task missing');
+    victim['title'] = ''; // validateTask: trimmed length must be >= 1
+    const replaced = await db.put('snapshot_payloads', {
+      id: snap.value.id,
+      payload: JSON.stringify(doc),
+    });
+    expect(replaced.ok).toBe(true);
+
+    // Diverge the live data so ANY rollback write would be observable.
+    const lists = await db.getAll('lists');
+    const list = lists.ok ? lists.value[0] : undefined;
+    if (list === undefined) throw new Error('fixture list missing');
+    await db.put('lists', { ...list, name: 'Renamed after snapshot' });
+    await db.put('settings', makeSettings({ theme: 'light' }));
+    await db.put('tasks', makeTask({ id: fixtureId(99), listId: list.id, title: 'Intruder' }));
+    const before = await db.getAll('tasks');
+    const beforeCount = before.ok ? before.value.length : -1;
+
+    const restored = await frameworkRestoreSnapshot(db, snap.value.id, adr004Codec);
+    expect(restored.ok).toBe(false);
+    if (!restored.ok) {
+      expect(restored.error).toMatchObject({ code: 'INVALID_RECORD', store: 'tasks' });
+    }
+
+    // Zero side effects: nothing written, deleted or replaced by the rollback.
+    const listsAfter = await db.getAll('lists');
+    expect(listsAfter.ok && listsAfter.value[0]?.name).toBe('Renamed after snapshot');
+    const settingsAfter = await db.getAll('settings');
+    expect(settingsAfter.ok && settingsAfter.value[0]?.theme).toBe('light');
+    const tasksAfter = await db.getAll('tasks');
+    expect(tasksAfter.ok && tasksAfter.value).toHaveLength(beforeCount);
+    expect(tasksAfter.ok && tasksAfter.value.some((t) => t.title === 'Intruder')).toBe(true);
   });
 });

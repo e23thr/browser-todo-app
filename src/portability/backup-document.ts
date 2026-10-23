@@ -249,6 +249,15 @@ function isSafeInt(v: unknown): v is number {
 }
 
 /**
+ * UTF-8 byte length of a string — the unit `MAX_IMPORT_BYTES` is stated in.
+ * `String.length` counts UTF-16 code units, so a multi-byte payload (e.g. Thai
+ * text: 1 code unit → 3 bytes) would otherwise slip under a code-unit cap.
+ */
+function utf8ByteLength(text: string): number {
+  return new TextEncoder().encode(text).length;
+}
+
+/**
  * Stage A: parse + envelope + structural + malicious-shape validation.
  * ANY failure = whole-file reject with zero side effects (Decision 5.1).
  */
@@ -256,8 +265,9 @@ export function parseBackupDocument(
   text: string,
   opts: { targetSchemaVersion: number },
 ): Result<RawBackup, ImportError> {
-  if (text.length > MAX_IMPORT_BYTES) {
-    return err({ code: 'FILE_TOO_LARGE', bytes: text.length, cap: MAX_IMPORT_BYTES });
+  const bytes = utf8ByteLength(text);
+  if (bytes > MAX_IMPORT_BYTES) {
+    return err({ code: 'FILE_TOO_LARGE', bytes, cap: MAX_IMPORT_BYTES });
   }
 
   let parsed: unknown;
@@ -425,7 +435,7 @@ export type ParseFileInput = File | string;
 
 /** Byte length of an import input without reading it (Decision 6.1.2). */
 export function inputByteSize(input: ParseFileInput): number {
-  if (typeof input === 'string') return input.length;
+  if (typeof input === 'string') return utf8ByteLength(input);
   return input.size;
 }
 

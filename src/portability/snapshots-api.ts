@@ -12,10 +12,11 @@
  * the id, the metadata row and the document envelope agree exactly.
  */
 
-import { err, ok, unknownError } from '../storage/errors';
+import { err, invalidRecord, ok, unknownError } from '../storage/errors';
 import type { Result, StorageError } from '../storage/errors';
 import type { AppDBImpl } from '../storage/db';
 import { newUlid } from '../storage/id';
+import { validateRow } from '../storage/validate';
 import {
   deleteSnapshot as frameworkDeleteSnapshot,
   getSnapshotPayload,
@@ -29,6 +30,7 @@ import type {
   Snapshot,
   SnapshotKind,
   SnapshotReason,
+  StoreName,
   Task,
 } from '../storage/types';
 import {
@@ -57,6 +59,13 @@ export type Adr004CodecOptions = {
   /** `exportedAt` fallback when the source carries no `takenAt`. */
   now?: () => number;
 };
+
+/** The row's `id` when it carries one — only used to name a rejected record. */
+function recordId(record: unknown): string | undefined {
+  if (typeof record !== 'object' || record === null || Array.isArray(record)) return undefined;
+  const id = (record as Record<string, unknown>)['id'];
+  return typeof id === 'string' ? id : undefined;
+}
 
 /**
  * ADR-004's serializer as a `SnapshotCodec` (the E1 format hook): snapshot
@@ -96,6 +105,25 @@ export function makeAdr004Codec(opts: Adr004CodecOptions = {}): SnapshotCodec {
       const parsed = parseBackupDocument(payload, { targetSchemaVersion: Number.MAX_SAFE_INTEGER });
       if (!parsed.ok) return err(unknownError(parsed.error));
       const raw = parsed.value;
+      // Rollback-side Stage B (review finding 4): boot's `validateSnapshotPayload`
+      // only checks "payload is a JSON object", so a corrupted-but-parseable stored
+      // payload reaches here. EVERY record is therefore validated before the
+      // whitelist rebuild, and one invalid row refuses the WHOLE payload with zero
+      // side effects — never a silent row drop (no-silent-loss beats partial
+      // restore). The E3 restore path is unaffected: it routes through
+      // `prepareImport` and quarantines per record there.
+      const sections: [StoreName, unknown[]][] = [
+        ['settings', [raw.settings]],
+        ['lists', raw.lists],
+        ['tasks', raw.tasks],
+        ['snapshots', raw.snapshots],
+      ];
+      for (const [store, records] of sections) {
+        for (const record of records) {
+          const checked = validateRow(store, record);
+          if (!checked.ok) return err(invalidRecord(store, checked.issues, recordId(record)));
+        }
+      }
       const toRows = <T>(
         section: 'settings' | 'lists' | 'tasks' | 'snapshots',
         items: unknown[],

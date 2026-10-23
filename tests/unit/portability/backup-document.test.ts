@@ -241,6 +241,33 @@ describe('Stage A parse (whole-file reject, zero side effects)', () => {
     });
   });
 
+  it('measures the cap in UTF-8 BYTES, not UTF-16 code units (multi-byte content)', async () => {
+    // Thai text: one UTF-16 code unit per char, three UTF-8 bytes per char —
+    // so `.length` and the byte length disagree for the very input the cap
+    // exists to bound.
+    const thai = 'สวัสดี โลก';
+    const thaiBytes = new TextEncoder().encode(thai).length;
+    expect(thai.length).toBeLessThan(thaiBytes); // the two measures differ
+    expect(inputByteSize(thai)).toBe(thaiBytes);
+    expect(inputByteSize(thai)).toBeGreaterThan(thai.length);
+    const fromString = await readImportText(thai);
+    expect(fromString.ok && fromString.value.bytes).toBe(thaiBytes);
+
+    // UNDER the cap in code units, OVER it in bytes → still FILE_TOO_LARGE
+    // (a code-unit check would have let this through to JSON.parse).
+    const multiByteOverCap = 'ก'.repeat(Math.floor(MAX_IMPORT_BYTES / 3) + 1);
+    expect(multiByteOverCap.length).toBeLessThanOrEqual(MAX_IMPORT_BYTES);
+    expect(parseBackupDocument(multiByteOverCap, TARGET)).toMatchObject({
+      ok: false,
+      error: {
+        code: 'FILE_TOO_LARGE',
+        bytes: multiByteOverCap.length * 3,
+        cap: MAX_IMPORT_BYTES,
+      },
+    });
+    expect(inputByteSize(multiByteOverCap)).toBe(multiByteOverCap.length * 3);
+  });
+
   it('reads File and string inputs (readImportText) and surfaces read failures as PARSE_ERROR', async () => {
     const text = makeDocText({ ...seedCorpus() });
     const fromFile = await readImportText(fakeFile('backup.json', text));
