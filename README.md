@@ -30,21 +30,21 @@ npm run dev       # http://localhost:5173
 
 ## Commands
 
-| Command                                                  | What it does                                                    |
-| -------------------------------------------------------- | --------------------------------------------------------------- |
-| `npm run dev`                                            | Vite dev server                                                 |
-| `npm run build`                                          | `tsc -b` + production build into `dist/` (honours `BASE_PATH`)  |
-| `npm run preview`                                        | Serve `dist/` locally                                           |
-| `npm run typecheck`                                      | `tsc -b` over app, node, test and e2e projects                  |
-| `npm run lint`                                           | ESLint (type-aware strict + jsx-a11y), `--max-warnings 0`       |
-| `npm run format:check` / `npm run format`                | Prettier check / write                                          |
-| `npm test`                                               | Vitest unit + component tests                                   |
-| `npm run test:coverage`                                  | Vitest with coverage thresholds (§9.5)                          |
-| `npm run budget`                                         | Bundle-budget gate over `dist/` (build first)                   |
-| `npm run e2e:install`                                    | Install the Chromium browser for Playwright                     |
-| `npm run e2e:smoke` / `npm run e2e:a11y` / `npm run e2e` | Playwright suites (build + preview are started automatically)   |
-| `npm run audit:gate`                                     | `npm audit --omit=dev --audit-level=high`                       |
-| `npm run ci`                                             | Everything CI runs locally, in order (minus the browser suites) |
+| Command                                                  | What it does                                                                                                        |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`                                            | Vite dev server                                                                                                     |
+| `npm run build`                                          | `tsc -b` + production build into `dist/` (honours `BASE_PATH`)                                                      |
+| `npm run preview`                                        | Serve `dist/` locally                                                                                               |
+| `npm run typecheck`                                      | `tsc -b` over app, node, test and e2e projects                                                                      |
+| `npm run lint`                                           | ESLint (type-aware strict + jsx-a11y), `--max-warnings 0`                                                           |
+| `npm run format:check` / `npm run format`                | Prettier check / write                                                                                              |
+| `npm test`                                               | Vitest unit + component tests                                                                                       |
+| `npm run test:coverage`                                  | Vitest with coverage thresholds (§9.5)                                                                              |
+| `npm run budget`                                         | Bundle-budget gate over `dist/` (build first)                                                                       |
+| `npm run e2e:install`                                    | Install the Chromium browser for Playwright                                                                         |
+| `npm run e2e:smoke` / `npm run e2e:a11y` / `npm run e2e` | Playwright suites (build + preview are started automatically)                                                       |
+| `npm run audit:gate`                                     | `npm audit --omit=dev --audit-level=high`                                                                           |
+| `npm run ci`                                             | Everything CI runs locally, in order (minus the browser suites). `BASE_PATH=/<repo>/ npm run ci` matches CI exactly |
 
 ---
 
