@@ -21,6 +21,16 @@ import { checkForUpdate, initUpdateFlow, startEditGuard } from './update';
 /** Name of the performance mark the §9.1 boot budget is measured against. */
 export const INTERACTIVE_MARK = 'app:interactive';
 
+/**
+ * Stamp `data-build-id` on `<html>` from `VITE_BUILD_ID` (ADR-005 Decision 9): the E2E harness
+ * builds two marked versions (`vA`/`vB`) and asserts the deliberate reload flips the marker.
+ * Absent outside the fixture builds.
+ */
+function stampBuildId(): void {
+  const id = String(import.meta.env['VITE_BUILD_ID'] ?? '');
+  if (id !== '') document.documentElement.dataset['buildId'] = id;
+}
+
 function mountUpdateNotice(): void {
   const container = document.createElement('div');
   container.id = 'update-notice-root';
@@ -49,6 +59,7 @@ function wireCheckTriggers(): () => void {
  * offline is a bonus, never a requirement for the app to work.
  */
 export function bootServiceWorker(): void {
+  stampBuildId();
   performance.mark(INTERACTIVE_MARK);
   startEditGuard();
   mountUpdateNotice();

@@ -19,6 +19,9 @@ export default defineConfig({
   forbidOnly: process.env['CI'] === 'true',
   retries: process.env['CI'] === 'true' ? 1 : 0,
   reporter: process.env['CI'] === 'true' ? [['list'], ['html', { open: 'never' }]] : [['list']],
+  // ADR-005 Decision 9: the offline/update suites need their two-marked-build fixtures; build
+  // them once per run (workers must never build the same directories concurrently).
+  globalSetup: './tests/e2e/fixtures/global-setup.mjs',
   use: {
     baseURL: APP_URL,
     trace: 'retain-on-failure',

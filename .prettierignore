@@ -12,6 +12,14 @@ package-lock.json
 # formatting is machine-owned and checked by tests/unit/sw-precache.test.ts instead.
 src/sw/precache-manifest.ts
 
+# E2E fixture builds + generated precache modules (ADR-005 Decision 9 harness).
+tests/e2e/.fixtures
+
+# ADR-004 backup/recovery drill fixtures (tests/fixtures/backup/): byte-stable by design —
+# several are deliberately malformed/hostile documents (proto-pollution keys, truncated JSON
+# variants) that a formatter must not rewrite. Loaded as raw text by the drill suites.
+tests/fixtures/backup
+
 # Document corpus authored and maintained by its owning cards (analysis, ADRs, design specs).
 # The toolchain formats code and this README; reformatting those documents would create diff
 # churn in files owned by other roles. Content rules still apply — see README "Repo layout".

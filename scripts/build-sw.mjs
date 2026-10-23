@@ -25,14 +25,33 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 /**
  * Build the classic service-worker bundle.
  *
- * @param {{ root?: string, outDir?: string }} [options]
+ * @param {{ root?: string, outDir?: string, precacheModule?: string }} [options]
+ *   `precacheModule` redirects the generated `./precache-manifest` import to another file — the
+ *   E2E fixture builds use it to stay fully isolated from the shared `dist/` and `src/sw/`.
  */
 export async function buildServiceWorker(options = {}) {
   const root = resolve(options.root ?? REPO_ROOT);
+  const precacheModule =
+    options.precacheModule === undefined ? null : resolve(options.precacheModule);
   await build({
     configFile: false,
     root,
     logLevel: 'warn',
+    plugins:
+      precacheModule === null
+        ? []
+        : [
+            {
+              // E2E fixture builds: substitute the generated precache module without touching
+              // the shared `src/sw/precache-manifest.ts` (an absolute `resolveId` — an alias
+              // would rewrite the relative specifier into a non-absolute path).
+              name: 'app:precache-module',
+              enforce: 'pre',
+              resolveId(source) {
+                return /precache-manifest$/u.test(source) ? precacheModule : null;
+              },
+            },
+          ],
     build: {
       target: 'es2022',
       outDir: resolve(options.outDir ?? join(root, 'dist')),
@@ -53,7 +72,7 @@ export async function buildServiceWorker(options = {}) {
 }
 
 function parseArgs(argv) {
-  /** @type {{root?: string, outDir?: string}} */
+  /** @type {{root?: string, outDir?: string, precacheModule?: string}} */
   const options = {};
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -62,6 +81,9 @@ function parseArgs(argv) {
       i += 1;
     } else if (arg === '--outDir') {
       options.outDir = argv[i + 1];
+      i += 1;
+    } else if (arg === '--precache') {
+      options.precacheModule = argv[i + 1];
       i += 1;
     } else {
       throw new Error(`Unknown argument: ${arg}`);

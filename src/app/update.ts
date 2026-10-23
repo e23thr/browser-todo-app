@@ -217,8 +217,7 @@ export function beginEdit(): void {
 /** The committing transaction acked `Ok` — the edit is durable (or was discarded). */
 export function markEditPersisted(): void {
   explicitEdits.value = 0;
-  dirtyFields.value = 0;
-  dirtyElements.clear();
+  clearDirty();
 }
 
 const dirtyElements = new Set<Element>();
@@ -254,7 +253,10 @@ const baselines = new WeakMap<Element, string>();
 function onFocusIn(event: Event): void {
   const element = event.target instanceof Element ? event.target : null;
   if (!isEditableElement(element)) return;
-  baselines.set(element, readValue(element));
+  // Capture the baseline ONCE per element (its first focus): re-focusing a dirty field must not
+  // re-baseline its uncommitted content, or the edit would silently stop being "in flight"
+  // (Decision 7: it stays in flight until `edit-persisted`).
+  if (!baselines.has(element)) baselines.set(element, readValue(element));
 }
 
 function onInput(event: Event): void {
@@ -266,10 +268,15 @@ function onInput(event: Event): void {
   dirtyFields.value = dirtyElements.size;
 }
 
-function onSubmitted(): void {
-  // A submitted form's content has been handed to its owner; only an explicit flush ack counts.
+function clearDirty(): void {
+  for (const element of dirtyElements) baselines.delete(element);
   dirtyElements.clear();
   dirtyFields.value = 0;
+}
+
+function onSubmitted(): void {
+  // A submitted form's content has been handed to its owner; only an explicit flush ack counts.
+  clearDirty();
 }
 
 /**

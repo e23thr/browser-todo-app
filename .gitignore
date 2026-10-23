@@ -37,3 +37,6 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# E2E fixture builds (ADR-005 Decision 9): rebuilt per run by tests/e2e/fixtures/build-fixtures.mjs
+tests/e2e/.fixtures/

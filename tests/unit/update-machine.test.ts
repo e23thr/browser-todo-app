@@ -216,4 +216,27 @@ describe('edit guard — DOM dirty detection (Decision 7 `edit-begin` definition
     dispose();
     checkbox.remove();
   });
+
+  it('keeps a dirty field in flight across re-focus (regression: blur must not re-baseline)', () => {
+    const dispose = startEditGuard();
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+
+    input.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    input.value = 'uncommitted text';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(editInFlight.value).toBe(true);
+
+    // Blur + re-focus (e.g. the user clicked the update toast's button), then clear the field:
+    // the content was never persisted, so it reverts to the ORIGINAL baseline and the edit is
+    // over — it must not compare against the dirty value captured at re-focus.
+    input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    input.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    input.value = '';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(editInFlight.value).toBe(false);
+
+    dispose();
+    input.remove();
+  });
 });
