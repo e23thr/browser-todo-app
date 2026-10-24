@@ -22,10 +22,12 @@ import type { JSX, TargetedEvent } from 'preact';
 
 import { announce } from '../../app/announce';
 import { t, getLocale } from '../../app/i18n';
+import type { FlushOutcome } from '../../app/update';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Dialog } from '../../components/Dialog';
 import type { List, Priority, Task } from '../../domain/model';
 import { DateField, ListSelect, PriorityField } from './fields';
+import { useEditSession } from './editSession';
 import { ListDialog } from '../lists/ListDialog';
 import { addList, deleteTask, saveTask, state } from './store';
 
@@ -61,6 +63,34 @@ export function TaskEditor({ task, lists, onClose }: TaskEditorProps): JSX.Eleme
     !sameDay(due, task.dueDate) ||
     listId !== task.listId ||
     priority !== task.priority;
+
+  /**
+   * Durable commit of the in-flight edit (ADR-005 Decision 7 rule 2): the update flow's
+   * Apply awaits this ADR-002 write BEFORE its single deliberate reload. The store's
+   * mutation promise resolves when the committing transaction has acked `Ok` or rolled
+   * back, so awaiting it IS the Decision 7 `edit-persisted` boundary.
+   *
+   * A draft that cannot be saved (empty title — Save is disabled for it) or whose write
+   * fails returns `{ok:false}`: the ADR leaves the uncommittable case implicit, and
+   * refusing the reload is its E9-safe reading — the edit stays intact in the DOM instead
+   * of being destroyed by a reload nothing flushed.
+   */
+  const commitEdit = async (): Promise<FlushOutcome> => {
+    if (invalid || saving || gone) return { ok: false };
+    const result = await saveTask(task.id, {
+      title: trimmed,
+      notes: notes.trim() === '' ? null : notes,
+      dueDate: due,
+      listId,
+      priority,
+    });
+    return result.ok ? { ok: true } : { ok: false };
+  };
+
+  // A dirty edit IS an in-flight edit (Decision 7): it ends when the dialog closes —
+  // after a save ack (`Ok`), a discard confirm, or the task vanishing — all of which make
+  // the editor unmount; a failed flush keeps the dialog open and the edit in flight.
+  useEditSession(dirty, commitEdit);
 
   const save = (): void => {
     if (invalid || saving || gone) return;

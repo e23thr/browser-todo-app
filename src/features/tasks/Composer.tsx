@@ -22,10 +22,12 @@ import type { JSX, TargetedEvent } from 'preact';
 
 import { announce } from '../../app/announce';
 import { t } from '../../app/i18n';
+import type { FlushOutcome } from '../../app/update';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import type { List, Priority } from '../../domain/model';
 import { ListDialog } from '../lists/ListDialog';
 import { DateField, ListSelect, PriorityField } from './fields';
+import { useEditSession } from './editSession';
 import { addList, addTask, liveLists, state } from './store';
 import { Dialog } from '../../components/Dialog';
 
@@ -132,6 +134,37 @@ export function Composer({ variant, onClose }: ComposerProps): JSX.Element {
       focusTitle();
     });
   };
+
+  /**
+   * Durable commit of the in-flight draft (ADR-005 Decision 7 rule 2): the update flow's
+   * Apply awaits this ADR-002 write BEFORE its single deliberate reload, and a failure
+   * aborts that reload with the draft untouched. `addTask` resolves when the committing
+   * transaction has acked `Ok` or rolled back — that ack IS the `edit-persisted` boundary;
+   * unlike `submit` (D6: clear synchronously so Enter stays capture-speed) this path never
+   * optimistically clears: the fields are emptied only after the durable ack, so there is
+   * no window in which the typed draft exists nowhere. A draft with no title cannot become
+   * a task, so it is refused (`{ok:false}`) rather than dropped under the reload.
+   */
+  const commitDraft = async (): Promise<FlushOutcome> => {
+    const trimmed = title.trim();
+    if (trimmed === '' || !hasLists) return { ok: false };
+    const result = await addTask({
+      title: trimmed,
+      notes: notes.trim() === '' ? null : notes,
+      dueDate: due,
+      listId: effectiveListId,
+      priority,
+    });
+    if (!result.ok) return { ok: false };
+    resetFields();
+    setError(null);
+    announce(t('a11y.taskAdded', { title: trimmed }));
+    return { ok: true };
+  };
+
+  // A dirty draft IS an in-flight edit (Decision 7): it ends when the draft is committed
+  // (flush or Enter), discarded, or the composer unmounts — all of which make it clean.
+  useEditSession(dirty, commitDraft);
 
   const performClose = (): void => {
     resetFields();
