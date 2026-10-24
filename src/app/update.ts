@@ -209,6 +209,11 @@ export function registerEditFlusher(next: EditFlusher | null): () => void {
   };
 }
 
+/** The currently registered flush, or `null` while no editor holds an in-flight edit. */
+export function getRegisteredEditFlusher(): EditFlusher | null {
+  return flusher;
+}
+
 /** Mark an edit in flight (dirty, uncommitted content or a pending optimistic write). */
 export function beginEdit(): void {
   explicitEdits.value += 1;
