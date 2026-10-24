@@ -206,9 +206,10 @@ test('drill 1 (acceptance): export -> wipe -> import -> restored byte-equivalent
   expect(afterWipe.tasks).toEqual([]);
   expect(afterWipe.snapshots).toEqual([]);
   expect(afterWipe.payloadIds).toEqual([]);
-  // Settings reset to the engine's pinned reset target (Decision 10). NOTE: that target
-  // (DEFAULT_SETTINGS_RECORD, weekStart 0) currently differs from the domain model's
-  // DEFAULT_SETTINGS (weekStart 1) — QA defect D1, documented in docs/qa/e3-data-engine.md.
+  // Settings reset to EXACTLY the fresh-profile default (Decision 10's "effectively fresh
+  // install with the same deviceId"): window.__e3.defaultSettings() is the domain model's
+  // DEFAULT_SETTINGS — the single literal the wipe target derives from. QA defect D1
+  // (the wipe used to land on weekStart 0 while a fresh profile gets 1) is fixed.
   expect(afterWipe.settings).toEqual(await page.evaluate(() => window.__e3.defaultSettings()));
   // Boot prefs cleared (theme mirror -> default) and meta kept: NO pre-wipe snapshot
   // (Decision 10 pins this — a snapshot here would be a forbidden shadow copy).

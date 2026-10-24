@@ -51,10 +51,11 @@ afterEach(() => {
 });
 
 describe('settings store defaults', () => {
-  it('boots from the empty mirror with the ADR-002 defaults', async () => {
+  it('boots from the empty mirror with the single-sourced domain defaults', async () => {
     await loadSettings();
     expect(getSettings()).toEqual(DEFAULT_SETTINGS);
-    expect(DEFAULT_SETTINGS.weekStart).toBe(0);
+    // QA D1 (PO 2026-10-25): the default week start is the domain model's value — Monday.
+    expect(DEFAULT_SETTINGS.weekStart).toBe(1);
     expect(getSettings().defaultListId).toBeNull();
   });
 
@@ -92,17 +93,19 @@ describe('durable persistence (ADR-002 settings record)', () => {
     registerSettingsPersistence(store.persistence);
     await loadSettings();
 
-    setWeekStart(1);
+    // The boot default is Monday, so this is a real change (QA D1 default flip).
+    setWeekStart(0);
     setDefaultListId('list-42');
 
     expect(store.saved).toEqual([
-      { ...DEFAULT_SETTINGS, weekStart: 1 },
-      { ...DEFAULT_SETTINGS, weekStart: 1, defaultListId: 'list-42' },
+      { ...DEFAULT_SETTINGS, weekStart: 0 },
+      { ...DEFAULT_SETTINGS, weekStart: 0, defaultListId: 'list-42' },
     ]);
   });
 
   it('lets the durable record win at boot and rewrites the mirror when they disagree', async () => {
-    const store = memoryPersistence({ theme: 'dark', weekStart: 1, defaultListId: 'list-9' });
+    // weekStart 0 (Sunday) DISAGREES with the Monday boot default — the durable value must win.
+    const store = memoryPersistence({ theme: 'dark', weekStart: 0, defaultListId: 'list-9' });
     registerSettingsPersistence(store.persistence);
     window.localStorage.setItem(THEME_PREF_KEY, 'light');
 
@@ -110,7 +113,7 @@ describe('durable persistence (ADR-002 settings record)', () => {
 
     expect(getSettings()).toEqual({
       theme: 'dark',
-      weekStart: 1,
+      weekStart: 0,
       defaultListId: 'list-9',
     });
     expect(window.localStorage.getItem(THEME_PREF_KEY)).toBe('dark');
@@ -139,9 +142,10 @@ describe('durable persistence (ADR-002 settings record)', () => {
     });
     await loadSettings();
 
-    setWeekStart(1);
+    // Boot default is Monday — flip to Sunday so the kept value is unmistakably ours.
+    setWeekStart(0);
 
-    expect(getSettings().weekStart).toBe(1);
+    expect(getSettings().weekStart).toBe(0);
     await Promise.resolve();
     expect(warn).toHaveBeenCalled();
   });

@@ -6,6 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { AppDBImpl } from '../../../src/storage/db';
+import { DEFAULT_SETTINGS } from '../../../src/domain/model';
 import {
   applyImport,
   prepareImport,
@@ -260,6 +261,12 @@ describe('restore path drill: export -> wipe -> import -> restored (drill 1)', (
 
     const wiped = await deleteAllData({ db, storage: window.localStorage });
     expect(wiped.ok).toBe(true);
+
+    // QA D1: immediately after the wipe the settings row is EXACTLY the fresh-profile state
+    // (the domain `DEFAULT_SETTINGS` — the single literal definition), not whatever the
+    // portability engine's own constant used to say. The import below then overwrites it.
+    const postWipe = await db.get('settings', 'settings');
+    expect(postWipe.ok && postWipe.value).toEqual(DEFAULT_SETTINGS);
 
     const prepared = await prepareImport(exported.value.document, {
       fileName: exported.value.fileName,

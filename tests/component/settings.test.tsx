@@ -77,12 +77,13 @@ describe('theme setting', () => {
     setListOptions([{ id: '01JBX000000000000000000000', name: 'Personal' }]);
     render(<SettingsView />);
 
-    fireEvent.click(screen.getByRole('radio', { name: 'Monday' }));
+    // The boot default is Monday (QA D1), so choosing Sunday is a real, persisted change.
+    fireEvent.click(screen.getByRole('radio', { name: 'Sunday' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Default list' }), {
       target: { value: '01JBX000000000000000000000' },
     });
 
-    expect(getSettings().weekStart).toBe(1);
+    expect(getSettings().weekStart).toBe(0);
     expect(getSettings().defaultListId).toBe('01JBX000000000000000000000');
     // Neither setting may touch localStorage: ADR-002 reserves it for boot-critical prefs.
     expect(Object.keys(window.localStorage)).toEqual([]);

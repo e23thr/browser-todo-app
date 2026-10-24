@@ -25,12 +25,12 @@ import type {
   SnapshotReason,
   Task,
 } from '../../../src/storage/types';
+import { DEFAULT_SETTINGS } from '../../../src/domain/model';
 import {
   applyImport,
   bindDataSafetyDb,
   buildBackupDocument,
   canonicalizeRecord,
-  DEFAULT_SETTINGS_RECORD,
   deleteAllData,
   deleteSnapshot,
   exportBackup,
@@ -437,7 +437,9 @@ const harness: E3Harness = {
   },
 
   defaultSettings() {
-    return canon('settings', DEFAULT_SETTINGS_RECORD);
+    // The fresh-profile default (QA D1): the domain model's single literal, which the
+    // portability engine's wipe target and the app store both derive from.
+    return canon('settings', DEFAULT_SETTINGS);
   },
 
   exportDoc(nowMs) {

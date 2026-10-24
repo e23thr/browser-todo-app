@@ -5,7 +5,7 @@
  * through an ADR amendment.
  */
 
-import type { Settings } from '../storage/types';
+import { DEFAULT_SETTINGS, type Settings } from '../domain/model';
 
 /** Backup document token (export files AND snapshot payloads). */
 export const BACKUP_FORMAT = 'local-first-todo-backup';
@@ -43,16 +43,13 @@ export const DATA_REPLACED_CHANNEL = 'local-first-todo';
  * Module defaults for the `settings` singleton: used when a database has no
  * settings row yet (every produced document must carry one — Decision 2.3) and
  * as the reset target of "Delete all data" (Decision 10).
+ *
+ * NOT a literal — it IS the domain model's `DEFAULT_SETTINGS` (ADR-003 Decision 1.2:
+ * the canonical record home). ADR-004 Decision 10 pins the wipe to "an effectively fresh
+ * install with the same `deviceId`", so the wipe target and a fresh profile can never
+ * drift apart again (QA defect D1: they used to disagree on `weekStart`).
  */
-export const DEFAULT_SETTINGS_RECORD: Settings = {
-  id: 'settings',
-  theme: 'system',
-  locale: 'en',
-  weekStart: 0,
-  defaultListId: null,
-  notificationsEnabled: false,
-  lastBackupAt: null,
-};
+export const DEFAULT_SETTINGS_RECORD: Settings = { ...DEFAULT_SETTINGS };
 
 /* ---------------------------- filenames (Decision 9) ---------------------------- */
 

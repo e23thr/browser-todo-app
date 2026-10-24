@@ -3,6 +3,7 @@ import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createSettingsLocalePersistence } from '../../src/i18n/settingsPersistence';
+import { DEFAULT_SETTINGS } from '../../src/domain/model';
 import { boot, resetBootSingleton } from '../../src/storage/boot';
 import { SETTINGS_KEY } from '../../src/storage/schema';
 import type { Settings } from '../../src/storage/types';
@@ -90,15 +91,21 @@ describe('createSettingsLocalePersistence — load', () => {
 });
 
 describe('createSettingsLocalePersistence — save', () => {
-  it('creates the settings row with ADR-002 defaults on the first switch', async () => {
+  it('creates the settings row from the single-sourced fresh defaults on the first switch', async () => {
+    // Earlier tests in this file share the same fake-indexeddb instance — drop any row so the
+    // CREATE path (defaultSettingsRow) is what is actually under test here.
+    const booted = await boot();
+    if (!booted.ok) throw new Error('boot failed in test setup');
+    const dropped = await booted.value.delete('settings', SETTINGS_KEY);
+    if (!dropped.ok) throw new Error('settings row delete failed');
+
     const persistence = createSettingsLocalePersistence();
     await persistence.save('th');
 
     const row = await readSettings();
-    expect(row?.locale).toBe('th');
-    expect(row?.theme).toBe('system');
-    expect(row?.weekStart).toBe(0);
-    expect(row?.defaultListId).toBeNull();
+    // Every field except the two this port owns comes straight from the domain model's
+    // `DEFAULT_SETTINGS` — the one literal default (QA D1: `weekStart` used to drift to 0).
+    expect(row).toEqual({ ...DEFAULT_SETTINGS, theme: 'system', locale: 'th' });
     expect(await persistence.load()).toBe('th');
   });
 

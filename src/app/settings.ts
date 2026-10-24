@@ -17,6 +17,7 @@
 
 import { signal } from '@preact/signals';
 
+import { DEFAULT_SETTINGS as RECORD_DEFAULTS } from '../domain/model';
 import type { Result, StorageError } from '../storage/errors';
 import {
   applyTheme,
@@ -38,11 +39,19 @@ export interface AppSettings {
   readonly defaultListId: string | null;
 }
 
-/** ADR-002 defaults: theme follows the system, week starts on Sunday, no default list yet. */
+/**
+ * Defaults for the three fields this card owns, DERIVED from the domain model's
+ * `DEFAULT_SETTINGS` — the single literal definition of the settings default
+ * (ADR-003 Decision 1.2: the canonical record home).
+ *
+ * ADR-002 defines these FIELDS (shape + `0 | 1` union); the default VALUES come from the
+ * domain record, so a fresh profile, "Delete all data" and this store can never disagree
+ * (QA defect D1: `weekStart` used to be Monday here vs Sunday there).
+ */
 export const DEFAULT_SETTINGS: AppSettings = {
-  theme: 'system',
-  weekStart: 0,
-  defaultListId: null,
+  theme: RECORD_DEFAULTS.theme,
+  weekStart: RECORD_DEFAULTS.weekStart,
+  defaultListId: RECORD_DEFAULTS.defaultListId,
 };
 
 /**

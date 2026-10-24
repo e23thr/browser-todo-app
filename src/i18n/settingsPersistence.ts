@@ -13,6 +13,7 @@
 
 import { readThemePref } from '../app/theme';
 import { bootCodec } from '../app/bootCodec';
+import { DEFAULT_SETTINGS } from '../domain/model';
 import { boot } from '../storage/boot';
 import { SETTINGS_KEY } from '../storage/schema';
 import type { Settings } from '../storage/types';
@@ -21,6 +22,10 @@ import { isLocale, type Locale, type LocalePersistence } from './index';
 /**
  * Row created when none exists yet (first locale write on a fresh profile).
  *
+ * Every field but the two below comes from the domain model's `DEFAULT_SETTINGS` — the ONE
+ * literal default (ADR-003 Decision 1.2), so this row is exactly what a fresh profile gets
+ * (QA defect D1: a `weekStart` literal here used to drift from it).
+ *
  * `theme` is seeded from the pre-paint boot mirror, never from a literal: ADR-002 §3.4 makes
  * `settings.theme` the durable source of truth, so a fabricated `'system'` here would win over
  * the user's stored preference at the very next boot and silently reset it. The mirror is the
@@ -28,13 +33,10 @@ import { isLocale, type Locale, type LocalePersistence } from './index';
  */
 function defaultSettingsRow(locale: Locale): Settings {
   return {
+    ...DEFAULT_SETTINGS,
     id: SETTINGS_KEY,
     theme: readThemePref(),
     locale,
-    weekStart: 0,
-    defaultListId: null,
-    notificationsEnabled: false,
-    lastBackupAt: null,
   };
 }
 

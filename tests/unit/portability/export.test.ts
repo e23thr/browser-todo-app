@@ -6,6 +6,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppDBImpl } from '../../../src/storage/db';
+import { DEFAULT_SETTINGS, type Settings } from '../../../src/domain/model';
+import { newUlid } from '../../../src/storage/id';
+import { SettingsRepo } from '../../../src/storage/repos/settingsRepo';
 import { clearPrefs, deleteAllData, exportBackup } from '../../../src/portability/export';
 import { downloadTextFile } from '../../../src/portability/download';
 import { parseBackupDocument } from '../../../src/portability/backup-document';
@@ -42,6 +45,21 @@ async function openSeeded(): Promise<AppDBImpl> {
   await db.put('settings', corpus.settings);
   await db.put('snapshots', corpus.snapshots[0] ?? makeSnapshot(fixtureId(30)));
   return db;
+}
+
+/**
+ * The settings a BRAND-NEW profile reads: `SettingsRepo.get()` over a profile with no
+ * `settings` row yet. This is the fresh-install state ADR-004 Decision 10 pins the wipe to
+ * ("an effectively fresh install with the same `deviceId`") — asserted against it rather than
+ * against the portability engine's own constant (QA defect D1).
+ */
+async function freshProfileSettings(): Promise<Settings> {
+  const db = await openFixtureDb(uniqueDbName('fresh-profile'));
+  opened.push(db);
+  const repo = new SettingsRepo({ db, clock: () => T0, ids: () => newUlid(T0) });
+  const read = await repo.get();
+  if (!read.ok) throw new Error(`fresh-profile settings read failed: ${read.error.code}`);
+  return read.value;
 }
 
 describe('exportBackup (Decision 9)', () => {
@@ -151,6 +169,36 @@ describe('deleteAllData — the pinned factory reset (Decision 10)', () => {
     expect(wiped.ok).toBe(true);
     const snaps = await db.getAll('snapshots');
     expect(snaps.ok && snaps.value).toEqual([]);
+  });
+
+  it('resets settings to EXACTLY the state a fresh profile gets (QA D1, single-sourced default)', async () => {
+    // The reference is a REAL fresh-profile read: SettingsRepo.get() on a profile with no
+    // settings row returns `row ?? DEFAULT_SETTINGS` (src/storage/repos/settingsRepo.ts),
+    // which is what the app shows before anything is written.
+    const freshProfile = await freshProfileSettings();
+    expect(freshProfile).toEqual(DEFAULT_SETTINGS); // the one literal lives in domain/model
+
+    const db = await openFixtureDb(uniqueDbName('wipe-fresh'), makeMeta({ lastPurgeAt: T0 - 9 }));
+    opened.push(db);
+    // Every field deliberately differs from the default — weekStart carries the value the
+    // drifted engine constant used to reset to (Sunday), so a regression is loud.
+    await db.put(
+      'settings',
+      makeSettings({
+        theme: 'dark',
+        locale: 'th',
+        weekStart: 0,
+        defaultListId: fixtureId(1),
+        notificationsEnabled: true,
+        lastBackupAt: T0,
+      }),
+    );
+
+    const wiped = await deleteAllData({ db, storage: window.localStorage });
+    expect(wiped.ok).toBe(true);
+
+    const after = await db.get('settings', 'settings');
+    expect(after.ok && after.value).toEqual(freshProfile);
   });
 });
 
