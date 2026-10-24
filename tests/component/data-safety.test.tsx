@@ -150,6 +150,18 @@ describe('<StoragePanel> (4, 5.1)', () => {
     ).toBeTruthy();
   });
 
+  it('names the hidden import picker and keeps it out of the tab order (§5.3, axe WCAG 4.1.2)', () => {
+    render(panel());
+
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    expect(input).not.toBeNull();
+    // The picker is `visually-hidden`, not display:none, so axe reads it on every Settings
+    // scan: it needs an accessible name of its own. It is driven by the visible "Import…"
+    // button, so it must not be a tab stop of its own.
+    expect(input?.getAttribute('aria-label')).toBe('Import…');
+    expect(input?.tabIndex).toBe(-1);
+  });
+
   it('keeps "Back up now" reachable and routes export/import/delete callbacks', () => {
     const onExport = vi.fn();
     const onDeleteAll = vi.fn();

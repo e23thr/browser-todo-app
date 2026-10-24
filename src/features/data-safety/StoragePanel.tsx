@@ -165,6 +165,11 @@ export function StoragePanel({
           accept="application/json,.json"
           class="visually-hidden"
           data-testid="import-file-input"
+          // The visible "Import…" button is what people use (it calls pickFile()), so this
+          // picker stays out of the tab order — but it must still be NAMED: it is not
+          // display:none, so axe (WCAG 4.1.2/1.3.1) reads it on every Settings scan.
+          aria-label={t('dataSafety.backup.import')}
+          tabIndex={-1}
           onChange={handleFile}
         />
         {state === 'import-loading' ? (
