@@ -5,6 +5,8 @@ node_modules/
 dist/
 dist-ssr/
 coverage/
+# Coverage run output of the e2e-b run (istanbul artifacts) — regenerated, never committed (D5).
+coverage-e2b/
 *.tsbuildinfo
 
 # Test artifacts
