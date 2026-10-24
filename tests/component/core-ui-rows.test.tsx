@@ -433,6 +433,30 @@ describe('E2 review rework — list semantics (B1) and menu Tab (B3)', () => {
     expect(firstRow !== undefined && (back === firstRow || firstRow.contains(back))).toBe(true);
   });
 
+  it('B3: Tab out of the ONLY row keeps focus on the trigger — never on document.body', async () => {
+    await seed({
+      lists: [makeList({ id: 'L1', name: 'Personal' })],
+      tasks: [makeTask({ id: 'T1', listId: 'L1', title: 'Solo' })],
+    });
+    renderAllOpen();
+
+    const trigger = await screen.findByRole('button', { name: 'Actions for "Solo"' });
+    fireEvent.click(trigger);
+    const menu = await screen.findByRole('menu');
+    within(menu).getAllByRole('menuitem').at(-1)?.focus();
+
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Tab' });
+    await waitFor(() => {
+      expect(screen.queryByRole('menu')).toBeNull();
+    });
+
+    // Nothing follows the row in this frame, so §9.2's "next control" cannot exist:
+    // the fallback keeps the trigger focused (the old code dropped focus on body, and the
+    // next Tab restarted from the top of the page).
+    expect(document.activeElement).toBe(trigger);
+    expect(document.activeElement).not.toBe(document.body);
+  });
+
   it('N3: the move leg announces `a11y.moveFailed` — the field edits HAVE persisted', async () => {
     await seed({
       lists: [makeList({ id: 'L1', name: 'Personal' }), makeList({ id: 'L2', name: 'Work' })],
