@@ -1,0 +1,8 @@
+{
+  "keystrokeCount": 6,
+  "warmKeystrokesUnder50ms": true,
+  "coldFirstQueryDomMs": 60.799999999813735,
+  "coldFirstQueryFrameMs": 61,
+  "warmMaxDomMs": 17.40000000037253,
+  "warmMaxFrameMs": 25
+}

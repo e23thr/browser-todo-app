@@ -1,0 +1,56 @@
+[
+  {
+    "query": "x",
+    "frameMs": 53.299999999813735,
+    "domMs": 53.200000000186265,
+    "label": "10000 results",
+    "rows": 21,
+    "first": "Fixture 10000 xpr",
+    "marks": 42
+  },
+  {
+    "query": "x0",
+    "frameMs": 18,
+    "domMs": 18,
+    "label": "288 results",
+    "rows": 21,
+    "first": "Fixture 09108 x0z",
+    "marks": 21
+  },
+  {
+    "query": "x0a",
+    "frameMs": 16.09999999962747,
+    "domMs": 9.099999999627471,
+    "label": "8 results",
+    "rows": 8,
+    "first": "Fixture 09083 x0a",
+    "marks": 8
+  },
+  {
+    "query": "x0ab",
+    "frameMs": 7.5,
+    "domMs": 6.400000000372529,
+    "label": "(no list)",
+    "rows": 0,
+    "first": "",
+    "marks": 0
+  },
+  {
+    "query": "apple",
+    "frameMs": 14.599999999627471,
+    "domMs": 14.5,
+    "label": "1250 results",
+    "rows": 21,
+    "first": "Fixture 09993 xpk apple",
+    "marks": 21
+  },
+  {
+    "query": "xylophonememo",
+    "frameMs": 24.799999999813735,
+    "domMs": 17.09999999962747,
+    "label": "100 results",
+    "rows": 100,
+    "first": "Fixture 09901 xn0",
+    "marks": 100
+  }
+]

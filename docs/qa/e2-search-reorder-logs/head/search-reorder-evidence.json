@@ -1,0 +1,717 @@
+{
+  "search_stage": "D5 completed-task + case-insensitive coverage verified",
+  "search_10k_keystrokes": [
+    {
+      "query": "x",
+      "frameMs": 61,
+      "domMs": 60.799999999813735,
+      "label": "10000 results",
+      "rows": 21,
+      "first": "Fixture 10000 xpr",
+      "marks": 42
+    },
+    {
+      "query": "x0",
+      "frameMs": 17.09999999962747,
+      "domMs": 16.90000000037253,
+      "label": "288 results",
+      "rows": 21,
+      "first": "Fixture 09108 x0z",
+      "marks": 21
+    },
+    {
+      "query": "x0a",
+      "frameMs": 6.2999999998137355,
+      "domMs": 5.2000000001862645,
+      "label": "8 results",
+      "rows": 8,
+      "first": "Fixture 09083 x0a",
+      "marks": 8
+    },
+    {
+      "query": "x0ab",
+      "frameMs": 13.599999999627471,
+      "domMs": 6.900000000372529,
+      "label": "(no list)",
+      "rows": 0,
+      "first": "",
+      "marks": 0
+    },
+    {
+      "query": "apple",
+      "frameMs": 13.799999999813735,
+      "domMs": 13.699999999254942,
+      "label": "1250 results",
+      "rows": 21,
+      "first": "Fixture 09993 xpk apple",
+      "marks": 21
+    },
+    {
+      "query": "xylophonememo",
+      "frameMs": 25,
+      "domMs": 17.40000000037253,
+      "label": "100 results",
+      "rows": 100,
+      "first": "Fixture 09901 xn0",
+      "marks": 100
+    }
+  ],
+  "search_scroll_to_bottom": {
+    "before": 21,
+    "after": 288,
+    "firstPos": "1",
+    "lastPos": "288",
+    "scrollY": 12842,
+    "maxScroll": 17610
+  },
+  "search_10k_summary": {
+    "keystrokeCount": 6,
+    "warmKeystrokesUnder50ms": true,
+    "coldFirstQueryDomMs": 60.799999999813735,
+    "coldFirstQueryFrameMs": 61,
+    "warmMaxDomMs": 17.40000000037253,
+    "warmMaxFrameMs": 25
+  },
+  "reorder_keyboard": [
+    {
+      "label": "keyboard op1 press1",
+      "order": [
+        "Reorder 01",
+        "Reorder 02",
+        "Reorder 03",
+        "Reorder 04",
+        "Reorder 06",
+        "Reorder 05",
+        "Reorder 07",
+        "Reorder 08",
+        "Reorder 09",
+        "Reorder 10",
+        "Reorder 11",
+        "Reorder 12"
+      ]
+    },
+    {
+      "label": "keyboard op1 press2",
+      "order": [
+        "Reorder 01",
+        "Reorder 02",
+        "Reorder 03",
+        "Reorder 04",
+        "Reorder 06",
+        "Reorder 07",
+        "Reorder 05",
+        "Reorder 08",
+        "Reorder 09",
+        "Reorder 10",
+        "Reorder 11",
+        "Reorder 12"
+      ]
+    },
+    {
+      "label": "keyboard op2 press1",
+      "order": [
+        "Reorder 01",
+        "Reorder 03",
+        "Reorder 02",
+        "Reorder 04",
+        "Reorder 06",
+        "Reorder 07",
+        "Reorder 05",
+        "Reorder 08",
+        "Reorder 09",
+        "Reorder 10",
+        "Reorder 11",
+        "Reorder 12"
+      ]
+    },
+    {
+      "label": "keyboard op3 press1",
+      "order": [
+        "Reorder 08",
+        "Reorder 01",
+        "Reorder 03",
+        "Reorder 02",
+        "Reorder 04",
+        "Reorder 06",
+        "Reorder 07",
+        "Reorder 05",
+        "Reorder 09",
+        "Reorder 10",
+        "Reorder 11",
+        "Reorder 12"
+      ]
+    }
+  ],
+  "drag_geometry_op1": {
+    "dropX": 768,
+    "dropY": 530,
+    "viewportH": 900,
+    "rowTops": [
+      100,
+      162,
+      224,
+      286,
+      348,
+      410,
+      472,
+      534,
+      596,
+      658,
+      720,
+      782
+    ],
+    "rowBottoms": [
+      154,
+      216,
+      278,
+      340,
+      402,
+      464,
+      526,
+      588,
+      650,
+      712,
+      774,
+      836
+    ],
+    "marker": {
+      "id": "01ARZ3NDEKTSV4RRFFQ1000007",
+      "kind": "before"
+    }
+  },
+  "drag_geometry_op2": {
+    "dropX": 768,
+    "dropY": 158,
+    "viewportH": 900,
+    "rowTops": [
+      100,
+      162,
+      224,
+      286,
+      348,
+      410,
+      472,
+      534,
+      596,
+      658,
+      720,
+      782
+    ],
+    "rowBottoms": [
+      154,
+      216,
+      278,
+      340,
+      402,
+      464,
+      526,
+      588,
+      650,
+      712,
+      774,
+      836
+    ],
+    "marker": {
+      "id": "01ARZ3NDEKTSV4RRFFQ1000001",
+      "kind": "before"
+    }
+  },
+  "drag_geometry_op3": {
+    "dropX": 768,
+    "dropY": 88,
+    "viewportH": 900,
+    "rowTops": [
+      100,
+      162,
+      224,
+      286,
+      348,
+      410,
+      472,
+      534,
+      596,
+      658,
+      720,
+      782
+    ],
+    "rowBottoms": [
+      154,
+      216,
+      278,
+      340,
+      402,
+      464,
+      526,
+      588,
+      650,
+      712,
+      774,
+      836
+    ],
+    "marker": {
+      "id": "01ARZ3NDEKTSV4RRFFQ1000000",
+      "kind": "before"
+    }
+  },
+  "reorder_drag": [
+    {
+      "label": "drag op1",
+      "order": [
+        "Reorder 01",
+        "Reorder 02",
+        "Reorder 03",
+        "Reorder 04",
+        "Reorder 06",
+        "Reorder 07",
+        "Reorder 05",
+        "Reorder 08",
+        "Reorder 09",
+        "Reorder 10",
+        "Reorder 11",
+        "Reorder 12"
+      ],
+      "marker": {
+        "id": "01ARZ3NDEKTSV4RRFFQ1000007",
+        "kind": "before"
+      }
+    },
+    {
+      "label": "drag op2",
+      "order": [
+        "Reorder 01",
+        "Reorder 03",
+        "Reorder 02",
+        "Reorder 04",
+        "Reorder 06",
+        "Reorder 07",
+        "Reorder 05",
+        "Reorder 08",
+        "Reorder 09",
+        "Reorder 10",
+        "Reorder 11",
+        "Reorder 12"
+      ],
+      "marker": {
+        "id": "01ARZ3NDEKTSV4RRFFQ1000001",
+        "kind": "before"
+      }
+    },
+    {
+      "label": "drag op3",
+      "order": [
+        "Reorder 08",
+        "Reorder 01",
+        "Reorder 03",
+        "Reorder 02",
+        "Reorder 04",
+        "Reorder 06",
+        "Reorder 07",
+        "Reorder 05",
+        "Reorder 09",
+        "Reorder 10",
+        "Reorder 11",
+        "Reorder 12"
+      ],
+      "marker": {
+        "id": "01ARZ3NDEKTSV4RRFFQ1000000",
+        "kind": "before"
+      }
+    }
+  ],
+  "reorder_paths": {
+    "initialOrder": [
+      "Reorder 01",
+      "Reorder 02",
+      "Reorder 03",
+      "Reorder 04",
+      "Reorder 05",
+      "Reorder 06",
+      "Reorder 07",
+      "Reorder 08",
+      "Reorder 09",
+      "Reorder 10",
+      "Reorder 11",
+      "Reorder 12"
+    ],
+    "keyboard": [
+      {
+        "label": "keyboard op1 press1",
+        "order": [
+          "Reorder 01",
+          "Reorder 02",
+          "Reorder 03",
+          "Reorder 04",
+          "Reorder 06",
+          "Reorder 05",
+          "Reorder 07",
+          "Reorder 08",
+          "Reorder 09",
+          "Reorder 10",
+          "Reorder 11",
+          "Reorder 12"
+        ]
+      },
+      {
+        "label": "keyboard op1 press2",
+        "order": [
+          "Reorder 01",
+          "Reorder 02",
+          "Reorder 03",
+          "Reorder 04",
+          "Reorder 06",
+          "Reorder 07",
+          "Reorder 05",
+          "Reorder 08",
+          "Reorder 09",
+          "Reorder 10",
+          "Reorder 11",
+          "Reorder 12"
+        ]
+      },
+      {
+        "label": "keyboard op2 press1",
+        "order": [
+          "Reorder 01",
+          "Reorder 03",
+          "Reorder 02",
+          "Reorder 04",
+          "Reorder 06",
+          "Reorder 07",
+          "Reorder 05",
+          "Reorder 08",
+          "Reorder 09",
+          "Reorder 10",
+          "Reorder 11",
+          "Reorder 12"
+        ]
+      },
+      {
+        "label": "keyboard op3 press1",
+        "order": [
+          "Reorder 08",
+          "Reorder 01",
+          "Reorder 03",
+          "Reorder 02",
+          "Reorder 04",
+          "Reorder 06",
+          "Reorder 07",
+          "Reorder 05",
+          "Reorder 09",
+          "Reorder 10",
+          "Reorder 11",
+          "Reorder 12"
+        ]
+      }
+    ],
+    "drag": [
+      {
+        "label": "drag op1",
+        "order": [
+          "Reorder 01",
+          "Reorder 02",
+          "Reorder 03",
+          "Reorder 04",
+          "Reorder 06",
+          "Reorder 07",
+          "Reorder 05",
+          "Reorder 08",
+          "Reorder 09",
+          "Reorder 10",
+          "Reorder 11",
+          "Reorder 12"
+        ],
+        "marker": {
+          "id": "01ARZ3NDEKTSV4RRFFQ1000007",
+          "kind": "before"
+        }
+      },
+      {
+        "label": "drag op2",
+        "order": [
+          "Reorder 01",
+          "Reorder 03",
+          "Reorder 02",
+          "Reorder 04",
+          "Reorder 06",
+          "Reorder 07",
+          "Reorder 05",
+          "Reorder 08",
+          "Reorder 09",
+          "Reorder 10",
+          "Reorder 11",
+          "Reorder 12"
+        ],
+        "marker": {
+          "id": "01ARZ3NDEKTSV4RRFFQ1000001",
+          "kind": "before"
+        }
+      },
+      {
+        "label": "drag op3",
+        "order": [
+          "Reorder 08",
+          "Reorder 01",
+          "Reorder 03",
+          "Reorder 02",
+          "Reorder 04",
+          "Reorder 06",
+          "Reorder 07",
+          "Reorder 05",
+          "Reorder 09",
+          "Reorder 10",
+          "Reorder 11",
+          "Reorder 12"
+        ],
+        "marker": {
+          "id": "01ARZ3NDEKTSV4RRFFQ1000000",
+          "kind": "before"
+        }
+      }
+    ],
+    "identical": true,
+    "persistedAfterReload": [
+      "Reorder 08",
+      "Reorder 01",
+      "Reorder 03",
+      "Reorder 02",
+      "Reorder 04",
+      "Reorder 06",
+      "Reorder 07",
+      "Reorder 05",
+      "Reorder 09",
+      "Reorder 10",
+      "Reorder 11",
+      "Reorder 12"
+    ]
+  },
+  "virtual_initial": {
+    "virtualized": "true",
+    "domRows": 23,
+    "setSize": "1200",
+    "posFirst": "1",
+    "padTop": true,
+    "padBottom": 1
+  },
+  "virtual_keyboard": {
+    "arrowUps": [
+      "1199",
+      "1198",
+      "1197",
+      "1196",
+      "1195",
+      "1194",
+      "1193",
+      "1192",
+      "1191",
+      "1190",
+      "1189",
+      "1188"
+    ],
+    "afterPageUp": "1178",
+    "arrowDowns": [
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20",
+      "21",
+      "22",
+      "23",
+      "24",
+      "25",
+      "26",
+      "27",
+      "28",
+      "29",
+      "30",
+      "31"
+    ],
+    "afterWalk": 32
+  },
+  "cpu_throttle_probe": {
+    "busyLoopMsAtRate1": 29.3,
+    "busyLoopMsAtRate4": 105.7,
+    "ratio": 3.61
+  },
+  "virtual_scroll_unthrottled": {
+    "frames": 122,
+    "medianMs": 16.699999999999818,
+    "p95Ms": 16.799999999999727,
+    "maxMs": 16.800000000000182,
+    "fps": 60,
+    "droppedFrames": 0,
+    "scrolledPx": 4816,
+    "maxDomRows": 112,
+    "scrollSource": "window innerHeight=800",
+    "firstPos": "31",
+    "lastPos": "142"
+  },
+  "virtual_scroll_cpu4x": {
+    "frames": 80,
+    "medianMs": 33.19999999999982,
+    "p95Ms": 33.400000000000546,
+    "maxMs": 50,
+    "fps": 30,
+    "droppedFrames": 7,
+    "scrolledPx": 3200,
+    "maxDomRows": 172,
+    "scrollSource": "window innerHeight=800",
+    "firstPos": "31",
+    "lastPos": "202"
+  },
+  "virtual_scroll_to_bottom": {
+    "before": 23,
+    "after": 1200,
+    "firstPos": "1",
+    "lastPos": "1200",
+    "focusedPos": "1",
+    "scrollY": 52942,
+    "maxScroll": 74120
+  },
+  "touch_handles_375": [
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    },
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    },
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    },
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    },
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    },
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    },
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    },
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    }
+  ],
+  "touch_handles_320": [
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    },
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    },
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    },
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    },
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    },
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    },
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    },
+    {
+      "w": 44,
+      "h": 44,
+      "opacity": "1",
+      "visibility": "visible",
+      "display": "grid",
+      "touchAction": "none"
+    }
+  ]
+}

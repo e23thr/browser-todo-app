@@ -1,0 +1,91 @@
+
+Running 6 tests using 1 worker
+
+QA[search] [{"query":"x","frameMs":218.20000000018626,"domMs":218,"label":"10000 results","rows":21,"first":"Fixture 10000 xpr","marks":42},{"query":"x0","frameMs":39.59999999962747,"domMs":39.299999999813735,"label":"288 results","rows":21,"first":"Fixture 09108 x0z","marks":21},{"query":"x0a","frameMs":14.299999999813735,"domMs":10.299999999813735,"label":"8 results","rows":8,"first":"Fixture 09083 x0a","marks":8},{"query":"x0ab","frameMs":9.799999999813735,"domMs":9.099999999627471,"label":"(no list)","rows":0,"first":"","marks":0},{"query":"apple","frameMs":36.59999999962747,"domMs":36.299999999813735,"label":"1250 results","rows":21,"first":"Fixture 09993 xpk apple","marks":21},{"query":"xylophonememo","frameMs":105.09999999962747,"domMs":59.799999999813735,"label":"100 results","rows":100,"first":"Fixture 09901 xn0","marks":100}]
+  ✘  1 [chromium] › tests/e2e/qa-search-reorder.spec.ts:421:1 › M5 search @10k fixtures — latency, title+notes coverage, instant filter (7.3s)
+QA[reorder] identical=true final=["Reorder 08","Reorder 01","Reorder 03","Reorder 02","Reorder 04","Reorder 06","Reorder 07","Reorder 05","Reorder 09","Reorder 10","Reorder 11","Reorder 12"]
+  ✓  2 [chromium] › tests/e2e/qa-search-reorder.spec.ts:624:3 › M6 reorder › keyboard and drag paths persist identical results (5.2s)
+QA[virtual] initial {"virtualized":"true","domRows":23,"setSize":"1200","posFirst":"1","padTop":true,"padBottom":1}
+QA[virtual-scroll:unthrottled] {"frames":87,"medianMs":16.699999999999818,"p95Ms":33.399999999999636,"maxMs":50,"fps":60,"droppedFrames":4,"scrolledPx":3416,"maxDomRows":87,"scrollSource":"window innerHeight=800","firstPos":"31","lastPos":"117"}
+QA[virtual-scroll:cpu4x] {"frames":25,"medianMs":83.40000000000146,"p95Ms":149.90000000000055,"maxMs":150,"fps":12,"droppedFrames":21,"scrolledPx":1000,"maxDomRows":105,"scrollSource":"window innerHeight=800","firstPos":"31","lastPos":"135"}
+  ✘  3 [chromium] › tests/e2e/qa-search-reorder.spec.ts:878:3 › M5/M6 virtualization › window, keyboard navigation across boundaries, aria positions, scroll frames (11.5s)
+QA[virtual-bottom] {"before":23,"after":1200,"firstPos":"1","lastPos":"1200","focusedPos":"1","scrollY":52942,"maxScroll":74120}
+  ✘  4 [chromium] › tests/e2e/qa-search-reorder.spec.ts:1097:3 › M5/M6 virtualization › V1: scrolling far from the pinned cursor materialises the whole list (2.4s)
+QA[touch:375] [{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"}]
+  ✓  5 [chromium] › tests/e2e/qa-search-reorder.spec.ts:1157:5 › M6 touch targets @375px › reorder handle is ≥44×44 and visible on touch (499ms)
+QA[touch:320] [{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"}]
+  ✓  6 [chromium] › tests/e2e/qa-search-reorder.spec.ts:1157:5 › M6 touch targets @320px › reorder handle is ≥44×44 and visible on touch (492ms)
+
+
+  1) [chromium] › tests/e2e/qa-search-reorder.spec.ts:421:1 › M5 search @10k fixtures — latency, title+notes coverage, instant filter 
+
+    Error: cold frame latency (index build) for "x"
+
+    expect(received).toBeLessThan(expected)
+
+    Expected: < 100
+    Received:   218.20000000018626
+
+      510 |     const ceiling = index === 0 ? 100 : 50;
+      511 |     const label = index === 0 ? 'cold frame latency (index build)' : 'frame latency';
+    > 512 |     expect(frameMs, `${label} for "${String(m['query'])}"`).toBeLessThan(ceiling);
+          |                                                             ^
+      513 |     if (domMs !== null) {
+      514 |       expect(domMs, `DOM update latency for "${String(m['query'])}"`).toBeLessThan(ceiling);
+      515 |     }
+        at /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e2-search-qa-head2/tests/e2e/qa-search-reorder.spec.ts:512:61
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/qa-search-reorder-M5-searc-18b0b-tes-coverage-instant-filter-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/qa-search-reorder-M5-searc-18b0b-tes-coverage-instant-filter-chromium/error-context.md
+
+    Error Context: test-results/qa-search-reorder-M5-searc-18b0b-tes-coverage-instant-filter-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/qa-search-reorder-M5-searc-18b0b-tes-coverage-instant-filter-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/qa-search-reorder-M5-searc-18b0b-tes-coverage-instant-filter-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/e2e/qa-search-reorder.spec.ts:878:3 › M5/M6 virtualization › window, keyboard navigation across boundaries, aria positions, scroll frames 
+
+    Error: 4×-throttled median frame
+
+    expect(received).toBeLessThan(expected)
+
+    Expected: < 50
+    Received:   83.40000000000146
+
+      1081 |     // §9.1 "Scroll: 60 fps; virtualize beyond ~200 DOM rows".
+      1082 |     expect(plain['medianMs'], 'unthrottled median frame').toBeLessThan(25);
+    > 1083 |     expect(throttled['medianMs'], '4×-throttled median frame').toBeLessThan(50);
+           |                                                                ^
+      1084 |   });
+      1085 |
+      1086 |   /**
+        at /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e2-search-qa-head2/tests/e2e/qa-search-reorder.spec.ts:1083:64
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/qa-search-reorder-M5-M6-vi-45606-ria-positions-scroll-frames-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/qa-search-reorder-M5-M6-vi-45606-ria-positions-scroll-frames-chromium/error-context.md
+
+    Error Context: test-results/qa-search-reorder-M5-M6-vi-45606-ria-positions-scroll-frames-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/qa-search-reorder-M5-M6-vi-45606-ria-positions-scroll-frames-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/qa-search-reorder-M5-M6-vi-45606-ria-positions-scroll-frames-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [chromium] › tests/e2e/qa-search-reorder.spec.ts:421:1 › M5 search @10k fixtures — latency, title+notes coverage, instant filter 
+    [chromium] › tests/e2e/qa-search-reorder.spec.ts:878:3 › M5/M6 virtualization › window, keyboard navigation across boundaries, aria positions, scroll frames 
+  4 passed (48.6s)

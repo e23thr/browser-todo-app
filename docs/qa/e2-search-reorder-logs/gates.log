@@ -1,0 +1,61 @@
+=== tsc
+TSC_EXIT=0
+=== eslint
+LINT_EXIT=0
+=== prettier
+Checking formatting...
+All matched files use Prettier code style!
+FMT_EXIT=0
+=== i18n
+i18n catalog check — src/i18n/en.json vs src/i18n/th.json
+  keys: 327 en / 327 th · 286 distinct keys used by 343 literal t() call site(s)
+  note: 15 t() call site(s) with a non-literal key (not statically verifiable):
+    app/Shell.tsx:181
+    app/Shell.tsx:262
+    components/ConfirmDialog.tsx:95
+    components/ConfirmDialog.tsx:104
+    components/ConfirmDialog.tsx:110
+    components/ConfirmDialog.tsx:112
+    features/lists/ListDialog.tsx:113
+    features/lists/ListDialog.tsx:132
+    features/lists/ListsManageView.tsx:388
+    features/tasks/Composer.tsx:225
+    features/tasks/TaskRow.tsx:276
+    features/tasks/TaskRow.tsx:277
+    features/tasks/ToastHost.tsx:33
+    features/tasks/ToastHost.tsx:42
+    features/tasks/fields.tsx:183
+RESULT: PASS — en/th key sets, values and placeholders are consistent
+I18N_EXIT=0
+=== vitest
+      Tests  734 passed (734)
+   Start at  02:38:43
+   Duration  11.24s (environment 65%, tests 21%, setup 9%, import 2%, transform 2%, worker 1%)
+
+Environment  jsdom was created 66 times · 65.34s total, 65% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+TEST_EXIT=0
+=== audit
+found 0 vulnerabilities
+AUDIT_EXIT=0
+=== budget
+Bundle budget report — /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e2-search-qa-head/dist (gzip level 9)
+  gate              measured    limit       status
+  initial-js        63.9 KB     100.0 KB    PASS
+      3 entry-closure chunk(s)
+  css               6.6 KB      20.0 KB     PASS
+      1 file(s)
+  app-shell         79.5 KB     200.0 KB    PASS
+      8 file(s), 4 lazy chunk(s) excluded
+  locales           12.1 KB     20.0 KB     PASS
+      2 locale pack(s)
+  locales-lazy      0 hit(s)    0           PASS
+      no locale pack is inside the initial JS closure
+  no-external-refs  0 hit(s)    0           PASS
+      scanned 12 shipped file(s)
+  no-wasm           0 hit(s)    0           PASS
+      no .wasm asset in dist/ (MVP rule)
+RESULT: PASS
+BUDGET_EXIT=0

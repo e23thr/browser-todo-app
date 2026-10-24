@@ -1,0 +1,166 @@
+{
+  "initialOrder": [
+    "Reorder 01",
+    "Reorder 02",
+    "Reorder 03",
+    "Reorder 04",
+    "Reorder 05",
+    "Reorder 06",
+    "Reorder 07",
+    "Reorder 08",
+    "Reorder 09",
+    "Reorder 10",
+    "Reorder 11",
+    "Reorder 12"
+  ],
+  "keyboard": [
+    {
+      "label": "keyboard op1 press1",
+      "order": [
+        "Reorder 01",
+        "Reorder 02",
+        "Reorder 03",
+        "Reorder 04",
+        "Reorder 06",
+        "Reorder 05",
+        "Reorder 07",
+        "Reorder 08",
+        "Reorder 09",
+        "Reorder 10",
+        "Reorder 11",
+        "Reorder 12"
+      ]
+    },
+    {
+      "label": "keyboard op1 press2",
+      "order": [
+        "Reorder 01",
+        "Reorder 02",
+        "Reorder 03",
+        "Reorder 04",
+        "Reorder 06",
+        "Reorder 07",
+        "Reorder 05",
+        "Reorder 08",
+        "Reorder 09",
+        "Reorder 10",
+        "Reorder 11",
+        "Reorder 12"
+      ]
+    },
+    {
+      "label": "keyboard op2 press1",
+      "order": [
+        "Reorder 01",
+        "Reorder 03",
+        "Reorder 02",
+        "Reorder 04",
+        "Reorder 06",
+        "Reorder 07",
+        "Reorder 05",
+        "Reorder 08",
+        "Reorder 09",
+        "Reorder 10",
+        "Reorder 11",
+        "Reorder 12"
+      ]
+    },
+    {
+      "label": "keyboard op3 press1",
+      "order": [
+        "Reorder 08",
+        "Reorder 01",
+        "Reorder 03",
+        "Reorder 02",
+        "Reorder 04",
+        "Reorder 06",
+        "Reorder 07",
+        "Reorder 05",
+        "Reorder 09",
+        "Reorder 10",
+        "Reorder 11",
+        "Reorder 12"
+      ]
+    }
+  ],
+  "drag": [
+    {
+      "label": "drag op1",
+      "order": [
+        "Reorder 01",
+        "Reorder 02",
+        "Reorder 03",
+        "Reorder 04",
+        "Reorder 06",
+        "Reorder 07",
+        "Reorder 05",
+        "Reorder 08",
+        "Reorder 09",
+        "Reorder 10",
+        "Reorder 11",
+        "Reorder 12"
+      ],
+      "marker": {
+        "id": "01ARZ3NDEKTSV4RRFFQ1000007",
+        "kind": "before"
+      }
+    },
+    {
+      "label": "drag op2",
+      "order": [
+        "Reorder 01",
+        "Reorder 03",
+        "Reorder 02",
+        "Reorder 04",
+        "Reorder 06",
+        "Reorder 07",
+        "Reorder 05",
+        "Reorder 08",
+        "Reorder 09",
+        "Reorder 10",
+        "Reorder 11",
+        "Reorder 12"
+      ],
+      "marker": {
+        "id": "01ARZ3NDEKTSV4RRFFQ1000001",
+        "kind": "before"
+      }
+    },
+    {
+      "label": "drag op3",
+      "order": [
+        "Reorder 08",
+        "Reorder 01",
+        "Reorder 03",
+        "Reorder 02",
+        "Reorder 04",
+        "Reorder 06",
+        "Reorder 07",
+        "Reorder 05",
+        "Reorder 09",
+        "Reorder 10",
+        "Reorder 11",
+        "Reorder 12"
+      ],
+      "marker": {
+        "id": "01ARZ3NDEKTSV4RRFFQ1000000",
+        "kind": "before"
+      }
+    }
+  ],
+  "identical": true,
+  "persistedAfterReload": [
+    "Reorder 08",
+    "Reorder 01",
+    "Reorder 03",
+    "Reorder 02",
+    "Reorder 04",
+    "Reorder 06",
+    "Reorder 07",
+    "Reorder 05",
+    "Reorder 09",
+    "Reorder 10",
+    "Reorder 11",
+    "Reorder 12"
+  ]
+}

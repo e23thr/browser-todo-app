@@ -1,0 +1,13 @@
+
+Running 1 test using 1 worker
+
+AXE-REAL-VIEWS
+#/all → serious: list — <ul> and <ol> must only directly contain <li>, <script> or <template> elements (1 node(s))
+    .task-list :: <ul class="task-list" aria-label="All open">
+#/all → serious: target-size — All touch targets must be 24px large, or leave sufficient space (1 node(s))
+    li[data-task-id="01M5QNKE1XM9MA1PKF3JNHE8QB"] > .row-main > .task-check[type="checkbox"] :: <input type="checkbox" class="task-check" aria-label="Mark &quot;First seeded task&quot; as complete" tabindex="0">
+#/settings → critical: label — Form elements must have labels (1 node(s))
+    input[type="file"] :: <input type="file" accept="application/json,.json" class="visually-hidden" data-testid="import-file-input">
+  ✓  1 [chromium] › tests/e2e/qa-axe-nonvacuous.spec.ts:14:1 › axe scan of the real core views (onboarding pre-dismissed) — violation report (4.6s)
+
+  1 passed (15.5s)

@@ -1,0 +1,13 @@
+{
+  "frames": 80,
+  "medianMs": 33.19999999999982,
+  "p95Ms": 33.400000000000546,
+  "maxMs": 50,
+  "fps": 30,
+  "droppedFrames": 7,
+  "scrolledPx": 3200,
+  "maxDomRows": 172,
+  "scrollSource": "window innerHeight=800",
+  "firstPos": "31",
+  "lastPos": "202"
+}
