@@ -56,7 +56,7 @@ domain logic stays framework-free.
 | Optimistic pipeline | `MutationRunner`: apply pure optimistic state change → notify synchronously (paint) → write through → on success swap in the authoritative record, on failure roll back to the committed baseline, cancel queued ops for that record, emit `write-failed` |
 | Reorder | **Single-record write**: `orderKeyBetween(prev, next)` per ADR-002 fractional keys; one `put` of the moved row (patch `{sortOrder}` + stamps); neighbors are reads only |
 | Search | In-memory token-prefix inverted index (sorted token array + posting lists) + keystroke narrowing (query results filter the next keystroke); incremental upsert/remove per task; no full re-scan per keystroke |
-| Virtualization | Pure `computeWindow()` (uniform row fast-path + prefix-sum variable heights) over a flat `ViewRow[]`; overscan 8; pinned focused row; a11y row-index contract |
+| Virtualization | Pure `computeWindow()` (uniform row fast-path + prefix-sum variable heights) over a flat `ViewRow[]`; overscan 8; pinned focused row (rendered set = window slice or its own segment — the pin never widens the window); a11y row-index contract |
 | State | One immutable `State` snapshot (maps + version) in a single signal; views are pure selectors returning flat `ViewRow[]`; per-record signals rejected (premature) |
 | Concurrent tabs | BroadcastChannel `local-first-todo:tabs:v1`, one message type `data-changed` (id lists or `'all'`), sent **after** IDB commit; advisory only — correctness comes from IDB re-read + `by_updatedAt` watermark sweep on tab focus |
 | dueDate | All-day local-date strings compared lexicographically; `today` from local `Date` components (never `toISOString`); day rollover via visibility + next-midnight timer |
@@ -446,11 +446,16 @@ type WindowSpec = {
   heightAt: (i: number) => number;   // uniform fast-path when height is constant
   viewportPx: number; scrollTop: number;
   overscan?: number;                 // default 8 rows
-  pin?: number[];                    // indices forced into the window (focused row)
+  pin?: number[];                    // indices that must stay mounted (roving cursor)
+};
+type PinnedSegment = {              // a pinned row rendered OUTSIDE [start, end) (V1)
+  index: number;                    //   row index — outside [start, end) (inside pins render in-window)
+  padBefore: number;                //   spacer before the row: gap since the previously rendered element
 };
 type WindowResult = {
-  start: number; end: number;        // [start, end) row indices to render
-  padTop: number; padBottom: number; // spacer heights; total = sum(heightAt)
+  start: number; end: number;        // [start, end) scroll-viewport window ± overscan
+  padTop: number; padBottom: number; // spacer heights; pads + segments tile sum(heightAt)
+  pins: readonly PinnedSegment[];    // out-of-window pins, ascending — pad+row segments in list order
 };
 computeWindow(spec: WindowSpec): WindowResult
 ```
@@ -461,20 +466,47 @@ computeWindow(spec: WindowSpec): WindowResult
   O(n) prefix-sum + binary-search path — 10k rows sum in < 0.1 ms, negligible next to a frame.
 - **> 200 DOM rows → never render them**: the window renders `viewport/rowHeight + 2×overscan`
   rows (≈ 25–35 rows on phone/desktop), keeping a 60 fps scroll a small keyed diff per frame.
+  The window is the **scroll-viewport window only** — a `pin` never widens it toward the scroll
+  position (§9.1 V1 seam contract; see the amendment below).
   Scroll handling is `requestAnimationFrame`-coalesced (one `computeWindow` per frame max).
 - **Row model is flat**: group headers are rows too, so one windowing path serves every view
   (Today's two groups, per-day groups, list groups, search results).
 - **a11y contract** (implemented by the UI card, verified in Playwright): the list exposes
   `aria-rowcount` / `aria-rowindex` (or `role="listbox"` + `aria-setsize/posinset` semantics per
   the TaskRow spec); keyboard Up/Down moves focus, and the focused row is **pinned** into the
-  window (`pin`) so focus never dies when the window scrolls; screen-reader row counts stay
-  correct while only a window is in the DOM.
+  RENDERED SET (`pin`) — the window slice, or its own `{ index, padBefore }` segment when it
+  falls outside the window (`pins`) — so focus never dies when the window scrolls; a
+  layout-effect focus restore (`focus({ preventScroll: true })`) re-focuses the row after the
+  keyed boundary move (Chromium blurs a moved node). Screen-reader row counts stay correct
+  while only a window is in the DOM.
 - **Scroll preservation**: cross-tab refreshes (Decision 8) and optimistic updates replace state
   but never reset `scrollTop`; rows are keyed by task id so Preact patches in place.
 - Rejected: render-all (breaks the 60 fps/200-row budget), `content-visibility` heuristics
   (uneven browser behavior, weak a11y story), and a virtualization dependency (the pure math is
   ~80 LOC; the a11y/scroll glue is ours either way). Revisit only if dynamic row heights become a
   design requirement (prefix-sum path already covers the math).
+
+> **Amendment (2026-10-25, V1 seam-contract sync — fix card t_805282a3, this card t_82de779b).**
+> Wording/snippet sync to the PM's binding V1 design decision; **the decision itself is
+> unchanged** — windowed rendering over a flat `ViewRow[]` driven by one pure `computeWindow()`
+> stays exactly as recorded above. What the seam contract now says (landed in t_805282a3,
+> commit c652340; measured 33 DOM rows at the bottom of a 1 200-row list vs 1 200 before):
+>
+> 1. **A pin no longer widens the window (§9.1 "< 200 DOM rows").** `computeWindow`'s window is
+>    the SCROLL-VIEWPORT window only (± overscan) — it never spans cursor→scroll (a cursor
+>    parked at the top with the scroll at the bottom used to materialise O(distance) rows, up to
+>    the entire list). An out-of-window pin comes back in `WindowResult.pins` as its own
+>    `{ index, padBefore }` segment; the UI renders, in list order,
+>    `[above segments] padTop [window rows] [below segments] padBottom`, pads + segments tiling
+>    the exact list height. A pin inside the window renders with it and is absent from `pins`.
+> 2. **The a11y pin targets the RENDERED SET, not the window**: the focused row stays mounted as
+>    the window slice or its own segment, and a layout-effect focus restore
+>    (`focus({ preventScroll: true })`) re-focuses it after the keyed boundary move — Chromium
+>    blurs any node moved by `insertBefore`.
+>
+> The type snippet, the a11y bullet, the "> 200 DOM rows" bullet and the testing bullet above
+> are rewritten to match. The authoritative seam surface is `docs/dev/domain-api.md` §6 (updated
+> in the fix card); implementation: `src/domain/windowing.ts` + `src/features/tasks/TaskList.tsx`.
 
 ---
 
@@ -640,7 +672,8 @@ points under ADR-006.
   day groups hidden, week/day boundaries, `completedAt desc`, manual order, subtask nesting),
   incl. the midnight-rollover case (dueDate === yesterday's today).
 - `windowing.ts`: property tests — rendered rows cover the visible range, bounds/clamping,
-  overscan, `pin` always included, uniform and prefix-sum modes agree.
+  overscan, `pin` always rendered (inside the window or as its own `pins` segment), uniform and
+  prefix-sum modes agree, pads + segments tile the exact list height.
 - `sync.ts`/`tabSync.ts`: reconcile upsert/evict (tombstone), `'all'`, self-origin ignore,
   watermark sweep catches missed messages, no writes on receipt.
 - Coverage ≥ 80% lines/branches on `src/domain/` and `src/storage/` (§9.5 gate).
