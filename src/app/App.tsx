@@ -156,6 +156,7 @@ export function App(): JSX.Element {
 
   // SPA route-change contract (§4.1): move focus to the view's h1 and announce the view.
   // Skipped on the very first paint so the skip link stays the first focusable element.
+  // A view that marks its own autofocus target (S5 search input, F8.1) wins over the h1.
   useEffect(() => {
     if (view.kind !== 'ready') return;
     if (firstPaint.current) {
@@ -165,7 +166,10 @@ export function App(): JSX.Element {
     const timer = setTimeout(() => {
       const heading = document.querySelector<HTMLElement>('main [data-view-title]');
       if (heading === null) return;
-      heading.focus();
+      const autofocus = [...document.querySelectorAll<HTMLElement>('main [data-autofocus]')].find(
+        (el) => el.closest('.dialog') === null,
+      );
+      (autofocus ?? heading).focus();
       announce(t('a11y.viewChanged', { view: heading.textContent.trim() }));
     }, 0);
     return () => {

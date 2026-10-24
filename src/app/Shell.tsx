@@ -16,7 +16,7 @@ import type { ComponentChildren, JSX, TargetedEvent } from 'preact';
 import { registerLiveRegions } from './announce';
 import { Icon, IconSprite, type IconName } from './icons';
 import { t } from './i18n';
-import { useListOptions } from './lists';
+import { useDropHoverListId, useListOptions } from './lists';
 import { useMediaQuery, WIDE_QUERY } from './media';
 import { startQuickAdd } from './quickAdd';
 
@@ -60,6 +60,7 @@ function currentAttr(condition: boolean): 'page' | undefined {
 /** Links to the lists the shell knows about, or the documented empty state. */
 function ListLinks({ onNavigate }: { readonly onNavigate: () => void }): JSX.Element {
   const lists = useListOptions();
+  const dropHover = useDropHoverListId();
 
   if (lists.length === 0) {
     return <li class="nav-empty">{t('list.empty.title')}</li>;
@@ -69,7 +70,14 @@ function ListLinks({ onNavigate }: { readonly onNavigate: () => void }): JSX.Ele
     <>
       {lists.map((list) => (
         <li key={list.id}>
-          <a href={`#/list/${encodeURIComponent(list.id)}`} onClick={onNavigate}>
+          <a
+            href={`#/list/${encodeURIComponent(list.id)}`}
+            onClick={onNavigate}
+            // §8.1 desktop extra: during a task drag every sidebar list is a
+            // move-to-list drop target (the drag layer hit-tests this attribute).
+            data-drop-list-id={list.id}
+            data-drop-hover={dropHover === list.id ? 'true' : undefined}
+          >
             <Icon name="folder" size={18} />
             <span class="nav-label">{list.name}</span>
           </a>

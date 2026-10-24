@@ -36,7 +36,8 @@ export type IconName =
   | 'monitor'
   | 'download'
   | 'upload'
-  | 'database';
+  | 'database'
+  | 'grip';
 
 /** Path/shape data per icon, all drawn on the 24×24 grid. */
 const PATHS: Readonly<Record<IconName, JSX.Element>> = {
@@ -179,6 +180,8 @@ const PATHS: Readonly<Record<IconName, JSX.Element>> = {
       <path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3" />
     </>
   ),
+  // Grip (reorder handle §8.1): two columns of three round-cap dots on the 24 grid.
+  grip: <path d="M9 7h.01M15 7h.01M9 12h.01M15 12h.01M9 17h.01M15 17h.01" />,
 };
 
 /**

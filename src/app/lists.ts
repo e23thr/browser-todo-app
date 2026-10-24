@@ -23,6 +23,27 @@ export function setListOptions(next: readonly ListOption[]): void {
   listOptions.value = next.slice();
 }
 
+/**
+ * Sidebar drop-target highlight while a task drag is in flight (design §8.1
+ * "desktop extra"). The drag layer (`features/tasks`) writes the list currently
+ * hovered; the shell's list links read the signal to render the highlight. `null`
+ * = no drag / not over a list.
+ */
+const dropHoverListId = signal<string | null>(null);
+
+export function setDropHoverListId(id: string | null): void {
+  dropHoverListId.value = id;
+}
+
+export function useDropHoverListId(): string | null {
+  return dropHoverListId.value;
+}
+
+/** Non-reactive read (tests, drag layer). */
+export function getDropHoverListId(): string | null {
+  return dropHoverListId.value;
+}
+
 /** Current options (non-reactive read; components should use `useListOptions`). */
 export function getListOptions(): readonly ListOption[] {
   return listOptions.value;
