@@ -11,6 +11,8 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/pre
 
 import { Composer } from '../../src/features/tasks/Composer';
 import { TaskEditor } from '../../src/features/tasks/TaskEditor';
+import { t } from '../../src/app/i18n';
+import { resetPersistGate } from '../../src/features/data-safety/persistGate';
 import {
   addTask,
   bindRunnerForTest,
@@ -28,6 +30,16 @@ import {
   setUpCoreUi,
   tearDownCoreUi,
 } from './core-ui-harness';
+
+/**
+ * Whatever the browser reports about `persist()`, the first-write notice announces one of
+ * these three — the assertion must not depend on which state a given environment lands on.
+ */
+const persistenceNotices = (): string[] => [
+  t('dataSafety.persistence.announcedGranted'),
+  t('dataSafety.persistence.announcedDenied'),
+  t('dataSafety.persistence.unsupported'),
+];
 
 beforeEach(() => {
   setUpCoreUi();
@@ -65,6 +77,32 @@ describe('S3 composer — F1 capture', () => {
     await waitFor(() => {
       expect(state.value.pending.size).toBe(0);
     });
+    view.unmount();
+  });
+
+  it("first capture: E3's first-write notice never swallows the task-added announcement", async () => {
+    // Run the once-per-session §5.5 gate inside THIS capture, whatever ran before.
+    resetPersistGate();
+    await seed({ lists: [makeList({ id: 'L1', name: 'Personal' })] });
+    const view = render(<Composer variant="inline" />);
+
+    const title = screen.getByLabelText<HTMLInputElement>('Title', { exact: true });
+    title.focus();
+    fireEvent.input(title, { target: { value: 'First capture' } });
+    fireEvent.keyDown(title, { key: 'Enter' });
+
+    // M13-B1 / E2 F-1: the gate's announce fired in the same tick as this one and used to
+    // cancel it inside the 60 ms window — the capture confirmation must still land first.
+    await waitFor(() => {
+      expect(regions.polite?.textContent).toBe('Task added: First capture');
+    });
+    // …and the persistence notice still reaches the user, after it rather than instead of it.
+    await waitFor(
+      () => {
+        expect(persistenceNotices()).toContain(regions.polite?.textContent ?? '');
+      },
+      { timeout: 2000, interval: 50 },
+    );
     view.unmount();
   });
 

@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { announce, registerLiveRegions } from '../../src/app/announce';
+import {
+  ANNOUNCE_DELAY_MS,
+  announce,
+  DEFERRED_ANNOUNCE_DELAY_MS,
+  registerLiveRegions,
+} from '../../src/app/announce';
 
 function mountRegions(): { polite: HTMLElement; assertive: HTMLElement; dispose: () => void } {
   const polite = document.createElement('div');
@@ -87,5 +92,33 @@ describe('global announcer (design §11.2)', () => {
 
     expect(polite.textContent).toBe('');
     dispose();
+  });
+
+  it('lands a deferred message after the window instead of superseding the one in flight', async () => {
+    const { polite, dispose } = mountRegions();
+
+    // M13-B1 / E2 F-1: the composer's first capture and E3's first-write notice fire in
+    // the same tick — the notice must wait the capture confirmation out, not cancel it.
+    announce('Task added: Buy milk');
+    announce('This browser did not grant extra protection.', 'polite', { deferred: true });
+
+    // Still inside the hold: the capture message is on screen, untouched.
+    await tick(DEFERRED_ANNOUNCE_DELAY_MS - ANNOUNCE_DELAY_MS);
+    expect(polite.textContent).toBe('Task added: Buy milk');
+
+    // …and after the hold the notice has landed too — neither message was lost.
+    await tick(DEFERRED_ANNOUNCE_DELAY_MS + ANNOUNCE_DELAY_MS);
+    expect(polite.textContent).toBe('This browser did not grant extra protection.');
+    dispose();
+  });
+
+  it('cancels a deferred message when the regions unregister', async () => {
+    const { polite, dispose } = mountRegions();
+
+    announce('never spoken', 'polite', { deferred: true });
+    dispose();
+    await tick(DEFERRED_ANNOUNCE_DELAY_MS + ANNOUNCE_DELAY_MS);
+
+    expect(polite.textContent).toBe('');
   });
 });

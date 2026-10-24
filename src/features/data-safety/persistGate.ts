@@ -57,12 +57,19 @@ export async function noteFirstMeaningfulWrite(): Promise<void> {
 
   try {
     const state = await requestPersist();
+    // M13-B1 / E2 F-1: this notice is fired from the same first-write tick as the composer's
+    // `a11y.taskAdded`, which is still inside its 60 ms announce window. Announcing here
+    // would supersede it and the capture confirmation would never reach the live region —
+    // so the background notice waits its turn (WCAG 2.2 SC 4.1.3: both must land).
+    // `runRequestPersist()` below stays immediate: it answers a click, nothing races it.
     announce(
       state === 'granted'
         ? t('dataSafety.persistence.announcedGranted')
         : state === 'unsupported'
           ? t('dataSafety.persistence.unsupported')
           : t('dataSafety.persistence.announcedDenied'),
+      'polite',
+      { deferred: true },
     );
     deriveBanners();
 
