@@ -34,6 +34,7 @@ import {
   status,
   WRITE_SLOW_MS,
 } from '../../src/features/tasks/store';
+import { announce } from '../../src/app/announce';
 import { clearToasts, toasts } from '../../src/features/tasks/toasts';
 import {
   makeList,
@@ -63,6 +64,8 @@ function visibleTaskIds(): string[] {
     (el) => el.dataset['taskId'] ?? '',
   );
 }
+
+const tick = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Mount inside a real `<main>`: the shell's focus contracts target `main [data-view-title]`,
@@ -350,6 +353,57 @@ describe('§5.6 never-settling write — its slow-write report must not outlive 
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+/* --------- §5.5 cross-region independence (E2 F-3 follow-up, WCAG 4.1.3) --------- */
+
+describe('§5.5 live regions — one region never cancels the other’s pending message', () => {
+  it('lands BOTH halves of the +1066/+1072 collision: the rollback report must not swallow the optimistic completion', async () => {
+    const built = await seed({
+      lists: [makeList({ id: 'L1', name: 'Personal' })],
+      tasks: [makeTask({ id: 'T1', listId: 'L1', title: 'Flaky toggle', dueDate: dayOffset(0) })],
+    });
+    // Break ONLY the write path (the §5.6 probe above): the optimistic apply paints and
+    // announces `Task completed` (polite) on click, the failed write rolls back and reports
+    // `Could not save…` (assertive) a few ms later — the exact two-message collision of the
+    // E2 F-3 evidence log, well inside one 60 ms announce window.
+    built.tasks.delete('T1');
+    render(<TodayView />);
+
+    fireEvent.click(
+      await screen.findByRole('checkbox', { name: 'Mark "Flaky toggle" as complete' }),
+    );
+
+    await waitFor(() => {
+      expect(regions.polite?.textContent).toBe('Task completed');
+    });
+    await waitFor(() => {
+      expect(regions.assertive?.textContent).toBe('Could not save. Your change was undone.');
+    });
+  });
+
+  it('an assertive announce does NOT cancel a pending polite message', async () => {
+    // Production collision: a fast failing write's assertive `a11y.saveFailed` lands inside
+    // the announce window of `a11y.taskSaved` / `a11y.taskCompleted`. Driven here through
+    // announce() over the harness-mounted production regions (role=status / role=alert).
+    announce('Task completed');
+    await tick(6);
+    announce('Could not save. Your change was undone.', 'assertive');
+    await tick(120);
+
+    expect(regions.polite?.textContent).toBe('Task completed');
+    expect(regions.assertive?.textContent).toBe('Could not save. Your change was undone.');
+  });
+
+  it('a polite announce does NOT cancel a pending assertive message (the mirror)', async () => {
+    announce('Could not save. Your change was undone.', 'assertive');
+    await tick(6);
+    announce('Task completed');
+    await tick(120);
+
+    expect(regions.assertive?.textContent).toBe('Could not save. Your change was undone.');
+    expect(regions.polite?.textContent).toBe('Task completed');
   });
 });
 

@@ -62,6 +62,46 @@ describe('global announcer (design §11.2)', () => {
     dispose();
   });
 
+  it('supersedes the newest message WITHIN the assertive region too', async () => {
+    const { assertive, dispose } = mountRegions();
+
+    announce('old failure', 'assertive');
+    announce('new failure', 'assertive');
+    await tick(120);
+
+    expect(assertive.textContent).toBe('new failure');
+    dispose();
+  });
+
+  it('an assertive message does NOT cancel a pending polite one (WCAG 2.2 SC 4.1.3)', async () => {
+    const { polite, assertive, dispose } = mountRegions();
+
+    // The evidence sequence from the E2 F-3 gate log (+1066 ms polite, +1072 ms assertive):
+    // the two regions hold independent pending slots, so BOTH messages must reach the
+    // user instead of the assertive one swallowing the polite one mid-window.
+    announce('Task completed');
+    await tick(6);
+    announce('Could not save. Your change was undone.', 'assertive');
+    await tick(120);
+
+    expect(polite.textContent).toBe('Task completed');
+    expect(assertive.textContent).toBe('Could not save. Your change was undone.');
+    dispose();
+  });
+
+  it('a polite message does NOT cancel a pending assertive one (the mirror)', async () => {
+    const { polite, assertive, dispose } = mountRegions();
+
+    announce('Could not save. Your change was undone.', 'assertive');
+    await tick(6);
+    announce('Task completed');
+    await tick(120);
+
+    expect(assertive.textContent).toBe('Could not save. Your change was undone.');
+    expect(polite.textContent).toBe('Task completed');
+    dispose();
+  });
+
   it('can re-announce an identical message', async () => {
     const { polite, dispose } = mountRegions();
 
@@ -109,6 +149,31 @@ describe('global announcer (design §11.2)', () => {
     // …and after the hold the notice has landed too — neither message was lost.
     await tick(DEFERRED_ANNOUNCE_DELAY_MS + ANNOUNCE_DELAY_MS);
     expect(polite.textContent).toBe('This browser did not grant extra protection.');
+    dispose();
+  });
+
+  it('still supersedes the newest DEFERRED message within one region (M13-B1 rule unchanged)', async () => {
+    const { polite, dispose } = mountRegions();
+
+    announce('first notice', 'polite', { deferred: true });
+    announce('second notice', 'polite', { deferred: true });
+    // +slack: the deferred timer fires at DEFERRED_ANNOUNCE_DELAY_MS and the message
+    // lands ANNOUNCE_DELAY_MS later — asserting at exactly that ms would race the timer.
+    await tick(DEFERRED_ANNOUNCE_DELAY_MS + ANNOUNCE_DELAY_MS + 20);
+
+    expect(polite.textContent).toBe('second notice');
+    dispose();
+  });
+
+  it('holds one deferred slot per region — a deferred assertive does not displace a deferred polite', async () => {
+    const { polite, assertive, dispose } = mountRegions();
+
+    announce('Task added: Buy milk', 'polite', { deferred: true });
+    announce('This browser did not grant extra protection.', 'assertive', { deferred: true });
+    await tick(DEFERRED_ANNOUNCE_DELAY_MS + ANNOUNCE_DELAY_MS + 20);
+
+    expect(polite.textContent).toBe('Task added: Buy milk');
+    expect(assertive.textContent).toBe('This browser did not grant extra protection.');
     dispose();
   });
 

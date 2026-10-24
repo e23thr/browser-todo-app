@@ -1,5 +1,5 @@
 /**
- * Global live-region announcer (design §11.2).
+ * Global live-region announcer (design ux-foundation §11.2, core-domain §5.5).
  *
  * The shell mounts exactly ONE polite and ONE assertive region for the lifetime of the app;
  * announcements swap their text content. The nodes are never re-created or re-rendered,
@@ -8,9 +8,13 @@
  * Messages are cleared first and written on the next task boundary, which is what forces
  * screen readers to re-announce an identical message twice in a row.
  *
- * Within the delay window the newest message wins and the pending one is dropped — except
- * when the caller passes `{ deferred: true }`, which holds its message back past the window
- * so a status notice fired in the same tick cannot cancel the one in flight (M13-B1).
+ * Each region owns its PENDING slot: within one region's delay window the newest message wins
+ * and the pending one is dropped — but the polite and assertive regions are independent, so a
+ * message in one NEVER cancels a pending message in the other (WCAG 2.2 SC 4.1.3: a status
+ * message the app announced must actually reach the user). The only carve-out from same-region
+ * supersede is the caller passing `{ deferred: true }`, which holds its message back past the
+ * window so a status notice fired in the same tick cannot cancel the one in flight (M13-B1) —
+ * the deferred hold is per-region as well.
  */
 
 /** `polite` = global status region, `assertive` = global alert region (design §11.2). */
@@ -58,12 +62,35 @@ export interface AnnounceOptions {
   readonly deferred?: boolean;
 }
 
-let announceToken = 0;
-let pendingTimer: ReturnType<typeof setTimeout> | null = null;
+/**
+ * One pending slot per region: the supersede token and timer for the message in flight,
+ * plus the deferred hold (M13-B1) and its timer. A region only ever reads its own slot,
+ * so nothing one region does can cancel what the other one is about to say.
+ */
+interface PendingSlot {
+  token: number;
+  timer: ReturnType<typeof setTimeout> | null;
+  deferred: { readonly message: string } | null;
+  deferredTimer: ReturnType<typeof setTimeout> | null;
+}
 
-/** The message held back by {@link AnnounceOptions.deferred}, and the timer holding it. */
-let deferred: { readonly message: string; readonly politeness: Politeness } | null = null;
-let deferredTimer: ReturnType<typeof setTimeout> | null = null;
+const newSlot = (): PendingSlot => ({ token: 0, timer: null, deferred: null, deferredTimer: null });
+
+const slots: Record<Politeness, PendingSlot> = { polite: newSlot(), assertive: newSlot() };
+
+/** Cancel everything a region still holds in flight (unregister / test reset). */
+function clearSlot(slot: PendingSlot): void {
+  slot.token += 1;
+  if (slot.timer !== null) {
+    clearTimeout(slot.timer);
+    slot.timer = null;
+  }
+  if (slot.deferredTimer !== null) {
+    clearTimeout(slot.deferredTimer);
+    slot.deferredTimer = null;
+  }
+  slot.deferred = null;
+}
 
 /**
  * Register the shell's regions. Returns a disposer that unregisters them and cancels
@@ -75,16 +102,8 @@ export function registerLiveRegions(next: LiveRegions): () => void {
   return () => {
     regions.polite = null;
     regions.assertive = null;
-    announceToken += 1;
-    if (pendingTimer !== null) {
-      clearTimeout(pendingTimer);
-      pendingTimer = null;
-    }
-    if (deferredTimer !== null) {
-      clearTimeout(deferredTimer);
-      deferredTimer = null;
-    }
-    deferred = null;
+    clearSlot(slots.polite);
+    clearSlot(slots.assertive);
   };
 }
 
@@ -99,33 +118,36 @@ export function announce(
 ): void {
   const region = politeness === 'assertive' ? regions.assertive : regions.polite;
   if (region === null || message === '') return;
+  const slot = slots[politeness];
 
   if (options?.deferred === true) {
-    // One held slot, newest wins — the same supersede rule the normal path applies.
-    if (deferredTimer !== null) clearTimeout(deferredTimer);
-    deferred = { message, politeness };
-    deferredTimer = setTimeout(() => {
-      deferredTimer = null;
-      const held = deferred;
-      deferred = null;
+    // One held slot PER REGION, newest wins — the same supersede rule the normal path
+    // applies, scoped to this region only.
+    if (slot.deferredTimer !== null) clearTimeout(slot.deferredTimer);
+    slot.deferred = { message };
+    slot.deferredTimer = setTimeout(() => {
+      slot.deferredTimer = null;
+      const held = slot.deferred;
+      slot.deferred = null;
       if (held === null) return;
       // Hand over to the normal path: by now the announce window of anything announced in
       // the original tick has closed, so this message lands instead of cancelling it.
-      announce(held.message, held.politeness);
+      announce(held.message, politeness);
     }, DEFERRED_ANNOUNCE_DELAY_MS);
     return;
   }
 
-  announceToken += 1;
-  const token = announceToken;
+  slot.token += 1;
+  const token = slot.token;
 
-  if (pendingTimer !== null) clearTimeout(pendingTimer);
+  if (slot.timer !== null) clearTimeout(slot.timer);
   region.textContent = '';
 
-  pendingTimer = setTimeout(() => {
-    pendingTimer = null;
-    // A newer announcement (or an unmount) supersedes this one.
-    if (token !== announceToken) return;
+  slot.timer = setTimeout(() => {
+    slot.timer = null;
+    // A newer announcement in THIS region (or an unmount) supersedes this one —
+    // never a message in the other region.
+    if (token !== slot.token) return;
     region.textContent = message;
   }, ANNOUNCE_DELAY_MS);
 }
