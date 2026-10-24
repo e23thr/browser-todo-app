@@ -45,6 +45,17 @@ import { ListRepo, SettingsRepo, TaskRepo, readRows } from '../../storage/repos'
 import { noteWriteFailure } from '../data-safety/pendingWrites';
 import { newToastId, pushToast, dismissToast } from './toasts';
 
+/**
+ * In-flight `guard()` slow-write report timers (§5.6).
+ *
+ * They are module-level state like the signals `resetTaskStore()` clears: a probe that
+ * leaves a never-settling write (the `hangWrites` fixture) arms one that would otherwise
+ * fire during a LATER test — pushing a bogus toast AND bumping the global announce token,
+ * which swallows that test's pending polite message (the intermittent E2 gate failure
+ * `expected '' to be 'List "Scratch" deleted (2 tasks)'`).
+ */
+const reportTimers = new Set<ReturnType<typeof setTimeout>>();
+
 /** A write still in flight after this long is reported once (§5.6). */
 export const WRITE_SLOW_MS = 3000;
 
@@ -228,8 +239,16 @@ export function bindRunnerForTest(r: MutationRunner): void {
   status.value = 'ready';
 }
 
-/** Reset every module-level signal (component tests). */
+/**
+ * Reset every module-level signal (component tests).
+ *
+ * Also disarms any in-flight `guard()` slow-write report (see `reportTimers`): those
+ * timers are module state just like the signals, and a probe that leaves a never-settling
+ * write must not report — or cancel another test's announcement — after its own test ended.
+ */
 export function resetTaskStore(): void {
+  for (const timer of reportTimers) clearTimeout(timer);
+  reportTimers.clear();
   unsubscribe?.();
   unsubscribe = null;
   runner = null;
@@ -302,8 +321,15 @@ async function guard<T>(
   };
 
   const timer = setTimeout(() => {
+    reportTimers.delete(timer);
     report(rerun);
   }, WRITE_SLOW_MS);
+  reportTimers.add(timer);
+  // Settle = disarm AND forget: both success and failure paths leave no live timer.
+  const settle = (): void => {
+    clearTimeout(timer);
+    reportTimers.delete(timer);
+  };
 
   let result: Result<T, AppError>;
   try {
@@ -311,10 +337,10 @@ async function guard<T>(
   } catch (error) {
     // Contract: nothing throws across a seam — classify defensively so a broken
     // adapter still surfaces as feedback instead of a silent dead control.
-    clearTimeout(timer);
+    settle();
     result = err(classifyUnknown(error));
   }
-  clearTimeout(timer);
+  settle();
 
   if (result.ok) {
     if (flag.reported) dismissToast(id); // landed late: the warning is obsolete

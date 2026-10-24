@@ -15,7 +15,7 @@
  * the ≥44 px touch-target sweep run in a real browser: tests/e2e/core-ui-keyboard.spec.ts.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/preact';
 import type { ComponentType, JSX } from 'preact';
 
@@ -29,8 +29,10 @@ import {
   bindRunnerForTest,
   bootError,
   resetTaskStore,
+  setTaskDone,
   state,
   status,
+  WRITE_SLOW_MS,
 } from '../../src/features/tasks/store';
 import { clearToasts, toasts } from '../../src/features/tasks/toasts';
 import {
@@ -291,6 +293,63 @@ describe('§5.6 write protocol — forced failure rolls back and reports', () =>
     expect(toasts.value).toHaveLength(1);
     expect(toasts.value[0]?.messageKey).toBe('error.save.title');
     expect(toasts.value[0]?.action?.key).toBe('common.retry');
+  });
+});
+
+/* -------------------- §5.6 stale fallback report (E2 F-3 gate flake) -------------------- */
+
+describe('§5.6 never-settling write — its slow-write report must not outlive its test', () => {
+  /** Arm `setTaskDone` against a port whose `setDone` never settles (the hangWrites probe). */
+  async function startHangingWrite(): Promise<void> {
+    await seed({
+      lists: [makeList({ id: 'L1', name: 'Personal' })],
+      tasks: [makeTask({ id: 'T1', listId: 'L1', title: 'Hanging write' })],
+      hangWrites: true,
+    });
+    void setTaskDone('T1', true);
+  }
+
+  /** Past WRITE_SLOW_MS plus the 60 ms announce delay, so a report would have landed. */
+  function passSlowWriteWindow(): void {
+    vi.advanceTimersByTime(WRITE_SLOW_MS + 100);
+  }
+
+  it('control: while the write is in flight the WRITE_SLOW_MS report fires once', async () => {
+    vi.useFakeTimers();
+    try {
+      await startHangingWrite();
+      expect(toasts.value).toHaveLength(0);
+
+      passSlowWriteWindow();
+
+      expect(toasts.value).toHaveLength(1);
+      expect(toasts.value[0]?.messageKey).toBe('error.save.title');
+      expect(regions.assertive?.textContent).toBe('Could not save. Your change was undone.');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('resetTaskStore cancels it, so no report leaks into the next test (E2 F-3)', async () => {
+    vi.useFakeTimers();
+    try {
+      await startHangingWrite();
+      // Exactly what every component suite runs between tests (core-ui-harness
+      // `setUpCoreUi` / this file's afterEach).
+      resetTaskStore();
+
+      passSlowWriteWindow();
+
+      // Nothing may survive the reset: no toast, and — the actual E2 gate flake — no
+      // assertive announcement. A surviving report bumps the GLOBAL announce token and
+      // swallows whatever pending polite message the next test announced, which is how
+      // `expected '' to be 'List "Scratch" deleted (2 tasks)'` showed up under load.
+      expect(toasts.value).toHaveLength(0);
+      expect(regions.assertive?.textContent ?? '').toBe('');
+      expect(regions.polite?.textContent ?? '').toBe('');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
