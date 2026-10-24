@@ -64,6 +64,15 @@ export { bindDataSafetyDb, resolveDataSafetyDb } from './context';
 export type { UnboundDbError } from './context';
 export { downloadTextFile } from './download';
 export { broadcastDataReplaced, mirrorTheme } from './side-effects';
+/**
+ * §8.4 retention constants (framework, `src/storage/snapshots.ts`) re-exported so the panel's
+ * "kept for 7 days" note quotes the SAME numbers the engine enforces.
+ */
+export {
+  AUTO_RETENTION,
+  MAX_PROTECTED_SNAPSHOTS,
+  PRE_IMPORT_PROTECTION_MS,
+} from '../storage/snapshots';
 export {
   APP_NAME,
   APP_VERSION,

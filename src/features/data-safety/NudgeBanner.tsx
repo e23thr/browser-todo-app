@@ -82,7 +82,8 @@ export function NudgeBanner({
             <button
               key={action.id}
               type="button"
-              class={`button button-${action.variant === 'primary' ? 'primary' : 'secondary'}`}
+              // §10.1 button variants map 1:1 — `link` must not be styled as a secondary.
+              class={`button button-${action.variant}`}
               onClick={() => {
                 onAction(action.id);
               }}

@@ -21,6 +21,9 @@ export interface UndoToastProps {
   readonly variant: 'success';
   /** `true` → no auto-dismiss until the first interaction (§5.8 pending-unseen state). */
   readonly pendingUnseen?: boolean;
+  /** ADR-004 Decision 5.5 (b): the durable `downloadSnapshot` escape hatch. */
+  readonly secondaryLabel?: string | undefined;
+  readonly onSecondary?: (() => void) | undefined;
 }
 
 export function UndoToast({
@@ -30,6 +33,8 @@ export function UndoToast({
   onDismiss,
   variant,
   pendingUnseen = true,
+  secondaryLabel,
+  onSecondary,
 }: UndoToastProps): JSX.Element {
   const [busy, setBusy] = useState(false);
   const [interacted, setInteracted] = useState(false);
@@ -72,6 +77,19 @@ export function UndoToast({
       >
         {busy ? t('dataSafety.undo.restoring') : actionLabel}
       </button>
+      {secondaryLabel !== undefined && onSecondary !== undefined ? (
+        <button
+          type="button"
+          class="button button-secondary"
+          onClick={() => {
+            interact();
+            onSecondary();
+          }}
+        >
+          <Icon name="download" size={16} />
+          {secondaryLabel}
+        </button>
+      ) : null}
       <button
         type="button"
         class="icon-button"

@@ -13,6 +13,10 @@
  * `recoverable: true` branch of §8.2 (the unrecoverable copy stays in the catalog for the day
  * a two-phase rollback exists).
  *
+ * The confirm dialog stays mounted in its §5.6 `busy` state for the whole write and is closed
+ * by `applyPlan` when it finishes — the dialog never disappears before the destructive write
+ * it just authorised (§5.6/§10.6).
+ *
  * Restore uses the SAME confirm + replace path (§8.4): `prepareSnapshotRestore` → confirm →
  * `applyImport`. Per ADR-004 the apply takes its own pre-import snapshot ("undo of undo"),
  * which is the engine behaviour the parent handoff binds — see the deviation note in the
@@ -32,8 +36,8 @@ import type { ImportError, ImportPlan } from '../../portability';
 import { t } from '../../i18n';
 import { deriveBanners } from './derive';
 import { invalidateCounts, loadCounts, refreshLastBackupAt, resolveDb } from './dbAccess';
-import { openDialog, pushToast, type ToastRequest } from './notices';
-import { refreshSnapshots } from './snapshots';
+import { closeDialog, openDialog, pushToast, type ToastRequest } from './notices';
+import { refreshSnapshots, runDownloadSnapshot } from './snapshots';
 import { dataSafetyState, patchState } from './state';
 import type { ImportPreview, SnapshotMeta } from './types';
 
@@ -151,6 +155,36 @@ function failedFrom(error: ImportError): { readonly message: string } {
   }
 }
 
+/**
+ * N4: `prepareSnapshotRestore` reports an evicted/absent payload as `UNKNOWN` carrying the
+ * engine's "snapshot payload … not found" error — that is a specific, actionable situation
+ * ("this snapshot is gone"), not the generic "nothing changed" fallback.
+ */
+function isMissingSnapshotError(error: ImportError): boolean {
+  if (error.code !== 'UNKNOWN') return false;
+  return error.cause instanceof Error && /snapshot payload .* not found/u.test(error.cause.message);
+}
+
+/**
+ * B3 (no-silent-loss): a whole-file `NOTHING_TO_IMPORT` reject still hands back the recovery
+ * document (API doc: "offer it in the UX"). The inline notice carries the error copy; this
+ * toast carries the download, exactly like the partial-apply path does.
+ */
+function offerRejectedRecoveryFile(error: ImportError): void {
+  if (error.code !== 'NOTHING_TO_IMPORT' || error.recoveryFile === null) return;
+  const recovery = error.recoveryFile;
+  pushToast({
+    message: t('dataSafety.import.recoveryOffer'),
+    variant: 'success',
+    action: {
+      label: t('dataSafety.import.recoveryFile'),
+      run: (): void => {
+        downloadTextFile(recovery.filename, recovery.json);
+      },
+    },
+  });
+}
+
 /* --------------------------------- flows -------------------------------- */
 
 /**
@@ -167,6 +201,7 @@ export async function chooseImportFile(file: File): Promise<void> {
     importState.value = { step: 'invalid', ...invalid };
     announce(invalid.message, 'assertive');
     patchState({ panelState: 'idle' });
+    offerRejectedRecoveryFile(plan.error);
     return;
   }
 
@@ -195,48 +230,57 @@ export async function chooseImportFile(file: File): Promise<void> {
 async function applyPlan(plan: ImportPlan): Promise<void> {
   patchState({ panelState: 'import-loading' });
   importState.value = { step: 'importing' };
-  const report = await applyImport(plan);
-  patchState({ panelState: 'idle' });
+  try {
+    const report = await applyImport(plan);
 
-  if (!report.ok) {
-    const failed = failedFrom(report.error);
-    importState.value = { step: 'failed', recoverable: true, message: failed.message };
-    announce(failed.message, 'assertive');
-    pushToast({ message: failed.message, variant: 'error' });
-    return;
-  }
+    if (!report.ok) {
+      const failed = failedFrom(report.error);
+      importState.value = { step: 'failed', recoverable: true, message: failed.message };
+      announce(failed.message, 'assertive');
+      pushToast({ message: failed.message, variant: 'error' });
+      return;
+    }
 
-  const undo = report.value.undoSnapshot;
-  importState.value = { step: 'done', undoSnapshotId: undo?.id ?? null };
+    const undo = report.value.undoSnapshot;
+    importState.value = { step: 'done', undoSnapshotId: undo?.id ?? null };
 
-  invalidateCounts();
-  await loadCounts();
-  await refreshSnapshots();
-  await refreshLastBackupAt();
-  deriveBanners();
+    invalidateCounts();
+    await loadCounts();
+    await refreshSnapshots();
+    await refreshLastBackupAt();
+    deriveBanners();
 
-  announce(t('dataSafety.import.done.message'));
-  pushToast(undoToast(undo?.id ?? null));
-  // A partial import also offers the recovery file (ADR-004 Decision 7) as its own toast.
-  if (report.value.recoveryFile !== null) {
-    const recovery = report.value.recoveryFile;
-    pushToast({
-      message: t('dataSafety.import.partial'),
-      variant: 'success',
-      action: {
-        label: t('dataSafety.import.recoveryFile'),
-        run: (): void => {
-          downloadTextFile(recovery.filename, recovery.json);
+    announce(t('dataSafety.import.done.message'));
+    pushToast(undoToast(undo ?? null));
+    // A partial import also offers the recovery file (ADR-004 Decision 7) as its own toast.
+    if (report.value.recoveryFile !== null) {
+      const recovery = report.value.recoveryFile;
+      pushToast({
+        message: t('dataSafety.import.partial'),
+        variant: 'success',
+        action: {
+          label: t('dataSafety.import.recoveryFile'),
+          run: (): void => {
+            downloadTextFile(recovery.filename, recovery.json);
+          },
         },
-      },
-    });
+      });
+    }
+  } finally {
+    // §5.6/§10.6: the confirm dialog closes only once the write it authorised is over.
+    patchState({ panelState: 'idle' });
+    closeDialog();
   }
 }
 
-/** §8.4 undo toast — persistent until the user interacts with it (§5.8). */
-function undoToast(undoId: string | null): ToastRequest {
+/**
+ * §8.4 undo toast — persistent until the user interacts with it (§5.8). Its second action is
+ * the binding `downloadSnapshot(undoSnapshot.id)` escape hatch (ADR-004 Decision 5.5 (b)):
+ * the rolling-3 retention can evict the undo, a downloaded file cannot.
+ */
+function undoToast(undo: { readonly id: string; readonly takenAt: number } | null): ToastRequest {
   const message = t('dataSafety.import.done.message');
-  if (undoId === null) return { message, variant: 'success' };
+  if (undo === null) return { message, variant: 'success' };
   return {
     message,
     variant: 'success',
@@ -244,7 +288,13 @@ function undoToast(undoId: string | null): ToastRequest {
     action: {
       label: t('dataSafety.import.done.action'),
       run: (): void => {
-        void restoreSnapshot(undoId);
+        void restoreSnapshot(undo.id);
+      },
+    },
+    secondaryAction: {
+      label: t('dataSafety.snapshots.download'),
+      run: (): void => {
+        void runDownloadSnapshot(undo.id, undo.takenAt);
       },
     },
   };
@@ -261,10 +311,13 @@ export async function restoreSnapshot(id: string): Promise<void> {
   patchState({ panelState: 'import-loading' });
   const plan = await prepareSnapshotRestore(id);
   if (!plan.ok) {
-    const failed = failedFrom(plan.error);
+    const message = isMissingSnapshotError(plan.error)
+      ? t('dataSafety.restore.missing')
+      : failedFrom(plan.error).message;
     patchState({ panelState: 'idle' });
-    importState.value = { step: 'failed', recoverable: true, message: failed.message };
-    pushToast({ message: failed.message, variant: 'error' });
+    importState.value = { step: 'failed', recoverable: true, message };
+    announce(message, 'assertive');
+    pushToast({ message, variant: 'error' });
     return;
   }
 
@@ -272,7 +325,15 @@ export async function restoreSnapshot(id: string): Promise<void> {
     (row) => row.id === id,
   );
   patchState({ panelState: 'idle' });
-  if (snapshot === undefined) return;
+  // N4: never fall through silently — without the metadata row there is nothing to confirm
+  // against, and the user must be told the snapshot they picked is gone.
+  if (snapshot === undefined) {
+    const message = t('dataSafety.restore.missing');
+    importState.value = { step: 'failed', recoverable: true, message };
+    announce(message, 'assertive');
+    pushToast({ message, variant: 'error' });
+    return;
+  }
 
   const currentCounts = await loadCounts(db);
   const confirmed = await openDialog({

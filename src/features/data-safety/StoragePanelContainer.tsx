@@ -12,6 +12,7 @@ import type { JSX } from 'preact';
 import { runDeleteAll, runExport } from './actions';
 import { importPickTick, importState, chooseImportFile, requestImportPick } from './importFlow';
 import { runRequestPersist } from './persistGate';
+import { runDownloadSnapshot } from './snapshots';
 import { StoragePanel } from './StoragePanel';
 import { dataSafetyState } from './state';
 import { persistenceError, persistenceState, quotaState } from './storageInfo';
@@ -60,6 +61,9 @@ export function StoragePanelContainer(): JSX.Element {
       }}
       onRestoreSnapshot={(id) => {
         void restoreSnapshot(id);
+      }}
+      onDownloadSnapshot={(snapshot) => {
+        void runDownloadSnapshot(snapshot.id, snapshot.takenAt);
       }}
       onDeleteAll={() => {
         void runDeleteAll();

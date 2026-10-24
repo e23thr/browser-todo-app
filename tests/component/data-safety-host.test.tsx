@@ -58,6 +58,8 @@ function ready(overrides: Record<string, unknown> = {}): void {
     status: 'ready',
     classification: { kind: 'normal' },
     hasData: true,
+    // The clock is pinned to NOW (see the CLOCK PIN note above), so this stays a fixed
+    // epoch — the banner's day math reads the pinned `Date.now()`, not wall time.
     lastBackupAt: NOW - 20 * DAY,
     priorUse: true,
     onboarding: false,

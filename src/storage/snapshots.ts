@@ -138,12 +138,28 @@ export async function takeSnapshot(
     // retention+1 payloads, so a near-quota user succeeds where put-first fails.
     if (snapshot.kind === 'auto') {
       const existing = await t.getAll('snapshots');
-      // Victim set = autos ordered (takenAt, id) DESC, newest 3 kept — with the
-      // row being written included in the ordering (8.2 step 1).
+      // Victim set = autos ordered (takenAt, id) DESC, newest first — with the row being
+      // written included in the ordering (8.2 step 1).
       const autos = [...existing.filter((s) => s.kind === 'auto'), snapshot].sort(
         (a, b) => b.takenAt - a.takenAt || (a.id < b.id ? 1 : -1),
       );
-      for (const stale of autos.slice(AUTO_RETENTION)) {
+      // Design §8.4: a recent `pre-import` snapshot (the undo of an import) is protected
+      // from the rolling purge for seven days, at most MAX_PROTECTED_SNAPSHOTS of them.
+      // Protected rows hold their own slots inside the rolling three — so the list never
+      // grows past AUTO_RETENTION (§4.3/§4.4 "more than three is impossible") — and a third
+      // protected snapshot pushes the OLDEST protected one out ("the oldest protected
+      // snapshot expires … when a newer protected one needs the slot").
+      const nowMs = now();
+      const isProtected = (row: Snapshot): boolean =>
+        row.reason === 'pre-import' && nowMs - row.takenAt < PRE_IMPORT_PROTECTION_MS;
+      const protectedRows = autos.filter(isProtected);
+      const rollingRows = autos.filter((row) => !isProtected(row));
+      const keptProtected = protectedRows.slice(0, MAX_PROTECTED_SNAPSHOTS);
+      const victims = [
+        ...protectedRows.slice(MAX_PROTECTED_SNAPSHOTS),
+        ...rollingRows.slice(Math.max(0, AUTO_RETENTION - keptProtected.length)),
+      ];
+      for (const stale of victims) {
         // 8.2 step 2 puts the new rows unconditionally — never evict them here.
         if (stale.id === id) continue;
         await t.delete('snapshots', stale.id);
@@ -160,6 +176,16 @@ export async function takeSnapshot(
 
 /** Rolling last-3 `auto` snapshots; all `manual` snapshots persist (Decision 9). */
 export const AUTO_RETENTION = 3;
+
+/**
+ * Design §8.4: `pre-import` snapshots are exempt from the rolling purge for seven days,
+ * at most two of them. The UI quotes the same constant for its retention note
+ * (`dataSafety.snapshots.protected`), so the promise and the behaviour cannot drift.
+ */
+export const PRE_IMPORT_PROTECTION_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Design §8.4 "max 2 protected". */
+export const MAX_PROTECTED_SNAPSHOTS = 2;
 
 export async function listSnapshots(db: AppDBImpl): Promise<Result<Snapshot[], StorageError>> {
   const all = await db.query('snapshots', { index: 'by_takenAt', direction: 'prev' });

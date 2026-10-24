@@ -39,6 +39,8 @@ export type SafetyDialogProps =
       readonly onCancel: () => void;
       /** Additive: how many records the validator quarantined (ADR-004 Decision 5.5). */
       readonly quarantined?: number | undefined;
+      /** §5.6/§10.6 `busy`: confirm pressed, the write is running, nothing can cancel it. */
+      readonly busy?: boolean | undefined;
     }
   | {
       readonly kind: 'delete-all-confirm';
@@ -47,6 +49,8 @@ export type SafetyDialogProps =
       readonly onCancel: () => void;
       /** Additive (§6.8): "Export a backup first" closes the dialog and runs the export. */
       readonly onExport: () => void;
+      /** §5.6/§10.6 `busy` (§6.8: the wipe runs behind a disabled confirm). */
+      readonly busy?: boolean | undefined;
     }
   | {
       readonly kind: 'private-browsing';
@@ -59,20 +63,45 @@ export type SafetyDialogProps =
       readonly currentCounts: DataCounts;
       readonly onConfirm: () => void;
       readonly onCancel: () => void;
-    }
-  | {
-      /** Additive: the flows show "busy" while the confirming write runs (§10.6). */
-      readonly kind: 'import-busy';
-      readonly title: string;
-      readonly body: string;
+      /** §5.6/§10.6 `busy`: the restore is running behind a disabled confirm. */
+      readonly busy?: boolean | undefined;
     };
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/**
+ * The §5.6 `busy` state: the confirming action ran and its write is in flight, so every
+ * affordance that would take the dialog off the screen is inert until the flow closes it.
+ */
+function isConfirmingBusy(props: SafetyDialogProps): boolean {
+  return (
+    (props.kind === 'import-confirm' ||
+      props.kind === 'delete-all-confirm' ||
+      props.kind === 'restore-confirm') &&
+    props.busy === true
+  );
+}
+
+/** Gerund shown while the confirming write runs (§10.6 `busy`). */
+function busyLabelOf(props: SafetyDialogProps): string | null {
+  if (!isConfirmingBusy(props)) return null;
+  switch (props.kind) {
+    case 'import-confirm':
+      return t('dataSafety.import.importing');
+    case 'delete-all-confirm':
+      return t('dataSafety.deleteAll.deleting');
+    case 'restore-confirm':
+      return t('dataSafety.undo.restoring');
+    default:
+      return null;
+  }
+}
+
 export function SafetyDialog(props: SafetyDialogProps): JSX.Element {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const openerRef = useRef<HTMLElement | null>(null);
+  const busy = isConfirmingBusy(props);
 
   // Capture the trigger before this layer covers the page, give initial focus inside.
   useEffect(() => {
@@ -119,6 +148,14 @@ export function SafetyDialog(props: SafetyDialogProps): JSX.Element {
     title: `safety-dialog-title-${props.kind}`,
     body: `safety-dialog-body-${props.kind}`,
   };
+  const busyLabel = busyLabelOf(props);
+
+  // §5.6 `busy`: the focused button is about to become disabled, so move focus back onto
+  // the dialog itself — otherwise it falls to <body> and the trap loses its anchor.
+  useEffect(() => {
+    if (!busy) return;
+    rootRef.current?.focus();
+  }, [busy]);
 
   return (
     <div class="safety-layer">
@@ -137,9 +174,11 @@ export function SafetyDialog(props: SafetyDialogProps): JSX.Element {
         aria-modal="true"
         aria-labelledby={ids.title}
         aria-describedby={ids.body}
+        aria-busy={busy ? 'true' : undefined}
         tabIndex={-1}
         ref={rootRef}
         data-kind={props.kind}
+        data-state={busy ? 'busy' : undefined}
       >
         <p class="safety-tier">
           <Icon name="alert-triangle" size={16} />
@@ -151,7 +190,14 @@ export function SafetyDialog(props: SafetyDialogProps): JSX.Element {
         <div class="safety-body" id={ids.body}>
           {bodyOf(props)}
         </div>
-        <div class="safety-actions">{actionsOf(props)}</div>
+        <div class="safety-actions">
+          {actionsOf(props)}
+          {busyLabel === null ? null : (
+            <p class="safety-busy" role="status">
+              {busyLabel}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -159,14 +205,15 @@ export function SafetyDialog(props: SafetyDialogProps): JSX.Element {
 
 /** Escape / backdrop / the safe button of each kind — never a destructive confirm. */
 function safeClose(props: SafetyDialogProps): void {
+  // §5.6: once the confirming write started there is no safe path left to take — the
+  // dialog stays until the flow closes it (Escape and the scrim are inert).
+  if (isConfirmingBusy(props)) return;
   switch (props.kind) {
     case 'quota-exceeded':
       props.onCancel();
       return;
     case 'private-browsing':
       props.onDismiss();
-      return;
-    case 'import-busy':
       return;
     case 'import-confirm':
     case 'delete-all-confirm':
@@ -189,8 +236,6 @@ function titleOf(props: SafetyDialogProps): string {
       return t('dataSafety.restore.title', {
         date: absoluteDate(props.snapshot.takenAt),
       });
-    case 'import-busy':
-      return props.title;
   }
 }
 
@@ -233,6 +278,8 @@ function bodyOf(props: SafetyDialogProps): JSX.Element {
             })}
           </p>
           <p>{t('dataSafety.import.confirm.body3', { appName })}</p>
+          {/* ADR-004 Decision 5.5 (c): tombstone resurrection is a fact of the engine. */}
+          <p>{t('dataSafety.import.confirm.body4')}</p>
           {props.quarantined !== undefined && props.quarantined > 0 ? (
             <p class="safety-note">
               {t('dataSafety.import.confirm.quarantined', { N: props.quarantined })}
@@ -275,9 +322,6 @@ function bodyOf(props: SafetyDialogProps): JSX.Element {
           </p>
         </>
       );
-
-    case 'import-busy':
-      return <p>{props.body}</p>;
   }
 }
 
@@ -310,11 +354,17 @@ function actionsOf(props: SafetyDialogProps): JSX.Element {
             type="button"
             class="button button-secondary"
             data-autofocus=""
+            disabled={isConfirmingBusy(props)}
             onClick={props.onCancel}
           >
             {t('common.cancel')}
           </button>
-          <button type="button" class="button button-primary" onClick={props.onConfirm}>
+          <button
+            type="button"
+            class="button button-primary"
+            disabled={isConfirmingBusy(props)}
+            onClick={props.onConfirm}
+          >
             {t('dataSafety.import.confirm.go')}
           </button>
         </>
@@ -327,14 +377,25 @@ function actionsOf(props: SafetyDialogProps): JSX.Element {
             type="button"
             class="button button-secondary"
             data-autofocus=""
+            disabled={isConfirmingBusy(props)}
             onClick={props.onExport}
           >
             {t('dataSafety.deleteAll.exportFirst')}
           </button>
-          <button type="button" class="button button-secondary" onClick={props.onCancel}>
+          <button
+            type="button"
+            class="button button-secondary"
+            disabled={isConfirmingBusy(props)}
+            onClick={props.onCancel}
+          >
             {t('common.cancel')}
           </button>
-          <button type="button" class="button button-danger-filled" onClick={props.onConfirm}>
+          <button
+            type="button"
+            class="button button-danger-filled"
+            disabled={isConfirmingBusy(props)}
+            onClick={props.onConfirm}
+          >
             {t('dataSafety.deleteAll.confirm')}
           </button>
         </>
@@ -364,17 +425,20 @@ function actionsOf(props: SafetyDialogProps): JSX.Element {
             type="button"
             class="button button-secondary"
             data-autofocus=""
+            disabled={isConfirmingBusy(props)}
             onClick={props.onCancel}
           >
             {t('common.cancel')}
           </button>
-          <button type="button" class="button button-primary" onClick={props.onConfirm}>
+          <button
+            type="button"
+            class="button button-primary"
+            disabled={isConfirmingBusy(props)}
+            onClick={props.onConfirm}
+          >
             {t('dataSafety.restore.confirm')}
           </button>
         </>
       );
-
-    case 'import-busy':
-      return <span class="safety-busy">{t('dataSafety.import.importing')}</span>;
   }
 }

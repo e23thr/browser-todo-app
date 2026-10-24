@@ -12,6 +12,7 @@
 
 import type { JSX } from 'preact';
 
+import { t } from '../../i18n';
 import { formatBytes, formatTotal, percentOf } from './format';
 import { QUOTA_CRIT_RATIO, QUOTA_WARN_RATIO } from './constants';
 
@@ -31,7 +32,7 @@ export interface QuotaMeterProps {
   };
   /** First estimate still in flight (§10.2 `loading`). */
   readonly loading?: boolean;
-  /** Value line prefix pieces, so callers can localize "{used} of {total} ({percent}%)". */
+  /** Value line formatter — defaults to the `dataSafety.quota.value` catalog entry (§11). */
   readonly valueTemplate?: (parts: { used: string; total: string; percent: number }) => string;
 }
 
@@ -49,8 +50,13 @@ export function quotaTier(
   return 'ok';
 }
 
+/** §11 "must not inline English": the value line comes from the catalog by default. */
 function defaultValue(parts: { used: string; total: string; percent: number }): string {
-  return `${parts.used} of ${parts.total} (${String(parts.percent)}%)`;
+  return t('dataSafety.quota.value', {
+    used: parts.used,
+    total: parts.total,
+    percent: parts.percent,
+  });
 }
 
 export function QuotaMeter({
