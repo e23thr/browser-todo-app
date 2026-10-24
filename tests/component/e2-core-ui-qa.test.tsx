@@ -339,7 +339,7 @@ describe('M1 editor (F2) — save, focus return, taskGone', () => {
     });
   });
 
-  it('taskGone (§14 S4): a concurrent delete closes the editor instead of showing the row', async () => {
+  it('taskGone (§14 S4): a concurrent delete keeps the editor, the draft and an honest message (F-3)', async () => {
     const built = await seed({
       lists: [makeList({ id: 'L1', name: 'Personal' })],
       tasks: [makeTask({ id: 'T1', listId: 'L1', title: 'Vanishing act', dueDate: dayOffset(0) })],
@@ -347,22 +347,79 @@ describe('M1 editor (F2) — save, focus return, taskGone', () => {
     render(<TodayView />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Vanishing act' }));
-    await screen.findByRole('dialog', { name: 'Edit task' });
+    const dialog = await screen.findByRole('dialog', { name: 'Edit task' });
+    const title = within(dialog).getByLabelText<HTMLInputElement>('Title', { exact: true });
+    title.focus();
+    // Unsaved work the PM decision forbids losing silently.
+    fireEvent.input(title, { target: { value: 'Draft that must not vanish' } });
 
     // Deleted concurrently (another tab / pipeline removal) while the dialog is open:
-    // removeTask EVICTS the row, so TaskScreen's `editingTask` becomes undefined and the
-    // editor unmounts — the §14 `error.taskGone` row never renders in the composed screen
-    // (it is only reachable when <TaskEditor> is mounted standalone; see
-    // core-ui-composer.test.tsx "disables Save with error.taskGone").
+    // removeTask EVICTS the row from state. The composed screen must NOT unmount the
+    // editor over that — it holds the last known task so the §14 `error.taskGone` state
+    // is reachable in situ (E2 F-3; core-ui-composer.test.tsx pins the standalone half).
     await built.runner.removeTask('T1');
 
+    // 1. The dialog is still open and the §14 row renders inside it.
+    const gone = await within(dialog).findByText('This task no longer exists', { exact: true });
+    expect(gone).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Edit task' })).toBe(dialog);
+
+    // 2. The unsaved draft survives verbatim and Save is disabled (§14 S4).
+    expect(within(dialog).getByLabelText<HTMLInputElement>('Title', { exact: true }).value).toBe(
+      'Draft that must not vanish',
+    );
+    expect(within(dialog).getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
+
+    // 3. The feedback is ANNOUNCED, not only painted: it lands in the shell's assertive
+    //    region (§5.5) as well as the dialog's own role="alert" row.
+    await waitFor(() => {
+      expect(regions.assertive?.textContent).toBe('This task no longer exists');
+    });
+
+    // 4. Keyboard: the row's removal does not steal focus — the caret is still in the
+    //    dialog, so the state and its controls stay reachable.
+    expect(document.activeElement).toBe(within(dialog).getByLabelText('Title', { exact: true }));
+
+    // 5. The only way the draft goes away is the explicit S7.3 discard confirm.
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Escape' });
+    const discard = await screen.findByRole('dialog', { name: 'Discard changes?' });
+    expect(within(discard).getByText('You have unsaved changes.', { exact: true })).toBeTruthy();
+    // Keep editing → the draft is still there.
+    fireEvent.click(within(discard).getByRole('button', { name: 'Keep editing' }));
+    expect(within(dialog).getByLabelText<HTMLInputElement>('Title', { exact: true }).value).toBe(
+      'Draft that must not vanish',
+    );
+  });
+
+  it('a delete the user confirms from the editor closes it without the taskGone state', async () => {
+    await seed({
+      lists: [makeList({ id: 'L1', name: 'Personal' })],
+      tasks: [
+        makeTask({ id: 'T1', listId: 'L1', title: 'Deliberate delete', dueDate: dayOffset(0) }),
+      ],
+    });
+    render(<TodayView />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Deliberate delete' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Edit task' });
+    const title = within(dialog).getByLabelText<HTMLInputElement>('Title', { exact: true });
+    fireEvent.input(title, { target: { value: 'Edited right before deleting' } });
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete task' }));
+    const confirm = await screen.findByRole('dialog', { name: 'Delete task?' });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
+
+    // A user-initiated delete is NOT the §14 error state: no "task no longer exists"
+    // row and no assertive announcement may fire on the way out (the editor closes
+    // before the optimistic eviction can render the gone state).
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: 'Edit task' })).toBeNull();
     });
-    // The §14 message itself never appears (the always-mounted assertive live region is a
-    // `div[role=alert]`, so scope this to the copy and the Save control instead of the role).
     expect(screen.queryByText('This task no longer exists', { exact: true })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    await waitFor(() => {
+      expect(regions.polite?.textContent).toBe('Task deleted');
+    });
+    expect(regions.assertive?.textContent ?? '').not.toBe('This task no longer exists');
   });
 });
 

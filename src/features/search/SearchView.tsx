@@ -29,6 +29,7 @@ import { selectView } from '../../domain/views';
 import { TaskEditor } from '../tasks/TaskEditor';
 import { MoveToListDialog } from '../tasks/MoveToListDialog';
 import { TaskList } from '../tasks/TaskList';
+import type { EditingTask } from '../tasks/TaskScreen';
 import {
   deleteTask,
   liveLists,
@@ -74,7 +75,7 @@ export function SearchView(): JSX.Element {
   const lists = liveLists(storeState);
 
   const [query, setQuery] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<EditingTask | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [movingId, setMovingId] = useState<string | null>(null);
 
@@ -106,7 +107,11 @@ export function SearchView(): JSX.Element {
     };
   }, [trimmed, count]);
 
-  const editingTask = editingId === null ? undefined : storeState.tasks.get(editingId);
+  // Same contract as TaskScreen (§14 `error.taskGone`, E2 F-3): the held last-known task
+  // keeps the editor mounted when a concurrent delete evicts the result row, so the dialog
+  // flips to its `gone` state instead of unmounting over the user's unsaved edits.
+  const editingTask =
+    editing === null ? undefined : (storeState.tasks.get(editing.id) ?? editing.task);
   const confirmingTask = confirmingId === null ? undefined : storeState.tasks.get(confirmingId);
   const movingTask = movingId === null ? undefined : storeState.tasks.get(movingId);
 
@@ -157,7 +162,9 @@ export function SearchView(): JSX.Element {
           void setTaskDone(task.id, done);
         }}
         onOpen={(id) => {
-          setEditingId(id);
+          const task = storeState.tasks.get(id);
+          if (task === undefined) return;
+          setEditing({ id, task });
         }}
         onDelete={(id) => {
           setConfirmingId(id);
@@ -196,7 +203,7 @@ export function SearchView(): JSX.Element {
           task={editingTask}
           lists={lists}
           onClose={() => {
-            setEditingId(null);
+            setEditing(null);
           }}
         />
       ) : null}

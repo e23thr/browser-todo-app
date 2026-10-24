@@ -44,6 +44,23 @@ export const MOVED_HIGHLIGHT_MS = 600;
 
 type Retained = { readonly id: string; readonly anchor: string | null };
 
+/**
+ * The open editor's anchor: the task id plus the LAST KNOWN image of that task.
+ *
+ * The image is what makes the §14 `error.taskGone` state reachable in situ (E2 F-3):
+ * a concurrent delete (another tab, a list-removal disposition) evicts the row from
+ * store state, and rendering the dialog off `tasks.get(id)` alone would unmount it and
+ * drop the user's unsaved edits with no message. Holding the last known task keeps the
+ * dialog mounted; `<TaskEditor>` then flips to its `gone` state (row + Save disabled)
+ * against the record it was already editing.
+ *
+ * Exported because the search screen composes the same dialog over the same contract.
+ */
+export interface EditingTask {
+  readonly id: string;
+  readonly task: Task;
+}
+
 export interface TaskScreenProps {
   readonly view: ViewId;
   readonly title: string;
@@ -106,7 +123,7 @@ export function TaskScreen({
   listResolved = true,
 }: TaskScreenProps): JSX.Element {
   const wide = useMediaQuery(WIDE_QUERY);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<EditingTask | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [movingId, setMovingId] = useState<string | null>(null);
   const [movedId, setMovedId] = useState<string | null>(null);
@@ -130,7 +147,10 @@ export function TaskScreen({
   const rows = withRetained(result.rows, retained, storeState.tasks);
   const taskCount = rows.flatMap((row) => (row.type === 'task' ? [row] : [])).length;
   const showListBadge = view.kind !== 'list';
-  const editingTask = editingId === null ? undefined : storeState.tasks.get(editingId);
+  // The live row wins; the held image is the §14 fallback once a concurrent delete
+  // has evicted it (see `EditingTask`) — never a silent unmount over unsaved edits.
+  const editingTask =
+    editing === null ? undefined : (storeState.tasks.get(editing.id) ?? editing.task);
   const confirmingTask = confirmingId === null ? undefined : storeState.tasks.get(confirmingId);
   const movingTask = movingId === null ? undefined : storeState.tasks.get(movingId);
 
@@ -158,7 +178,9 @@ export function TaskScreen({
   };
 
   const onOpen = (id: string): void => {
-    setEditingId(id);
+    const task = storeState.tasks.get(id);
+    if (task === undefined) return;
+    setEditing({ id, task });
   };
 
   const onDelete = (id: string): void => {
@@ -176,7 +198,7 @@ export function TaskScreen({
       timers.current.delete(task.id);
     }
     setRetained((current) => current.filter((entry) => entry.id !== task.id));
-    setEditingId(null);
+    setEditing(null);
     void deleteTask(task.id).then((result) => {
       if (result.ok) announce(t('a11y.taskDeleted'));
     });
@@ -369,7 +391,7 @@ export function TaskScreen({
           task={editingTask}
           lists={lists}
           onClose={() => {
-            setEditingId(null);
+            setEditing(null);
           }}
         />
       ) : null}

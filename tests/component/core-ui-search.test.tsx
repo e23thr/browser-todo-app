@@ -340,3 +340,42 @@ describe('AC-1: measured search latency at 10,000 fixtures', () => {
     });
   }, 30_000);
 });
+
+/* ------------------------ E2 F-3: §14 error.taskGone in search ------------------------ */
+
+describe('S5 editor across a concurrent delete (E2 F-3 — §14 error.taskGone)', () => {
+  it('keeps the editor open with the §14 row instead of dropping the draft', async () => {
+    const built = await seed({
+      lists: LISTS,
+      tasks: [makeTask({ id: 'T1', listId: 'L1', title: 'Vanishing search hit' })],
+    });
+    render(<SearchView />);
+    await searchFor('vanishing');
+    // Open the editor from the result row (the title button carries the `<mark>` split,
+    // so the test anchors on the row instead of on an accessible-name string).
+    const opener = await waitFor(() => {
+      const el = document.querySelector<HTMLElement>('[data-task-id="T1"] .task-title');
+      expect(el).toBeTruthy();
+      return el as HTMLElement;
+    });
+    fireEvent.click(opener);
+    const dialog = await screen.findByRole('dialog', { name: 'Edit task' });
+    const title = within(dialog).getByLabelText<HTMLInputElement>('Title', { exact: true });
+    fireEvent.input(title, { target: { value: 'Draft in the search screen' } });
+
+    // Concurrent delete (another tab) while the search screen's dialog is open: the row
+    // leaves the results, but the dialog must hold its last known task and flip to the
+    // §14 state rather than unmount over the unsaved edits.
+    await built.runner.removeTask('T1');
+
+    await within(dialog).findByText('This task no longer exists', { exact: true });
+    expect(within(dialog).getByLabelText<HTMLInputElement>('Title', { exact: true }).value).toBe(
+      'Draft in the search screen',
+    );
+    expect(within(dialog).getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
+    // Announced in the shell's assertive region too (§5.5), not only rendered.
+    await waitFor(() => {
+      expect(regions.assertive?.textContent).toBe('This task no longer exists');
+    });
+  });
+});

@@ -17,7 +17,7 @@
  * the notes textarea (§9.5).
  */
 
-import { useId, useState } from 'preact/hooks';
+import { useEffect, useId, useState } from 'preact/hooks';
 import type { JSX, TargetedEvent } from 'preact';
 
 import { announce } from '../../app/announce';
@@ -88,9 +88,26 @@ export function TaskEditor({ task, lists, onClose }: TaskEditorProps): JSX.Eleme
   };
 
   // A dirty edit IS an in-flight edit (Decision 7): it ends when the dialog closes —
-  // after a save ack (`Ok`), a discard confirm, or the task vanishing — all of which make
-  // the editor unmount; a failed flush keeps the dialog open and the edit in flight.
+  // after a save ack (`Ok`), a discard confirm, or the user confirming the task's
+  // removal — all of which make the editor unmount; a failed flush keeps the dialog
+  // open with the edit in flight. A task that VANISHES under the dialog (concurrent
+  // delete) does NOT end it: the composed screen holds this dialog open in its §14
+  // `error.taskGone` state (E2 F-3), so the draft stays visible and still refuses to
+  // commit (`commitEdit` returns `{ok:false}` while `gone`), which is exactly the
+  // "never flush a write that cannot land" reading of Decision 7.
   useEditSession(dirty, commitEdit);
+
+  // §14 / E2 F-3: this state is reachable in situ because the composed screen keeps the
+  // dialog mounted across a concurrent delete. Render the row AND say it in the shell's
+  // assertive region (§5.5) — the inline `role="alert"` row is only heard when assistive
+  // tech is parked inside the dialog, and the PM decision on F-3 requires the feedback to
+  // reach the global alert region. The effect runs on the false→true flip, so a single
+  // concurrent delete announces exactly once; a delete the user confirmed from here
+  // closes the dialog first and never reaches this branch.
+  useEffect(() => {
+    if (!gone) return;
+    announce(t('error.taskGone'), 'assertive');
+  }, [gone]);
 
   const save = (): void => {
     if (invalid || saving || gone) return;
@@ -140,6 +157,10 @@ export function TaskEditor({ task, lists, onClose }: TaskEditorProps): JSX.Eleme
       <button
         type="button"
         class="button button-danger button-start"
+        // §14 `error.taskGone`: a remove write on a record that is already evicted can
+        // only come back as a false "Your change was undone" — the honest answer is to
+        // offer no destructive action at all, alongside the disabled Save.
+        disabled={gone}
         onClick={() => {
           setConfirmingDelete(true);
         }}
@@ -278,9 +299,15 @@ export function TaskEditor({ task, lists, onClose }: TaskEditorProps): JSX.Eleme
           tone="danger"
           onConfirm={() => {
             setConfirmingDelete(false);
+            // Close BEFORE the optimistic remove evicts the row: the composed screen now
+            // keeps this dialog mounted across a concurrent delete (§14 error.taskGone),
+            // so closing in the same tick is what stops a delete the user just confirmed
+            // from rendering — or announcing — the "task no longer exists" state on the
+            // way out. Outcome is unchanged: S7 closes the confirm on either leg, and
+            // `Task deleted` still only announces on the ok leg.
+            onClose();
             void deleteTask(task.id).then((result) => {
               if (result.ok) announce(t('a11y.taskDeleted'));
-              onClose();
             });
           }}
           onCancel={() => {
