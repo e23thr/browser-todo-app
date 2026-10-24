@@ -582,6 +582,12 @@ Current data is replaced wholesale: lists, tasks, settings EXCEPT locale/theme p
 updates to now on successful import? NO — import is not a backup; `lastBackupAt` updates
 only on export. Rationale: the nudge tracks whether the user has an external safety net.)
 
+> **Erratum — Ratified 2026-10-25** (epic t_57b9ef8f): the "UI prefs are device-local" carve-out
+> above is superseded. An import replaces the settings record **wholesale** (ADR-004 wins;
+> PROJECT_ANALYSIS §7.4 = replace): `theme` applies immediately, `locale` on next boot, and
+> `lastBackupAt` comes from the imported file. Imported settings are no longer split into
+> "device-local" vs "synced" — the whole record is replaced.
+
 ### 8.4 The undo (pre-import snapshot restore)
 
 - After a successful import, `UndoToast` (T4, `role="status"`):
@@ -598,6 +604,11 @@ only on export. Rationale: the nudge tracks whether the user has an external saf
 - Restoring the pre-import snapshot is itself non-destructive to the undo concept: it
   creates NO new snapshot (restore target is already a snapshot; the replaced import data
   is discarded — it exists only as the file the user already has).
+
+> **Erratum — Ratified 2026-10-25** (epic t_57b9ef8f): the "creates NO new snapshot" line above
+> is superseded. A restore now takes its own pre-import snapshot first (undo-of-undo — safer), so
+> restoring is reversible. The 7-day protected-retention rule and the download escape hatch stand
+> as implemented in 067e769.
 
 ---
 
