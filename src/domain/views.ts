@@ -127,20 +127,22 @@ function countsOf(members: readonly Task[], today: string): ViewResult['counts']
 
 export function selectView(state: State, view: ViewId, ctx: ViewCtx): ViewResult {
   const { today } = ctx;
-  const all = visibleTasks(state);
   switch (view.kind) {
     case 'today':
-      return todayView(all, today);
+      return todayView(visibleTasks(state), today);
     case 'week':
-      return weekView(all, today);
+      return weekView(visibleTasks(state), today);
     case 'allOpen':
-      return allOpenView(state, all, today);
+      return allOpenView(state, visibleTasks(state), today);
     case 'list':
-      return listView(all, view.listId, today);
+      return listView(visibleTasks(state), view.listId, today);
     case 'completed':
-      return completedView(all, today);
+      return completedView(visibleTasks(state), today);
     case 'search':
-      return searchView(all, view.query, ctx, today);
+      // S5 keystroke path: resolve only the HITS against the store (O(hits)) —
+      // the O(n) visible-task scan runs solely for the documented naive
+      // fallback, never per keystroke with a maintained index (review R1 N2).
+      return searchView(state, view.query, ctx, today);
   }
 }
 
@@ -209,12 +211,26 @@ function completedView(all: Task[], today: string): ViewResult {
   };
 }
 
-function searchView(all: Task[], query: string, ctx: ViewCtx, today: string): ViewResult {
-  const valid = new Map(all.map((t) => [t.id, t]));
+/**
+ * Search results (S5): rank → updatedAt desc → id desc. Hit ids resolve against
+ * the STORE one `Map.get` each (plus the ADR-002 D6 liveness predicate) — no
+ * per-query id-Map build over the whole corpus (review R1 N2). The naive
+ * fallback (ADR-003 D6.3) is the only path that scans the visible corpus.
+ */
+function searchView(state: State, query: string, ctx: ViewCtx, today: string): ViewResult {
   const hits: SearchHit[] =
-    ctx.index !== undefined ? ctx.index.search(query) : SearchIndex.naive(all, query); // documented fallback (Decision 6.3)
+    ctx.index !== undefined
+      ? ctx.index.search(query)
+      : SearchIndex.naive(visibleTasks(state), query); // documented fallback (Decision 6.3)
   const rankOf = new Map(hits.map((h) => [h.id, h.rank]));
-  const members = hits.map((h) => valid.get(h.id)).filter((t): t is Task => t !== undefined);
+  const members: Task[] = [];
+  for (const hit of hits) {
+    const task = state.tasks.get(hit.id);
+    if (task === undefined) continue;
+    if (task.deletedAt !== null) continue;
+    if (!state.lists.has(task.listId)) continue; // ADR-002 D6: hidden-list tasks stay hidden
+    members.push(task);
+  }
   const sorted = [...members].sort((a, b) => {
     const ra = rankOf.get(a.id) ?? 2;
     const rb = rankOf.get(b.id) ?? 2;

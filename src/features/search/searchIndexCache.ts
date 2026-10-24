@@ -40,24 +40,24 @@ function liveTasks(state: State): Map<string, Task> {
 /**
  * The store-backed index for `state`. First call builds from scratch; later
  * calls re-sync incrementally when (and only when) the state version moved.
+ * A keystroke that changed nothing (`state.version` identical) reads NOTHING
+ * but that version — no `liveTasks()` scan, no Map build (review R1 N2).
  */
 export function searchIndexFor(state: State): SearchIndex {
-  const current = index === null ? new SearchIndex() : index;
-  const tasks = liveTasks(state);
+  if (index === null) index = new SearchIndex();
+  if (state.version === syncedVersion) return index;
 
-  if (index === null || state.version !== syncedVersion) {
-    for (const [id, task] of tasks) {
-      const previous = syncedIds.get(id);
-      if (previous === undefined || previous !== task) current.upsert(task);
-    }
-    for (const id of syncedIds.keys()) {
-      if (!tasks.has(id)) current.remove(id);
-    }
-    index = current;
-    syncedIds = tasks;
-    syncedVersion = state.version;
+  const tasks = liveTasks(state);
+  for (const [id, task] of tasks) {
+    const previous = syncedIds.get(id);
+    if (previous === undefined || previous !== task) index.upsert(task);
   }
-  return current;
+  for (const id of syncedIds.keys()) {
+    if (!tasks.has(id)) index.remove(id);
+  }
+  syncedIds = tasks;
+  syncedVersion = state.version;
+  return index;
 }
 
 /** Drop the singleton (component tests between corpora). */
