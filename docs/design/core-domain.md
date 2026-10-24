@@ -14,7 +14,7 @@ How to read this document:
   hardcoded copy), interactions, accessibility, responsive deltas, and edge cases.
 - §8 is the reorder system (drag **and** keyboard) and is deliberately first-class.
 - §9 is the complete keyboard interaction map.
-- §15 "Handoff checklist" is the contract impl cards are built and reviewed against.
+- §16 "Handoff checklist" is the contract impl cards are built and reviewed against.
 
 ---
 
@@ -43,7 +43,7 @@ client-side filter), and manual reorder with drag AND a keyboard equivalent (mov
   desktop), empty/loading/error states, confirm dialogs, and a keyboard interaction map.
 - AC-2: Keyboard reorder is specified as a first-class interaction, not an afterthought (§8.2).
 - AC-3: The document ends with a handoff section listing the exact UI states/behaviors impl cards
-  must build (§15).
+  must build (§16).
 
 **Refs:** PROJECT_ANALYSIS.md §3 (P1 JTBDs), §4 (M1–M6), §8 (accessibility), plus §5.2/§5.3 (data
 model: per-list fractional `sortOrder`, `priority: 0|1|2`, `dueDate` local-date string) and §9.1
@@ -872,7 +872,7 @@ interface LiveRegionProps { /* single polite + single assertive region, mounted 
 ```
 
 Every interactive component implements the 7 states: `default, hover, focus, active, disabled,
-loading (saving), error` — enumerated per component in §7 and asserted in the §15 checklist.
+loading (saving), error` — enumerated per component in §7 and asserted in the §16 checklist.
 
 ---
 
@@ -1012,7 +1012,28 @@ axe/CI a11y gate (§8 of PROJECT_ANALYSIS) in both themes.
 
 ---
 
-## 15. Handoff checklist — exact UI states/behaviors impl cards must build
+## 15. Open questions for h_pm (non-blocking; defaults applied above)
+
+Nothing blocks implementation — the items below are confirm-or-override; the stated default is what
+impl will build if no answer arrives.
+
+- [x] **OQ-1 (D1 confirm):** manual reorder restricted to per-list views (aggregate views use
+  derived order + `Move to list`). Cross-list manual ordering would require a schema change (per
+  §5.2 `sortOrder` is per list) — confirm the restriction or schedule a schema ADR amendment.
+  Resolved 2026-10-25 — h_pm, epic t_9b61ecf5 (see docs/qa/e2-epic-verification.md §5): confirmed as built.
+- [x] **OQ-2 (D10 confirm):** validation limits (title 1–200, notes ≤ 20,000, list name 1–60 unique)
+  were chosen by design; override if product wants different bounds.
+  Resolved 2026-10-25 — h_pm, epic t_9b61ecf5 (see docs/qa/e2-epic-verification.md §5): confirmed as built.
+- [x] **OQ-3 (D8 confirm):** Completed view is global with a list filter (no per-list completed
+  section). V1 S6 (archive/history) will refine this.
+  Resolved 2026-10-25 — h_pm, epic t_9b61ecf5 (see docs/qa/e2-epic-verification.md §5): confirmed as built.
+- [x] **OQ-4 (nice-to-have):** `Alt+Home/End` (move to top/bottom) is included as an optional
+  accelerator; drop it if the V1 shortcut owner (S8) prefers to own all extended keys.
+  Resolved 2026-10-25 — h_pm, epic t_9b61ecf5 (see docs/qa/e2-epic-verification.md §5): confirmed as built.
+
+---
+
+## 16. Handoff checklist — exact UI states/behaviors impl cards must build
 
 This is the review contract (AC-3). Each item is verifiable in a component test or keyboard-only
 pass. **h_reviewer: anything unchecked here is a spec deviation.**
@@ -1096,23 +1117,8 @@ pass. **h_reviewer: anything unchecked here is a spec deviation.**
 
 ---
 
-## 16. Open questions for h_pm (non-blocking; defaults applied above)
+_Sibling ownership: Epic E5 (UX Foundation) owns shell chrome, theme and final token values; Epic
+E3 (Data Safety) owns the recovery/quota dialogs referenced in §14. String keys §13 and token names
+§11 are the only copy/value sources; hardcoded strings are a review failure._
 
-Nothing blocks implementation — the items below are confirm-or-override; the stated default is what
-impl will build if no answer arrives.
 
-- [ ] **OQ-1 (D1 confirm):** manual reorder restricted to per-list views (aggregate views use
-  derived order + `Move to list`). Cross-list manual ordering would require a schema change (per
-  §5.2 `sortOrder` is per list) — confirm the restriction or schedule a schema ADR amendment.
-- [ ] **OQ-2 (D10 confirm):** validation limits (title 1–200, notes ≤ 20,000, list name 1–60 unique)
-  were chosen by design; override if product wants different bounds.
-- [ ] **OQ-3 (D8 confirm):** Completed view is global with a list filter (no per-list completed
-  section). V1 S6 (archive/history) will refine this.
-- [ ] **OQ-4 (nice-to-have):** `Alt+Home/End` (move to top/bottom) is included as an optional
-  accelerator; drop it if the V1 shortcut owner (S8) prefers to own all extended keys.
-
----
-
-*End of spec. Handoff checklist §15 is the implementation contract; string keys §13 and tokens §11
-are the only copy/value sources. Sibling ownership: Epic E5 (UX Foundation) owns shell chrome, theme
-and final token values; Epic E3 (Data Safety) owns recovery/quota dialogs referenced in §14.*
