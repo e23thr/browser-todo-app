@@ -71,6 +71,9 @@
   --touch-min: 44px;
   --appbar-h: 56px;
   --tabbar-h: 56px;
+  /* Virtualization estimate: uniform task-row height the window math uses for
+     unmeasured rows (§5.7 `--row-height-task`; overridden per breakpoint). */
+  --row-height-task: 56px;
 
   /* §3.6 Z-index. */
   --z-base: 0;
