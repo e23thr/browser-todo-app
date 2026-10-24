@@ -1,0 +1,30 @@
+=== git rev-parse HEAD ===
+b747c8e3c411a22093b5fc76c728257ce7bc4461
+=== git diff | sha256 ===
+0520c7d627c58981feac9d614f627e162d4f4d45b362ca3b5effea4324099c02  -
+=== tsc -b ===
+TSC_EXIT=0
+=== check-i18n ===
+i18n catalog check — src/i18n/en.json vs src/i18n/th.json
+  keys: 337 en / 337 th · 284 distinct keys used by 330 literal t() call site(s)
+  note: 16 t() call site(s) with a non-literal key (not statically verifiable):
+    app/Shell.tsx:173
+    app/Shell.tsx:254
+    components/ConfirmDialog.tsx:95
+    components/ConfirmDialog.tsx:104
+    components/ConfirmDialog.tsx:110
+    components/ConfirmDialog.tsx:112
+    features/data-safety/actions.ts:61
+    features/lists/ListDialog.tsx:113
+    features/lists/ListDialog.tsx:132
+    features/lists/ListsManageView.tsx:388
+    features/tasks/Composer.tsx:192
+    features/tasks/TaskRow.tsx:154
+    features/tasks/TaskRow.tsx:155
+    features/tasks/ToastHost.tsx:33
+    features/tasks/ToastHost.tsx:42
+    features/tasks/fields.tsx:183
+RESULT: PASS — en/th key sets, values and placeholders are consistent
+I18N_EXIT=0
+=== eslint (my files) ===
+ESLINT_EXIT=0

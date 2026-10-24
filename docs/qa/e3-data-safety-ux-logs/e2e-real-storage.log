@@ -1,0 +1,10 @@
+
+Running 5 tests using 5 workers
+
+  ✓  1 [chromium] › tests/e2e/data-safety-ux.spec.ts:80:1 › the quota meter quotes the browser OWN estimate() numbers (no mock drift) (338ms)
+  ✓  2 [chromium] › tests/e2e/data-safety-ux.spec.ts:101:1 › the persistence row tells the truth about the REAL persisted() state (299ms)
+  ✓  3 [chromium] › tests/e2e/data-safety-ux.spec.ts:150:1 › REAL keyboard: Tab traps in the quota dialog, Escape takes the safe path, focus returns (414ms)
+  ✓  5 [chromium] › tests/e2e/data-safety-ux.spec.ts:185:1 › the backup nudge follows the REAL clock: fires beyond 14 days, quiet below (323ms)
+  ✓  4 [chromium] › tests/e2e/data-safety-ux.spec.ts:119:1 › persist() is requested exactly once at the first meaningful write (real API) (444ms)
+
+  5 passed (2.1s)

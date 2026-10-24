@@ -1,0 +1,49 @@
+
+ RUN  v5.0.5 /home/ubuntu/workspace/browser-todo-app
+
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S1 — first run: onboarding before task UI, honest copy, durable marker > shows the first-run screen before any task UI and finishes through the single CTA 122ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S1 — first run: onboarding before task UI, honest copy, durable marker > names the iOS 7-day rule + the backup path in English AND Thai (§11 QA checklist) 14ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S2 — panel values with scripted StorageManager states > healthy estimate → quota value line + persistence granted row 20ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S2 — panel values with scripted StorageManager states > 80% warn tier and 90% crit tier carry their text labels (colour is never the only signal) 7ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S2 — panel values with scripted StorageManager states > no StorageManager at all → unknown meter + unsupported persistence row (§9.4) 7ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S2 — panel values with scripted StorageManager states > estimate() without a total → the indeterminate meter copy, never a fake number 3ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S2 — panel values with scripted StorageManager states > persistence states: not-requested → "Request protection"; denied → "Ask again"; persist() throw → error copy 14ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S2 — panel values with scripted StorageManager states > lastBackupAt age labels: Never (danger with data / neutral without), Today, Yesterday, N days, N months (§10.4) 15ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S2 — panel values with scripted StorageManager states > the panel keeps export + import reachable and the danger zone at the bottom (§4.1) 10ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S3 — persist() requested after the FIRST task created, exactly once > addTask success triggers the persist() gate; a second task does not request again 4ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S3 — persist() requested after the FIRST task created, exactly once > a FAILED first write does not request persist() (no meaningful use yet) 2ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S3 — backup-reminder nudge (§3.2/§6.3) > does NOT nag at 13 days, fires at the 14-day threshold and beyond 1ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S3 — backup-reminder nudge (§3.2/§6.3) > fires the "never backed up" variant only when data exists 1ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S3 — backup-reminder nudge (§3.2/§6.3) > renders the nudge copy (incl. the Safari 7-day rule) and snoozes 7 days on close 8ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S3 — backup-reminder nudge (§3.2/§6.3) > clears after a successful backup and does not return until the threshold passes again (§6.3) 1ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S4 — quota-exceeded write: dialog appears, the write is NEVER dropped > routes a real store write failure through the dialog + pending queue and retires it only when it lands 32ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S4 — quota-exceeded write: dialog appears, the write is NEVER dropped > D1 (defect evidence) — §6.4: Escape must leave the persistent T2 "N changes waiting" banner 62ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S4 — quota-exceeded write: dialog appears, the write is NEVER dropped > a second queued failure counts up in the dialog and the banner (no write is ever discarded) 8ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S5 — eviction / wipe detection with scripted boot states > boot-validation wipe (empty store after prior use) → recovery screen surfacing lastBackupAt 5ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S5 — eviction / wipe detection with scripted boot states > "Start fresh" asks inline first, then acknowledges so the SAME store is not re-flagged as evicted 15ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S5 — eviction / wipe detection with scripted boot states > first run after a long absence (≥ 7 days) surfaces lastBackupAt in the banner (§6.6) 23ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S5 — eviction / wipe detection with scripted boot states > long-absence boundary is 7 days, and it outranks a shrunken store (§3.4 priority) 1ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S5 — eviction / wipe detection with scripted boot states > a >30% record drop vs the snapshot baseline raises the T2 shrunken warning (§3.4) 2ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S6 — private-browsing warning (ephemeral heuristic at first write) > opens the one-time dialog when persist() is denied AND the quota looks like private mode 9ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S6 — private-browsing warning (ephemeral heuristic at first write) > never warns when the browser grants persistence (even with a small quota) 2ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S7 — import confirm + pre-import snapshot undo (real ADR-004 engine) > writes nothing before confirm, replaces on confirm, and the undo restores the previous data 67ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > S7 — import confirm + pre-import snapshot undo (real ADR-004 engine) > an invalid file never mutates anything and always offers "Choose another file" (§7) 7ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > R — review round-1 rework verification > B3: a whole-file NOTHING_TO_IMPORT reject offers the recovery file and writes nothing 9ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > R — review round-1 rework verification > B2: a pre-import snapshot row carries the 7-day note + a download affordance (autos carry neither) 8ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > R — review round-1 rework verification > N4: restoring an evicted snapshot says so instead of the generic "nothing changed" copy 3ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > R — review round-1 rework verification > N5 §5.6 busy lifecycle: answerDialog(true) keeps the dialog mounted until closeDialog() 0ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > R — review round-1 rework verification > N5: the cancel path still resolves false and drains the queue at once 0ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > P — §8.4 pre-import retention protection (real engine on fake-indexeddb) > holds 2 protected pre-imports inside the rolling 3, evicts the oldest on a 3rd, and lapses after 7 days 7ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > K — keyboard/a11y matrix over every T3 dialog (§5.6) > quota-exceeded: Escape closes (keeping the write), never the retry/export actions 30ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > K — keyboard/a11y matrix over every T3 dialog (§5.6) > private-browsing: Escape/scrim dismiss — never the export action 34ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > K — keyboard/a11y matrix over every T3 dialog (§5.6) > import-confirm: Escape/scrim cancel — the destructive confirm never fires 34ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > K — keyboard/a11y matrix over every T3 dialog (§5.6) > delete-all-confirm: focus starts on "Export a backup first"; Escape/scrim never wipe 35ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > K — keyboard/a11y matrix over every T3 dialog (§5.6) > restore-confirm: Escape/scrim cancel — the restore never runs 37ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > K — keyboard/a11y matrix over every T3 dialog (§5.6) > N5 busy state: buttons disabled, focus on the dialog, Escape and scrim inert, status announced 33ms
+ ✓ tests/component/data-safety-ux-qa.test.tsx > K — keyboard/a11y matrix over every T3 dialog (§5.6) > N5 busy labels per confirming kind (importing / deleting / restoring) 65ms
+
+ Test Files  1 passed (1)
+      Tests  39 passed | 1 expected fail (40)
+   Start at  00:23:33
+   Duration  1.59s (tests 53%, environment 30%, transform 8%, import 5%, setup 4%)
+
