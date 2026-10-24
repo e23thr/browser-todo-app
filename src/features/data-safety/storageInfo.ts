@@ -12,6 +12,8 @@
 
 import { signal } from '@preact/signals';
 
+import { PREFS_KEYS } from './constants';
+
 /** §5.3 `PersistenceRowProps.state` — the four states of the persistence row. */
 export type PersistenceState = 'granted' | 'denied' | 'unsupported' | 'not-requested';
 
@@ -177,14 +179,24 @@ export async function looksEphemeral(): Promise<boolean> {
   return localStorageProbeFails();
 }
 
-/** `true` when localStorage rejects a write — hardened/private contexts do exactly that. */
+/**
+ * `true` when localStorage rejects a write — hardened/private contexts do exactly that.
+ *
+ * N2 (ADR-002 Decision 7): that decision closes the localStorage key list at three
+ * boot-critical prefs, so a throwaway `todo:prefs:v1:probe` key is NOT allowed. The probe
+ * therefore writes an ALLOWED key with the value it already holds: an existing
+ * `dismissedBanners` list is rewritten byte-for-byte (no change to what the app reads) and an
+ * absent one is created as `[]` — which is exactly what "absent" means — then removed again.
+ * A private-mode `setItem` rejection still throws here, so §3.5's signature is unchanged.
+ */
 function localStorageProbeFails(): boolean {
   try {
     const store = (globalThis as { localStorage?: Storage }).localStorage;
     if (store === undefined) return false;
-    const key = 'todo:prefs:v1:probe';
-    store.setItem(key, '1');
-    store.removeItem(key);
+    const key = PREFS_KEYS.dismissed;
+    const before = store.getItem(key);
+    store.setItem(key, before ?? '[]');
+    if (before === null) store.removeItem(key);
     return false;
   } catch {
     return true;

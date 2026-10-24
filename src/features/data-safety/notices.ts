@@ -99,6 +99,11 @@ export type DialogRequest =
 export interface QueuedDialog {
   readonly id: number;
   readonly request: DialogRequest;
+  /**
+   * §5.6 `busy`: the confirming action was taken and the awaiting flow is running its write.
+   * A busy dialog stays mounted (buttons disabled, Escape inert) until `closeDialog()`.
+   */
+  readonly busy: boolean;
 }
 
 const dialogQueue = signal<readonly QueuedDialog[]>([]);
@@ -113,24 +118,51 @@ export function currentDialog(): QueuedDialog | null {
 /**
  * Enqueue a T3 dialog and resolve with the verdict: `true` = the confirming action ran,
  * `false` = cancel / Escape / safe path. Queued dialogs render one at a time (§2).
+ *
+ * A `true` verdict does NOT pop the dialog: the flow still has to run the destructive write,
+ * and §5.6/§10.6 require the dialog to stay up in its `busy` state while it does. The flow
+ * calls `closeDialog()` when the write is over (success or failure).
  */
 export function openDialog(request: DialogRequest): Promise<boolean> {
   dialogSeq += 1;
   const id = dialogSeq;
-  dialogQueue.value = [...dialogQueue.value, { id, request }];
+  dialogQueue.value = [...dialogQueue.value, { id, request, busy: false }];
   return new Promise<boolean>((resolve) => {
     resolvers.set(id, resolve);
   });
 }
 
-/** Answer the dialog at the head of the queue and let it close. */
+/**
+ * Answer the dialog at the head of the queue: `false` closes it at once, `true` flips it into
+ * the §5.6 `busy` state and hands the verdict to the awaiting flow, which finishes with
+ * `closeDialog()`.
+ */
 export function answerDialog(confirmed: boolean): void {
   const head = dialogQueue.value[0];
   if (head === undefined) return;
+  const resolve = resolvers.get(head.id);
+  resolvers.delete(head.id);
+  if (confirmed) {
+    dialogQueue.value = dialogQueue.value.map((queued) =>
+      queued.id === head.id ? { ...queued, busy: true } : queued,
+    );
+    resolve?.(true);
+    return;
+  }
+  dialogQueue.value = dialogQueue.value.slice(1);
+  resolve?.(false);
+}
+
+/** Close the head dialog once the confirming write has finished (§5.6 `busy` → closed). */
+export function closeDialog(): void {
+  const head = dialogQueue.value[0];
+  // Only a dialog that reported `true` is a flow's to close — anything else (already answered,
+  // or queued behind ours) belongs to whoever opened it.
+  if (head === undefined || !head.busy) return;
   dialogQueue.value = dialogQueue.value.slice(1);
   const resolve = resolvers.get(head.id);
   resolvers.delete(head.id);
-  resolve?.(confirmed);
+  resolve?.(false);
 }
 
 /** Test/teardown seam: drop every queued dialog and reject nothing (resolve as cancel). */
@@ -149,6 +181,11 @@ export interface ToastRequest {
   readonly variant: 'success' | 'error';
   /** Present = the toast renders an action button (undo, "Open snapshots"). */
   readonly action?: { readonly label: string; readonly run: () => void };
+  /**
+   * Optional second action (ADR-004 Decision 5.5 (b)): the undo toast also offers the
+   * `downloadSnapshot` escape hatch, because the rolling-3 can evict the undo snapshot.
+   */
+  readonly secondaryAction?: { readonly label: string; readonly run: () => void };
   /** Undo toast: no auto-dismiss until the user interacts with it (§5.8). */
   readonly persistent?: boolean;
 }

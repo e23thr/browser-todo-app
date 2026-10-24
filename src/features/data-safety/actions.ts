@@ -15,7 +15,7 @@ import { deleteAllData, exportBackup } from '../../portability';
 import { t } from '../../i18n';
 import { deriveBanners } from './derive';
 import { markRecoveryStarted } from './flags';
-import { openDialog, pushToast } from './notices';
+import { closeDialog, openDialog, pushToast } from './notices';
 import { invalidateCounts, loadCounts, resolveDb } from './dbAccess';
 import { isQuotaExceeded, noteWriteFailure } from './pendingWrites';
 import { invalidateSnapshots, refreshSnapshots } from './snapshots';
@@ -26,6 +26,9 @@ import { refreshQuota, refreshPersistence } from './storageInfo';
 export function isBusy(): boolean {
   return dataSafetyState.value.panelState !== 'idle';
 }
+
+/** A delete-all is already running (its confirm is in `busy` state — N5 double-submit guard). */
+let deleteInFlight = false;
 
 /**
  * Run an export (§4.3 "Back up now", plus every "Export a backup" crisis action).
@@ -46,14 +49,18 @@ export async function runExport(): Promise<boolean> {
       return false;
     }
 
+    // §7 vs §9: the FIRST ever backup gets the longer "keep it somewhere safe" line, every
+    // later one the short §9 toast — the reassurance is only needed the first time.
+    const firstEver = dataSafetyState.value.lastBackupAt === null;
     patchState({ exportState: 'saved', lastBackupAt: result.value.exportedAt });
     // `warnings` (e.g. lastBackupAt could not be written back) are non-fatal for the export —
     // but they are never hidden from the local log.
     for (const warning of result.value.warnings) {
       console.warn('data-safety: export warning', warning);
     }
-    announce(t('dataSafety.backup.doneSafe'));
-    pushToast({ message: t('dataSafety.backup.doneSafe'), variant: 'success' });
+    const doneMessage = t(firstEver ? 'dataSafety.backup.doneSafe' : 'dataSafety.backup.doneShort');
+    announce(doneMessage);
+    pushToast({ message: doneMessage, variant: 'success' });
     await refreshQuota();
     await refreshSnapshots();
     deriveBanners();
@@ -70,38 +77,48 @@ export async function runExport(): Promise<boolean> {
  * real wipe. On success the wipe is acknowledged so the NEXT boot does not misread a
  * deliberate deletion as an eviction (§3.4). The acknowledgement is written AFTER
  * `deleteAllData()` clears `todo:prefs:v1:*`, so it survives.
+ *
+ * N5: the confirm dialog stays up in its `busy` state while the wipe runs (§5.6/§10.6) and is
+ * released in `finally`, and a second click can never start a second wipe.
  */
 export async function runDeleteAll(): Promise<boolean> {
-  const db = resolveDb();
-  if (db === null) return false;
-  const counts = await loadCounts(db);
-  const confirmed = await openDialog({ kind: 'delete-all-confirm', dataCounts: counts });
-  if (!confirmed) return false;
+  if (isBusy() || deleteInFlight) return false;
+  deleteInFlight = true;
+  try {
+    const db = resolveDb();
+    if (db === null) return false;
+    const counts = await loadCounts(db);
+    const confirmed = await openDialog({ kind: 'delete-all-confirm', dataCounts: counts });
+    if (!confirmed) return false;
 
-  const wiped = await deleteAllData();
-  if (!wiped.ok) {
-    announce(t('dataSafety.deleteAll.failed'), 'assertive');
-    pushToast({ message: t('dataSafety.deleteAll.failed'), variant: 'error' });
-    return false;
+    const wiped = await deleteAllData();
+    if (!wiped.ok) {
+      announce(t('dataSafety.deleteAll.failed'), 'assertive');
+      pushToast({ message: t('dataSafety.deleteAll.failed'), variant: 'error' });
+      return false;
+    }
+
+    markRecoveryStarted();
+    invalidateCounts();
+    invalidateSnapshots();
+    patchState({
+      counts: null,
+      hasData: false,
+      snapshots: [],
+      lastBackupAt: null,
+      classification: { kind: 'normal' },
+      onboarding: false,
+      exportState: 'idle',
+      panelState: 'idle',
+    });
+    announce(t('dataSafety.deleteAll.done'));
+    pushToast({ message: t('dataSafety.deleteAll.done'), variant: 'success' });
+    await refreshQuota();
+    await refreshPersistence();
+    deriveBanners();
+    return true;
+  } finally {
+    deleteInFlight = false;
+    closeDialog();
   }
-
-  markRecoveryStarted();
-  invalidateCounts();
-  invalidateSnapshots();
-  patchState({
-    counts: null,
-    hasData: false,
-    snapshots: [],
-    lastBackupAt: null,
-    classification: { kind: 'normal' },
-    onboarding: false,
-    exportState: 'idle',
-    panelState: 'idle',
-  });
-  announce(t('dataSafety.deleteAll.done'));
-  pushToast({ message: t('dataSafety.deleteAll.done'), variant: 'success' });
-  await refreshQuota();
-  await refreshPersistence();
-  deriveBanners();
-  return true;
 }

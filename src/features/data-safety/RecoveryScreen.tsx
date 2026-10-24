@@ -43,10 +43,16 @@ export function RecoveryScreen({
       <p class="recovery-backup">
         {lastBackupAt === null
           ? t('dataSafety.recovery.neverBackup')
-          : t('dataSafety.recovery.lastBackup', {
-              N: age ?? 0,
-              date: absoluteDate(lastBackupAt),
-            })}
+          : // N3: the N-day line must not render "1 days ago" (or "0 days ago") — the
+            // Today/Yesterday family of §11 has its own entries for those.
+            age === 0
+            ? t('dataSafety.recovery.lastBackupToday', { date: absoluteDate(lastBackupAt) })
+            : age === 1
+              ? t('dataSafety.recovery.lastBackupOne', { date: absoluteDate(lastBackupAt) })
+              : t('dataSafety.recovery.lastBackup', {
+                  N: age ?? 0,
+                  date: absoluteDate(lastBackupAt),
+                })}
       </p>
 
       <div class="recovery-actions">

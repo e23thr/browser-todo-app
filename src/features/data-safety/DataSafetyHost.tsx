@@ -281,6 +281,7 @@ function DialogHost({ queued }: { readonly queued: QueuedDialog }): JSX.Element 
           file={request.preview}
           currentCounts={request.currentCounts}
           quarantined={request.quarantined}
+          busy={queued.busy}
           onConfirm={() => {
             answerDialog(true);
           }}
@@ -295,6 +296,7 @@ function DialogHost({ queued }: { readonly queued: QueuedDialog }): JSX.Element 
         <SafetyDialog
           kind="delete-all-confirm"
           dataCounts={request.dataCounts}
+          busy={queued.busy}
           onConfirm={() => {
             answerDialog(true);
           }}
@@ -328,6 +330,7 @@ function DialogHost({ queued }: { readonly queued: QueuedDialog }): JSX.Element 
           kind="restore-confirm"
           snapshot={request.snapshot}
           currentCounts={request.currentCounts}
+          busy={queued.busy}
           onConfirm={() => {
             answerDialog(true);
           }}
@@ -353,6 +356,7 @@ function ToastItem({ toast }: { readonly toast: Toast }): JSX.Element {
   }, [toast.id, toast.persistent]);
 
   if (toast.action !== undefined) {
+    const secondary = toast.secondaryAction;
     return (
       <UndoToast
         variant="success"
@@ -362,6 +366,14 @@ function ToastItem({ toast }: { readonly toast: Toast }): JSX.Element {
           dismissToast(toast.id);
           toast.action?.run();
         }}
+        secondaryLabel={secondary?.label}
+        onSecondary={
+          secondary === undefined
+            ? undefined
+            : (): void => {
+                secondary.run();
+              }
+        }
         onDismiss={() => {
           dismissToast(toast.id);
         }}

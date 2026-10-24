@@ -29,6 +29,8 @@ export interface StoragePanelProps {
   readonly onExport: () => void;
   readonly onImport: (file: File) => void;
   readonly onRestoreSnapshot: (id: string) => void;
+  /** ADR-004 Decision 5.5 (b): download a `pre-import` undo snapshot as a file. */
+  readonly onDownloadSnapshot: (snapshot: SnapshotMeta) => void;
   readonly onDeleteAll: () => void;
   /** Injectable clock for age math/tests (§5.1, §9). */
   readonly now?: number | undefined;
@@ -64,6 +66,7 @@ export function StoragePanel({
   onExport,
   onImport,
   onRestoreSnapshot,
+  onDownloadSnapshot,
   onDeleteAll,
   now = Date.now(),
   state = 'idle',
@@ -118,6 +121,10 @@ export function StoragePanel({
             usedBytes={quota.usedBytes}
             totalBytes={quota.totalBytes}
             loading={state === 'idle' && quota.totalBytes === null}
+            // §11: no inline English — the value line is localized here, not in the meter.
+            valueTemplate={({ used, total, percent }): string =>
+              t('dataSafety.quota.value', { used, total, percent })
+            }
             labels={{
               ok: t('dataSafety.meter.ok'),
               warn: t('dataSafety.meter.warn'),
@@ -181,7 +188,12 @@ export function StoragePanel({
         <h3 class="storage-heading" id="storage-snapshots">
           {t('dataSafety.snapshots.heading')}
         </h3>
-        <SnapshotList snapshots={snapshots} onRestore={onRestoreSnapshot} />
+        <SnapshotList
+          snapshots={snapshots}
+          now={now}
+          onRestore={onRestoreSnapshot}
+          onDownload={onDownloadSnapshot}
+        />
       </section>
 
       <section class="storage-section storage-danger" aria-labelledby="storage-danger">

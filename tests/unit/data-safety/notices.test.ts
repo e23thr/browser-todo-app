@@ -5,6 +5,7 @@ import { resetFlags, snooze } from '../../../src/features/data-safety/flags';
 import {
   answerDialog,
   clearBanners,
+  closeDialog,
   currentDialog,
   openDialog,
   resetDialogs,
@@ -81,6 +82,8 @@ describe('banner priority and cap (§2)', () => {
     const before = visibleBanners(NOW);
     expect(before.visible).toHaveLength(1);
 
+    // The clock is pinned to NOW (see the CLOCK PIN note above), so the snooze stamped by
+    // `snoozeBanner` and the expiry assertions below share one instant — deterministic.
     snoozeBanner('backup-reminder', 7);
     const after = visibleBanners(NOW + 1 * DAY);
     expect(after.visible).toHaveLength(0);
@@ -190,9 +193,36 @@ describe("T3 dialog queue (§2: queue, don't stack)", () => {
     answerDialog(false);
     expect(await first).toBe(false);
     expect(currentDialog()?.request.kind).toBe('quota-exceeded');
+    // §5.6 `busy`: a cancel pops the dialog at once, a confirm does NOT — the flow that
+    // asked for the confirmation still has to run its write behind the mounted dialog.
     answerDialog(true);
     expect(await second).toBe(true);
+    expect(currentDialog()?.busy).toBe(true);
+
+    // …and the flow releases it with closeDialog() when the write is over.
+    closeDialog();
     expect(currentDialog()).toBeNull();
+  });
+
+  it('keeps a confirmed dialog mounted and inert until closeDialog (§5.6 busy)', () => {
+    const pending = openDialog({ kind: 'quota-exceeded', pendingCount: 1 });
+    answerDialog(true);
+    const busy = currentDialog();
+    expect(busy?.busy).toBe(true);
+    // A second answer on a busy head must not pop it or double-resolve the promise —
+    // only the flow's closeDialog() may release the dialog.
+    answerDialog(true);
+    expect(currentDialog()?.busy).toBe(true);
+    closeDialog();
+    expect(currentDialog()).toBeNull();
+    void pending;
+  });
+
+  it('closeDialog is a no-op for a dialog that is not busy (never steals an unconfirmed one)', () => {
+    const pending = openDialog({ kind: 'private-browsing' });
+    closeDialog();
+    expect(currentDialog()?.request.kind).toBe('private-browsing');
+    void pending;
   });
 
   it('resolves queued dialogs as cancelled on reset (teardown never leaks promises)', async () => {

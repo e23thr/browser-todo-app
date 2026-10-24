@@ -8,7 +8,11 @@ import { NudgeBanner } from '../../src/features/data-safety/NudgeBanner';
 import { QuotaMeter } from '../../src/features/data-safety/QuotaMeter';
 import { PersistenceRow } from '../../src/features/data-safety/PersistenceRow';
 import { SafetyDialog } from '../../src/features/data-safety/SafetyDialog';
+import { SnapshotList } from '../../src/features/data-safety/SnapshotList';
 import { StoragePanel } from '../../src/features/data-safety/StoragePanel';
+import { UndoToast } from '../../src/features/data-safety/UndoToast';
+import { PRE_IMPORT_PROTECTION_MS } from '../../src/storage/snapshots';
+import type { SnapshotMeta } from '../../src/features/data-safety/types';
 import {
   answerDialog,
   currentDialog,
@@ -123,6 +127,7 @@ describe('<StoragePanel> (4, 5.1)', () => {
         onExport={noop}
         onImport={noop}
         onRestoreSnapshot={noop}
+        onDownloadSnapshot={noop}
         onDeleteAll={noop}
         {...props}
       />
@@ -242,10 +247,72 @@ describe('<SafetyDialog> (5.6 a11y contract)', () => {
     expect(document.activeElement?.textContent).toBe('Cancel');
     expect(
       screen.getByText(
-        'Importing will replace the data currently in this browser: 3 tasks in 1 lists will be removed and replaced by the backup.',
+        'Importing will replace the data currently in this browser: 3 tasks in 1 lists will be removed and replaced by the backup, and your settings are replaced too — theme and language come from the backup file.',
         { exact: true },
       ),
     ).toBeTruthy();
+  });
+
+  it('states the three ADR-004 Decision 5.5 confirm facts (en)', () => {
+    render(
+      <SafetyDialog
+        kind="import-confirm"
+        file={{
+          schemaVersion: 1,
+          counts: { lists: 2, tasks: 5, doneTasks: 1, snapshots: 0 },
+          exportedAt: NOW - DAY,
+          fileSizeBytes: 2048,
+        }}
+        currentCounts={{ lists: 1, tasks: 3, doneTasks: 0, hasData: true }}
+        onConfirm={() => undefined}
+        onCancel={() => undefined}
+      />,
+    );
+
+    // (a) replaces-ALL warning with counts — including the SETTINGS record the engine's
+    // one-tx replace overwrites (import.ts tx spans ['lists','tasks','settings']).
+    expect(screen.getByText(/and your settings are replaced too/u, { exact: true })).toBeTruthy();
+    // (b) undo snapshot pointer: WHERE it lives + the binding download escape hatch.
+    expect(
+      screen.getByText(/It lives in Settings → Storage & back up → Snapshots/u, { exact: true }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/restore it in one tap or download it as a file/u, { exact: true }),
+    ).toBeTruthy();
+    // (c) tombstone-resurrection caveat.
+    expect(
+      screen.getByText(
+        'Importing an older backup can bring back tasks and lists you deleted after that backup was made.',
+        { exact: true },
+      ),
+    ).toBeTruthy();
+  });
+
+  it('states the three Decision 5.5 confirm facts in Thai too (§11 both locales)', async () => {
+    await setLocale('th');
+    render(
+      <SafetyDialog
+        kind="import-confirm"
+        file={{
+          schemaVersion: 1,
+          counts: { lists: 2, tasks: 5, doneTasks: 1, snapshots: 0 },
+          exportedAt: NOW - DAY,
+          fileSizeBytes: 2048,
+        }}
+        currentCounts={{ lists: 1, tasks: 3, doneTasks: 0, hasData: true }}
+        onConfirm={() => undefined}
+        onCancel={() => undefined}
+      />,
+    );
+
+    // (a) settings replacement, (b) snapshot location + download, (c) tombstone caveat.
+    expect(screen.getByText(/การตั้งค่าของคุณก็ถูกแทนที่ด้วย/u, { exact: true })).toBeTruthy();
+    expect(
+      screen.getByText(/สแนปช็อต คุณสามารถกู้คืนได้ในแตะเดียว/u, { exact: true }),
+    ).toBeTruthy();
+    expect(screen.getByText(/ดาวน์โหลดเป็นไฟล์ได้ที่นั่น/u, { exact: true })).toBeTruthy();
+    expect(screen.getByText(/อาจทำให้งานและรายการที่คุณลบไป/u, { exact: true })).toBeTruthy();
+    await setLocale('en');
   });
 
   it('takes the safe path on Escape (cancel, never confirm)', () => {
@@ -492,5 +559,277 @@ describe('dialog queue wiring', () => {
     expect(currentDialog()?.request.kind).toBe('quota-exceeded');
     answerDialog(true);
     await expect(pending).resolves.toBe(true);
+  });
+});
+
+describe('<SafetyDialog> §5.6/§10.6 busy confirm state (N5)', () => {
+  const importFile = {
+    schemaVersion: 1,
+    counts: { lists: 2, tasks: 5, doneTasks: 1, snapshots: 0 },
+    exportedAt: NOW - DAY,
+    fileSizeBytes: 2048,
+  };
+
+  it('keeps the import dialog mounted with disabled actions and an Importing… status', () => {
+    const onCancel = vi.fn();
+    const onConfirm = vi.fn();
+    render(
+      <SafetyDialog
+        kind="import-confirm"
+        file={importFile}
+        currentCounts={{ lists: 1, tasks: 3, doneTasks: 0, hasData: true }}
+        busy
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      />,
+    );
+
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.getAttribute('aria-busy')).toBe('true');
+    expect(dialog.getAttribute('data-state')).toBe('busy');
+    expect(screen.getByRole('status').textContent).toBe('Importing…');
+
+    const cancel = screen.getByRole<HTMLButtonElement>('button', { name: 'Cancel' });
+    const go = screen.getByRole<HTMLButtonElement>('button', { name: 'Replace and import' });
+    expect(cancel.disabled).toBe(true);
+    expect(go.disabled).toBe(true);
+
+    // Escape is inert while the write runs (§5.6: no safe path left mid-write). The
+    // disabled buttons are the double-submit guard — a real browser never dispatches
+    // their click, so the disabled check above is the binding assertion for those.
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it('shows Deleting… on the busy delete-all confirm and Restoring… on restore', () => {
+    const { rerender } = render(
+      <SafetyDialog
+        kind="delete-all-confirm"
+        dataCounts={{ lists: 1, tasks: 4, doneTasks: 0, hasData: true }}
+        busy
+        onConfirm={() => undefined}
+        onCancel={() => undefined}
+        onExport={() => undefined}
+      />,
+    );
+    expect(screen.getByRole('status').textContent).toBe('Deleting…');
+
+    rerender(
+      <SafetyDialog
+        kind="restore-confirm"
+        snapshot={{
+          id: '01ARZ3NDEKTSV4RRFFQ6000030',
+          takenAt: NOW - DAY,
+          kind: 'auto',
+          reason: 'pre-import',
+          sizeBytes: 1024,
+        }}
+        currentCounts={{ lists: 1, tasks: 4, doneTasks: 0, hasData: true }}
+        busy
+        onConfirm={() => undefined}
+        onCancel={() => undefined}
+      />,
+    );
+    expect(screen.getByRole('status').textContent).toBe('Restoring…');
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', { name: 'Restore snapshot' }).disabled,
+    ).toBe(true);
+  });
+
+  it('renders the dialog interactively again when busy clears', () => {
+    const onCancel = vi.fn();
+    const { rerender } = render(
+      <SafetyDialog
+        kind="import-confirm"
+        file={importFile}
+        currentCounts={{ lists: 1, tasks: 3, doneTasks: 0, hasData: true }}
+        busy
+        onConfirm={() => undefined}
+        onCancel={onCancel}
+      />,
+    );
+    rerender(
+      <SafetyDialog
+        kind="import-confirm"
+        file={importFile}
+        currentCounts={{ lists: 1, tasks: 3, doneTasks: 0, hasData: false }}
+        onConfirm={() => undefined}
+        onCancel={onCancel}
+      />,
+    );
+    expect(screen.queryByRole('status')).toBeNull();
+    const cancel = screen.getByRole<HTMLButtonElement>('button', { name: 'Cancel' });
+    expect(cancel.disabled).toBe(false);
+    fireEvent.click(cancel);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('<SnapshotList> ADR-004 Decision 5.5 (b) download escape hatch (B2)', () => {
+  const base = {
+    id: '01ARZ3NDEKTSV4RRFFQ6000030',
+    kind: 'auto' as const,
+    sizeBytes: 2048,
+  };
+  const preImport: SnapshotMeta = {
+    ...base,
+    takenAt: NOW - 60_000,
+    reason: 'pre-import',
+  };
+  const scheduled: SnapshotMeta = { ...base, takenAt: NOW - 120_000, reason: 'scheduled' };
+
+  it('offers Download on pre-import rows only, and Restore keeps the upload icon', () => {
+    const onDownload = vi.fn();
+    const onRestore = vi.fn();
+    render(
+      <SnapshotList
+        snapshots={[preImport, scheduled]}
+        now={NOW}
+        onRestore={onRestore}
+        onDownload={onDownload}
+      />,
+    );
+
+    const download = screen.getByTestId('download-snapshot');
+    fireEvent.click(download);
+    expect(onDownload).toHaveBeenCalledWith(preImport);
+
+    // Exactly one Download button: the scheduled row has no undo to preserve.
+    expect(screen.getAllByTestId('download-snapshot')).toHaveLength(1);
+
+    const restore = screen.getAllByRole('button', { name: 'Restore' });
+    expect(restore).toHaveLength(2);
+    fireEvent.click(restore[0] as HTMLElement);
+    expect(onRestore).toHaveBeenCalledWith(preImport.id);
+    // N6: the Restore button carries the upload icon, never the download one.
+    expect(restore[0]?.querySelector('use')?.getAttribute('href')).toBe('#i-upload');
+  });
+
+  it('promises "kept for 7 days" only while the §8.4 protection actually holds', () => {
+    const first = render(
+      <SnapshotList
+        snapshots={[preImport]}
+        now={NOW}
+        onRestore={() => undefined}
+        onDownload={() => undefined}
+      />,
+    );
+    expect(screen.getByText('kept for 7 days', { exact: true })).toBeTruthy();
+    first.unmount();
+
+    // Past the 7-day window the note must stop promising protection (retention reality).
+    render(
+      <SnapshotList
+        snapshots={[{ ...preImport, takenAt: NOW - PRE_IMPORT_PROTECTION_MS }]}
+        now={NOW}
+        onRestore={() => undefined}
+        onDownload={() => undefined}
+      />,
+    );
+    expect(screen.queryByText('kept for 7 days', { exact: true })).toBeNull();
+  });
+});
+
+describe('<UndoToast> undo + download escape hatch (B2)', () => {
+  it('renders the secondary download action alongside Restore', () => {
+    const onAction = vi.fn();
+    const onSecondary = vi.fn();
+    render(
+      <UndoToast
+        message="Import complete. Your previous data is saved as a snapshot."
+        actionLabel="Restore previous data"
+        onAction={onAction}
+        secondaryLabel="Download snapshot"
+        onSecondary={onSecondary}
+        onDismiss={() => undefined}
+        variant="success"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Download snapshot' }));
+    expect(onSecondary).toHaveBeenCalledTimes(1);
+    expect(onAction).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Restore previous data' }));
+    expect(onAction).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('<QuotaMeter> §11 no inline English (N1)', () => {
+  const labels = {
+    ok: 'Plenty of room',
+    warn: 'Worth a look',
+    crit: 'Action needed',
+    unknown: 'Unknown',
+  };
+
+  it('localizes the value line from the catalog by default', () => {
+    render(
+      <QuotaMeter usedBytes={43_000_000} totalBytes={2 * 1024 * 1024 * 1024} labels={labels} />,
+    );
+    expect(screen.getByText('41 MB of ≈2 GB (2%)', { exact: true })).toBeTruthy();
+  });
+
+  it('renders the Thai value line after a locale switch', async () => {
+    await setLocale('th');
+    render(
+      <QuotaMeter usedBytes={43_000_000} totalBytes={2 * 1024 * 1024 * 1024} labels={labels} />,
+    );
+    expect(screen.getByText('41 MB จาก ≈2 GB (2%)', { exact: true })).toBeTruthy();
+    await setLocale('en');
+  });
+});
+
+describe('<RecoveryScreen> N3 singular last-backup line', () => {
+  it('says "1 day ago" (never "1 days ago") and "today" for a same-day backup', () => {
+    const { rerender } = render(
+      <RecoveryScreen
+        lastBackupAt={NOW - 1 * DAY}
+        onRestore={() => undefined}
+        onStartFresh={() => undefined}
+        now={NOW}
+      />,
+    );
+    expect(
+      screen.getByText(
+        `Your last backup was 1 day ago (${fmt(NOW - 1 * DAY)}). You can restore everything from that file.`,
+        { exact: true },
+      ),
+    ).toBeTruthy();
+
+    rerender(
+      <RecoveryScreen
+        lastBackupAt={NOW}
+        onRestore={() => undefined}
+        onStartFresh={() => undefined}
+        now={NOW}
+      />,
+    );
+    expect(
+      screen.getByText(
+        `Your last backup was today (${fmt(NOW)}). You can restore everything from that file.`,
+        { exact: true },
+      ),
+    ).toBeTruthy();
+  });
+});
+
+describe('<NudgeBanner> N6 link action variant', () => {
+  it('styles a link action as button-link, not button-secondary', () => {
+    render(
+      <NudgeBanner
+        kind="quota-warn"
+        tier={2}
+        title="Storage is filling up"
+        body="…"
+        actions={[{ id: 'learn', label: 'How backups work', variant: 'link' }]}
+        onAction={() => undefined}
+        onSnooze={() => undefined}
+        closeLabel="Close"
+      />,
+    );
+    const link = screen.getByRole('button', { name: 'How backups work' });
+    expect(link.getAttribute('class')).toContain('button-link');
+    expect(link.getAttribute('class')).not.toContain('button-secondary');
   });
 });

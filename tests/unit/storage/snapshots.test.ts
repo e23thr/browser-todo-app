@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { AppDBImpl } from '../../../src/storage/db';
 import {
   AUTO_RETENTION,
+  MAX_PROTECTED_SNAPSHOTS,
+  PRE_IMPORT_PROTECTION_MS,
   deleteSnapshot,
   fallbackRawCodec,
   getSnapshotPayload,
@@ -93,6 +95,78 @@ describe('snapshots (ADR-002 Decision 9)', () => {
     // Pruned snapshots take their payloads with them (no orphan blobs).
     const payloads = await db.getAll('snapshot_payloads');
     if (payloads.ok) expect(payloads.value).toHaveLength(listed.value.length);
+  });
+
+  describe('§8.4 pre-import retention protection (undo durability, B2)', () => {
+    /** Take one `auto` snapshot at `takenAtMs` with the given reason. */
+    async function auto(
+      db: AppDBImpl,
+      reason: 'scheduled' | 'pre-import',
+      takenAtMs: number,
+    ): Promise<void> {
+      const snap = await takeSnapshot(db, {
+        kind: 'auto',
+        reason,
+        now: () => takenAtMs,
+      });
+      expect(snap.ok).toBe(true);
+    }
+
+    it('keeps a fresh pre-import undo through a rolling purge of newer scheduled snapshots', async () => {
+      const db = await fixture();
+      const t0 = fixedNow();
+      // The undo lands first, then three newer scheduled snapshots arrive — with §8.4
+      // protection the rolling-3 purge must NOT evict the undo.
+      await auto(db, 'pre-import', t0);
+      for (let i = 1; i <= AUTO_RETENTION; i += 1) {
+        await auto(db, 'scheduled', t0 + i * 1000);
+      }
+
+      const listed = await listSnapshots(db);
+      expect(listed.ok).toBe(true);
+      if (!listed.ok) return;
+      const preImports = listed.value.filter((s) => s.reason === 'pre-import');
+      expect(preImports).toHaveLength(1);
+      // Protected rows hold slots inside the rolling three, so the list never grows.
+      expect(listed.value.filter((s) => s.kind === 'auto')).toHaveLength(AUTO_RETENTION);
+      // The undo's payload is still retrievable (the download escape hatch needs it).
+      const payload = await getSnapshotPayload(db, preImports[0]?.id ?? '');
+      expect(payload.ok && payload.value).toEqual(expect.any(String));
+    });
+
+    it('protects at most two pre-imports; a third pushes the oldest out', async () => {
+      const db = await fixture();
+      const t0 = fixedNow();
+      await auto(db, 'pre-import', t0);
+      await auto(db, 'pre-import', t0 + 1000);
+      await auto(db, 'pre-import', t0 + 2000);
+
+      const listed = await listSnapshots(db);
+      expect(listed.ok).toBe(true);
+      if (!listed.ok) return;
+      const preImports = listed.value
+        .filter((s) => s.reason === 'pre-import')
+        .sort((a, b) => a.takenAt - b.takenAt);
+      expect(preImports).toHaveLength(MAX_PROTECTED_SNAPSHOTS);
+      // The OLDEST protected one is the one that expired for the newer one's slot.
+      expect(preImports[0]?.takenAt).toBe(t0 + 1000);
+    });
+
+    it('stops protecting a pre-import once it is older than seven days', async () => {
+      const db = await fixture();
+      const t0 = fixedNow();
+      await auto(db, 'pre-import', t0);
+      // A brand-new scheduled snapshot purges rolling victims: the expired pre-import
+      // (older than PRE_IMPORT_PROTECTION_MS) is now an ordinary auto and gets evicted.
+      for (let i = 1; i <= AUTO_RETENTION; i += 1) {
+        await auto(db, 'scheduled', t0 + PRE_IMPORT_PROTECTION_MS + i * 1000);
+      }
+
+      const listed = await listSnapshots(db);
+      expect(listed.ok).toBe(true);
+      if (!listed.ok) return;
+      expect(listed.value.filter((s) => s.reason === 'pre-import')).toHaveLength(0);
+    });
   });
 
   it('restores rows and resets meta.schemaVersion in one replace', async () => {
