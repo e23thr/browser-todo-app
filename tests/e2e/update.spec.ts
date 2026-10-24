@@ -84,43 +84,41 @@ test('update flow: detect -> toast -> apply on user action -> exactly one reload
   expect(await cacheNames(page)).not.toContain(cacheA);
 });
 
-test('E9: a mid-edit session is never force-reloaded', async ({ page }) => {
+test('E9: a mid-edit session is never force-reloaded; Apply flushes the draft first', async ({
+  page,
+}) => {
   await bootBuildA(page);
 
-  // Uncommitted content in an editable field. The app has no editor yet (the task editor is the
-  // E2 core-UI card's), so the field is a stand-in exercising the SAME Decision 7 machinery the
-  // real editor drives: DOM dirty detection -> `editInFlight` -> flush-or-abort before reload.
-  await page.evaluate(() => {
-    const field = document.createElement('textarea');
-    field.id = 'e2e-edit-standin';
-    document.body.appendChild(field);
-  });
-  const field = page.locator('#e2e-edit-standin');
-  await field.focus();
-  await field.fill('uncommitted text');
+  // The REAL editor (E2 core UI): a fresh profile has no lists, so the composer stays
+  // disabled until one exists (S3 `composer.needsList` + `list.action.new`).
+  await page.getByRole('button', { name: 'New list', exact: true }).click();
+  await page.getByLabel('List name', { exact: true }).fill('QA List');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+
+  // Uncommitted content in the composer's REAL title field: typed, never submitted.
+  const composer = page.getByPlaceholder('Add task…', { exact: true });
+  await expect(composer).toBeEnabled();
+  await composer.fill('Mid-edit draft');
 
   await deployBAndWaitForToast(page);
   await plantNoReloadMarker(page);
   await page.waitForTimeout(1000);
 
-  // The toast appeared mid-edit and nothing reloaded; the content is intact.
+  // The toast appeared mid-edit and nothing reloaded; the draft is intact (E9).
   expect(await noReloadMarkerPresent(page)).toBe(true);
-  await expect(field).toHaveValue('uncommitted text');
+  await expect(composer).toHaveValue('Mid-edit draft');
 
-  // Apply with unflushable content is REFUSED, not destructive (Decision 7 rule 2).
-  await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  await expect(
-    page.getByText('Save or discard your edit before updating.', { exact: true }),
-  ).toBeVisible();
-  expect(await noReloadMarkerPresent(page)).toBe(true);
-  await expect(field).toHaveValue('uncommitted text');
-
-  // Once the edit is resolved, Apply reloads exactly once — deliberately.
-  await field.fill('');
+  // Apply during the edit FLUSHES the draft through the ADR-002 storage layer, then
+  // reloads exactly once (Decision 7 rule 2) — never a reload over unflushed content.
   const navigations = countMainNavigations(page);
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-build-id', 'vB', { timeout: 20_000 });
   expect(navigations()).toBe(1);
+
+  // The edit survived the reload: the flushed draft is durable and restorable (the All-open
+  // view lists an undated capture in its "No due date" group — S2).
+  await page.goto(`${appUrl}#/all`);
+  await expect(page.getByRole('listitem').filter({ hasText: 'Mid-edit draft' })).toBeVisible();
 });
 
 test('E9 multi-tab: applying in one tab never reloads another', async ({ context }) => {

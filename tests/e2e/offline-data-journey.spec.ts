@@ -75,8 +75,11 @@ test('offline task journey: add -> complete -> reload -> data present (E2 core U
   await waitForControlled(page);
 
   // Activation gate: the composer ships with the E2 core-UI card (t_a2c647e1). Until then this
-  // journey cannot run — it self-skips here with the dependency named instead of failing.
+  // journey cannot run — it self-skips here with the dependency named instead of failing. The
+  // composer only renders once the store leaves its loading state, so let the shell settle
+  // before probing (the probe and the skip reason below are unchanged).
   const composer = page.getByPlaceholder('Add task…', { exact: true });
+  await composer.waitFor({ state: 'attached', timeout: 15_000 }).catch(() => undefined);
   test.skip(
     (await composer.count()) === 0,
     'task composer not implemented yet — depends on E2 core UI (t_a2c647e1); this journey activates unchanged once the composer lands',
