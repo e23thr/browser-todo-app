@@ -106,3 +106,78 @@ QA/test cards and must be durable for the MVP DoD gate):
 design deliverable, shared with sibling epics; routed to a docs-landing card (parent of the MVP
 DoD gate). ADR-003 carries three marked amendments written by fix card t_cae21e7c (D8.1 rebalance
 signal, D8.2 watermark erratum, Decision 4 orphan pin) that have never been committed.
+
+> **Update (post-5b1fdbb):** the docs-landing card t_6c273e38 has since landed the accepted ADR
+> set (2d86d06) including t_cae21e7c's three amendments; d989313 additionally synced ADR-003
+> Decision 7 to the V1 pin seam contract. The E2-relevant part of this routing is closed.
+
+## 7. Closing verification run — 2026-10-25, HEAD `ef83108`
+
+**Trigger:** both gating fix cards landed — V1 → t_805282a3 (`c652340`), QA-D1 → t_08fd0e7e
+(`cec79ba`/`3a84df3`/`3956cec`) — and all work-item parents of the epic card are done.
+**Method:** first-hand re-verification on a fresh `git clone` of shared `main` at **`ef83108`**
+(`chore(sw): regenerate the precache manifest after the announce() per-region fix`), node_modules
+symlinked; the shared workspace (sibling cards' untracked files) was again never used for gates.
+
+### 7.1 Gates re-run first-hand (clean clone @ `ef83108`)
+
+| Gate | Result |
+|---|---|
+| `npm run ci` (full chain) | **exit 0** |
+| `npm run test:coverage` (vitest) | **910 / 910** (77 files) |
+| `npm run typecheck` (`tsc -b`) | **0 errors** |
+| `npm run lint` (`eslint . --max-warnings 0`) | **exit 0** |
+| `npx prettier --check .` | **clean** (via `format:check`) |
+| `npm run build` + `npm run budget` | **PASS** — precache manifest `[unchanged]` (build deterministic at this commit); RESULT: PASS (initial-js 65.5 KB / 100, app-shell 81.4 KB / 200, no wasm, no external refs) |
+| `npm run i18n:check` | **PASS** |
+| `npm run audit:gate` | **0 vulnerabilities** |
+| Coverage | All files 85.48 / 79.90 / 84.72 / 87.86; **`src/domain` 97.51 / 87.05 / 99.44 / 99.13** — ≥ 80 % gate **PASS** |
+
+### 7.2 Defect probes re-verified first-hand
+
+| Probe | Result |
+|---|---|
+| **QA-D1** — `tests/unit/domain/e2-qa-probes.test.ts` (flipped) + `tests/unit/e2-qa-d1-fix.test.ts` | **21 / 21 green** — `QA-D1 fixed: a depth-2 chain renders every row — the grandchild flattens to depth 1`; the 4 fix tests (import chain renders in List/Today/Next 7/All open via the real `upsertImported` path, export→import round-trip preserves every rendered row, interactive `PARENT_DEPTH_EXCEEDED` unchanged with zero port writes, parent-cycle never-dropped invariant) all pass |
+| **V1** — `tests/e2e/qa-search-reorder.spec.ts` (production build, real Chromium) | **6 / 6 green** — `QA[virtual-bottom] {"before":23,"after":33,...,"focusedPos":"1"}` (was 23 → **1,200**); `QA[search-bottom] {"before":21,"after":26,...,"lastPos":"288"}` (was 288 / 288). Both **< 200 DOM rows** at scroll-bottom with the cursor pinned — §9.1 "virtualize beyond ~200 DOM rows" now **met** |
+
+First-hand M5/M6 measurements at `ef83108` (echoed by the spec): initial window **23 DOM rows of
+1,200** (real `aria-setsize/posinset`); scroll unthrottled **60 fps median 16.7 ms, 0 dropped
+frames, max 33 DOM rows**; 4× CPU identical (median 16.7 ms, 0 dropped); reorder parity
+`identical=true` (keyboard vs grip-handle drag, byte-identical persisted orders); reorder handles
+44 × 44 at 375 px and 320 px.
+
+### 7.3 Regression probes re-run first-hand at the closing HEAD
+
+| Probe | Result |
+|---|---|
+| `tests/e2e/core-ui-keyboard.spec.ts` | **2 / 2** — 20-step keyboard-only pass F1 capture → F2 edit → F3 complete → F4 delete → F6 delete list + touch sweep ≥ 44 × 44 |
+| `tests/e2e/qa-axe-nonvacuous.spec.ts` | **1 / 1** — axe on the real core views (onboarding pre-dismissed): **0 violations** (`AXE-REAL-VIEWS (none)`) |
+| `tests/e2e/qa-f2-remeasure.spec.ts` | **1 / 1** — `.task-check-hit: 44×44` (F-2 fix holds) |
+
+The keyboard pass also re-confirms the announcement contract under the new per-region `announce()`
+slots (`0ef2d8e`, §5.5) — no live-region regression at the closing HEAD.
+
+### 7.4 Final acceptance-criteria verdicts (supersede §3)
+
+| # | Criterion | Verdict | Evidence |
+|---|---|---|---|
+| AC1 | M1–M6 flows offline, desktop + mobile viewports | **MET** | §2 + §7.3 first-hand (320/375 px included); offline persistence journey via E4 `e2e:sw` |
+| AC2 | §9.1 budgets met (measured) | **MET** | add→visible 1.7–3.4 ms (< 100 ms), search warm ≤ 17.9 ms @10k (< 50 ms, CI-pinned; benchmark test green), boot@10k 52.6 ms (< 500 ms), scroll 60 fps / 0 dropped; **virtualize row now met — 33 DOM rows at scroll-bottom (V1 fixed, measured first-hand §7.2)** |
+| AC3 | Keyboard equivalence for every gesture (incl. drag reorder) | **MET** | 20/20 keyboard-only re-run first-hand at `ef83108` (§7.3); keyboard-vs-drag parity `identical=true` (§7.2) |
+| AC4 | Domain coverage ≥ 80 %, LWW/tombstone/reorder/concurrency tested | **MET** | `src/domain` 97.51 / 87.05 / 99.44 / 99.13 first-hand (§7.1); named behavior suites green in the 910-test run |
+| AC5 | Two-tab concurrent writes refresh correctly | **MET at the E2/domain layer** | `e2-qa-tabsync-probes` + `tabSync.test.ts` green in the 910-test run; end-to-end multi-tab UX remains with Epic E5 |
+
+### 7.5 Open-defect register — final E2 status
+
+| ID | Status at closure | Routing |
+|---|---|---|
+| F-1 first-capture announcement | **FIXED** (`86709cc` + per-region `announce()` hardening `0ef2d8e`) | closed for E2 |
+| F-2 checkbox target 24×24 | **FIXED** (`b32cf9a`), re-measured 44×44 first-hand (§7.3) | closed |
+| **V1** pinned-cursor scroll materialises whole list | **FIXED** (`c652340`, t_805282a3) — 33 / 26 DOM rows measured first-hand | closed |
+| **QA-D1** depth-2 chains silently dropped | **FIXED** (`cec79ba`…`3956cec`, t_08fd0e7e) — flipped probe + 4 fix tests green first-hand | closed |
+| F-3 `error.taskGone` unreachable | **FIXED in tree** (`924c17f` + `445821f` flake fix) but its card t_fe2c9dd4 is a parent of the **MVP DoD gate**, not of E2 | non-gating for E2; closure tracked there |
+| QA-D2 wall-clock CI gate / QA-D3 `listRepo` per-file coverage | advisory, aggregate gates pass | recorded, no card |
+
+**Epic verdict: all 5 acceptance criteria MET — Epic E2 complete.** Residual risk carried to the
+MVP DoD gate: F-3 card closure (t_fe2c9dd4), docs-landing verification (t_6c273e38) and the E5
+end-to-end multi-tab UX check.
