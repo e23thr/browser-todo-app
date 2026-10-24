@@ -12,6 +12,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/pre
 import { Composer } from '../../src/features/tasks/Composer';
 import { TaskEditor } from '../../src/features/tasks/TaskEditor';
 import {
+  addTask,
   bindRunnerForTest,
   liveLists,
   resetTaskStore,
@@ -124,7 +125,9 @@ describe('S3 composer — F1 capture', () => {
     fireEvent.keyDown(title, { key: 'Escape' });
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByRole('heading', { name: 'Discard changes?' })).toBeTruthy();
+    // §16-17 / S7.3: the composer asks the register's DRAFT variant ("Discard draft?"),
+    // not the TaskEditor's generic `confirm.discard.title` ("Discard changes?").
+    expect(within(dialog).getByRole('heading', { name: 'Discard draft?' })).toBeTruthy();
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
     await waitFor(() => {
@@ -287,5 +290,64 @@ describe('S4 task editor — F2 edit', () => {
       expect(within(editor).getByRole('alert').textContent).toBe('This task no longer exists');
     });
     expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
+  });
+});
+
+/* --------------------------- E2 core-UI review rework (N1 / N2) --------------------------- */
+
+describe('E2 review rework — composer default list & draft discard', () => {
+  it('N1: the default list falls back to the LAST-USED list, not the first one (F1.4 / §16-14)', async () => {
+    await seed({
+      lists: [makeList({ id: 'L1', name: 'Personal' }), makeList({ id: 'L2', name: 'Work' })],
+    });
+
+    // Nothing used yet: first live list, as before. (The picker lives in Details.)
+    const before = render(<Composer variant="inline" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }));
+    expect(screen.getByRole('combobox', { name: 'List' })).toHaveProperty('value', 'L1');
+    before.unmount();
+
+    // A task lands in the second list — that becomes the last-used list.
+    const added = await addTask({
+      title: 'Belongs to Work',
+      notes: null,
+      dueDate: null,
+      listId: 'L2',
+      priority: 0,
+    });
+    expect(added.ok).toBe(true);
+
+    const after = render(<Composer variant="inline" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }));
+    expect(screen.getByRole('combobox', { name: 'List' })).toHaveProperty('value', 'L2');
+    after.unmount();
+  });
+
+  it('N2: a LIST-ONLY pick is a dirty draft and asks the DRAFT confirm on Escape (§16-17)', async () => {
+    await seed({
+      lists: [makeList({ id: 'L1', name: 'Personal' }), makeList({ id: 'L2', name: 'Work' })],
+    });
+    render(<Composer variant="inline" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }));
+    const title = screen.getByLabelText<HTMLInputElement>('Title', { exact: true });
+    // No text at all — only the list pick differs from the default.
+    fireEvent.change(screen.getByRole('combobox', { name: 'List' }), {
+      target: { value: 'L2' },
+    });
+    fireEvent.keyDown(title, { key: 'Escape' });
+
+    const dialog = await screen.findByRole('dialog', { name: 'Discard draft?' });
+    expect(within(dialog).getByRole('button', { name: 'Keep editing' })).toBeTruthy();
+
+    // Discarding drops the pick with the draft: the next Escape is clean (no re-ask).
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Discard' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    fireEvent.keyDown(title, { key: 'Escape' });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
   });
 });

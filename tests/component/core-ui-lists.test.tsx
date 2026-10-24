@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/preact';
 
 import { ListsManageView } from '../../src/features/lists/ListsManageView';
-import { resetTaskStore, state } from '../../src/features/tasks/store';
+import { bootError, resetTaskStore, state, status } from '../../src/features/tasks/store';
 import { clearToasts } from '../../src/features/tasks/toasts';
 import { makeList, makeTask, regions, seed, setUpCoreUi, tearDownCoreUi } from './core-ui-harness';
 
@@ -321,5 +321,22 @@ describe('F6 delete list with task disposition (S7.2)', () => {
     expect(
       within(dialog).getByRole('button', { name: 'Delete list' }).hasAttribute('disabled'),
     ).toBe(false);
+  });
+});
+
+/* --------------------------- E2 core-UI review rework (N5) --------------------------- */
+
+describe('E2 review rework — lists screen boot error', () => {
+  it('N5: the boot-error panel carries a Try again action and the typed code (§14)', () => {
+    status.value = 'error';
+    bootError.value = { code: 'BLOCKED', message: 'probe' };
+    render(<ListsManageView />);
+
+    const panel = screen.getByTestId('boot-error');
+    expect(panel.getAttribute('role')).toBe('alert');
+    // §14 error rows carry `common.retry` — the same panel the task views use.
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Storage & backup' })).toBeTruthy();
+    expect(screen.getByTestId('boot-error-code').textContent).toBe('BLOCKED');
   });
 });

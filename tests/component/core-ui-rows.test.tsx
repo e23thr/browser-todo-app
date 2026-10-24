@@ -347,3 +347,123 @@ describe('§9.1 row focus model + row menu (§9.2)', () => {
     });
   });
 });
+
+/* ------------------------------------- E2 core-UI review rework (B1 / B3 / N3) */
+
+/** Local calendar day `offset` days from today (D9 compares local days, never UTC). */
+function localDay(offset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${String(d.getFullYear())}-${month}-${day}`;
+}
+
+describe('E2 review rework — list semantics (B1) and menu Tab (B3)', () => {
+  it('B1: every `ul.task-list` child is a real `li` without a role override (axe `list`)', async () => {
+    await seed({
+      lists: [makeList({ id: 'L1', name: 'Personal' })],
+      tasks: [
+        makeTask({ id: 'T1', listId: 'L1', title: 'Dated', dueDate: localDay(0) }),
+        makeTask({ id: 'T2', listId: 'L1', title: 'Undated' }),
+      ],
+    });
+    renderAllOpen();
+
+    const list = await screen.findByRole('list', { name: 'All open' });
+    expect(list.children.length).toBeGreaterThan(0);
+    for (const child of [...list.children]) {
+      // axe serious `list`: a `ul` only accepts `li` children, and an `li` whose role is
+      // overridden (`role="presentation"`) is not one of them (M13 / WCAG 2.2 AA).
+      expect(child.tagName).toBe('LI');
+      expect(child.getAttribute('role')).toBeNull();
+    }
+    // §5.3: the group header is a real heading inside its list item (all-open groups by list).
+    const headings = [...list.querySelectorAll('li.group-row h2.group-header')];
+    expect(headings.length).toBe(1);
+    const headingText = (headings[0]?.textContent ?? '').trim();
+    expect(headingText.length).toBeGreaterThan(0);
+  });
+
+  it('B3: Tab from an open row menu closes and lands AFTER the row menu, never on body (§9.2)', async () => {
+    await seed({
+      lists: [makeList({ id: 'L1', name: 'Personal' })],
+      tasks: [
+        makeTask({ id: 'T1', listId: 'L1', title: 'First' }),
+        makeTask({ id: 'T2', listId: 'L1', title: 'Second' }),
+      ],
+    });
+    renderAllOpen();
+
+    const trigger = await screen.findByRole('button', { name: 'Actions for "First"' });
+    fireEvent.click(trigger);
+    const menu = await screen.findByRole('menu');
+    const items = within(menu).getAllByRole('menuitem');
+    const lastItem = items.at(-1);
+    expect(lastItem).toBeDefined();
+    // Worst case for the old index math: focus sits on the LAST item of the open menu.
+    lastItem?.focus();
+
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Tab' });
+    await waitFor(() => {
+      expect(screen.queryByRole('menu')).toBeNull();
+    });
+
+    const anchor = trigger.closest('.row-menu') as HTMLElement;
+    const active = document.activeElement as HTMLElement;
+    // The contract: a real element, positioned AFTER the whole `.row-menu` container —
+    // never `document.body` (which is what dropping focus there used to do), and never
+    // one of the menu items that unmounted with the menu.
+    expect(active).not.toBe(document.body);
+    expect(active).toBeInstanceOf(HTMLElement);
+    expect(anchor.contains(active)).toBe(false);
+    expect(active).not.toBe(trigger);
+    expect(anchor.compareDocumentPosition(active) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+
+    // Shift+Tab walks the same path backwards: reopen and step out the other way.
+    fireEvent.click(trigger);
+    const reopened = await screen.findByRole('menu');
+    within(reopened).getAllByRole('menuitem').at(-1)?.focus();
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Tab', shiftKey: true });
+    const back = document.activeElement as HTMLElement;
+    expect(back).not.toBe(document.body);
+    expect(anchor.contains(back)).toBe(false);
+    expect(anchor.compareDocumentPosition(back) & Node.DOCUMENT_POSITION_PRECEDING).not.toBe(0);
+    const firstRow = rows()[0];
+    expect(firstRow !== undefined && (back === firstRow || firstRow.contains(back))).toBe(true);
+  });
+
+  it('N3: the move leg announces `a11y.moveFailed` — the field edits HAVE persisted', async () => {
+    await seed({
+      lists: [makeList({ id: 'L1', name: 'Personal' }), makeList({ id: 'L2', name: 'Work' })],
+      tasks: [makeTask({ id: 'T1', listId: 'L1', title: 'Old name' })],
+      failMoves: true,
+    });
+    renderAllOpen();
+
+    const opener = await screen.findByRole('button', { name: 'Old name' });
+    opener.focus();
+    fireEvent.click(opener);
+    const dialog = await screen.findByRole('dialog', { name: 'Edit task' });
+
+    fireEvent.input(within(dialog).getByLabelText<HTMLInputElement>('Title', { exact: true }), {
+      target: { value: 'Renamed' },
+    });
+    fireEvent.change(within(dialog).getByRole('combobox', { name: 'List' }), {
+      target: { value: 'L2' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(regions.assertive?.textContent).toBe(
+        'Could not move the task to the selected list. Your other changes were saved.',
+      );
+    });
+    // Review N3: the patch landed, so only the membership write rolled back.
+    const saved = state.value.tasks.get('T1');
+    expect(saved?.title).toBe('Renamed');
+    expect(saved?.listId).toBe('L1');
+    // The generic "Your change was undone" would be a false statement on this branch.
+    expect(regions.assertive?.textContent).not.toBe('Could not save. Your change was undone.');
+  });
+});
