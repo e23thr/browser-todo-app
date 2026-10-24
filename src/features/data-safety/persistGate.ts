@@ -10,15 +10,20 @@
  * private/incognito storage, opens the one-time T3 warning (`localStorage`-equivalent flag:
  * a `dismissedBanners` sentinel, ADR-002 Decision 7).
  *
- * INTEGRATION SEAM: the composer (E2/M1) calls `noteFirstMeaningfulWrite()` after the first
- * task is written. Nothing in the app creates tasks yet, so the gate is idempotent and safe to
- * call from any future write path; see the follow-up noted in this card's metadata.
+ * INTEGRATION SEAM: the composer (E2/M1) calls `noteFirstMeaningfulWrite()` after every
+ * successful task write. The gate inside is once-per-session and idempotent, so any write path
+ * can call it without accounting for who ran first.
+ *
+ * That same seam is where the §3.4 prior-data mark (`markPriorData()`) is written: the first
+ * successful task write is the earliest moment the profile has rows worth remembering, and this
+ * is the only cross-feature entry point E3 owns for "a write happened" (every call re-arms the
+ * mark, so a failed localStorage write self-heals on the next one).
  */
 
 import { announce } from '../../app/announce';
 import { t } from '../../i18n';
 import { deriveBanners } from './derive';
-import { markPrivateWarned, wasPrivateWarned } from './flags';
+import { markPriorData, markPrivateWarned, wasPrivateWarned } from './flags';
 import { openDialog } from './notices';
 import { dataSafetyState, patchState } from './state';
 import { looksEphemeral, persistenceState, requestPersist } from './storageInfo';
@@ -41,6 +46,12 @@ export function resetPersistGate(): void {
  * triggered it.
  */
 export async function noteFirstMeaningfulWrite(): Promise<void> {
+  // The first task written IS the moment this profile demonstrably holds rows: record it in the
+  // durable ADR-002 flags before anything else, so the §3.4 classifier can still tell "these rows
+  // were lost" from "there never were any" if IndexedDB — the usual eviction victim — is what
+  // disappears before the next boot. (Idempotent and try-guarded; never blocks the write.)
+  markPriorData();
+
   if (gateOpen) return;
   gateOpen = true;
 

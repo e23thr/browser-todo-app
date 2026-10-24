@@ -18,7 +18,11 @@ import {
   resetPersistGate,
 } from '../../../src/features/data-safety/persistGate';
 import { currentDialog, resetDialogs } from '../../../src/features/data-safety/notices';
-import { markPrivateWarned, resetFlags } from '../../../src/features/data-safety/flags';
+import {
+  hasPriorData,
+  markPrivateWarned,
+  resetFlags,
+} from '../../../src/features/data-safety/flags';
 
 type StorageMock = {
   estimate?: () => Promise<{ usage?: number; quota?: number }>;
@@ -186,6 +190,24 @@ describe('first-meaningful-use gate (§5.5 + §3.5)', () => {
     expect(persist).toHaveBeenCalledTimes(1);
     expect(persistenceState.value).toBe('denied');
     expect(currentDialog()?.request.kind).toBe('private-browsing');
+  });
+
+  it('records the durable "this profile now holds rows" mark on the first task write (§3.4)', async () => {
+    installStorage({
+      persist: async () => true,
+      persisted: async () => true,
+      estimate: async () => ({ quota: 8_000_000 }),
+    });
+    window.localStorage.clear();
+    resetFlags();
+    expect(hasPriorData()).toBe(false);
+
+    await noteFirstMeaningfulWrite();
+
+    // The evidence has to exist from the moment data exists: if IndexedDB is evicted before
+    // the next boot, this flag is the only thing that can still say "rows were lost".
+    expect(hasPriorData()).toBe(true);
+    expect(window.localStorage.getItem('todo:prefs:v1:dismissedBanners')).toContain('had-data');
   });
 
   it('warns at most once per profile', async () => {

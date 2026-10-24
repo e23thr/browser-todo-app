@@ -80,4 +80,9 @@ export const NOTICE_MARKS = {
   privateWarned: 'private-browsing',
   /** "Start fresh" was chosen on the recovery screen (§6.5) — value: `id@<epoch ms>`. */
   recoveryStarted: 'recovery-started',
+  /**
+   * This profile has HELD tasks/lists at least once (§3.4 row 1's "store empty" evidence) —
+   * plain id, never pruned: it is testimony about the past, not a suppression.
+   */
+  priorData: 'had-data',
 } as const;

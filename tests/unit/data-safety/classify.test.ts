@@ -1,9 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { classifyBoot, type ClassifyInput } from '../../../src/features/data-safety/boot';
+import {
+  classifyBoot,
+  hasPriorDataEvidence,
+  type ClassifyInput,
+} from '../../../src/features/data-safety/boot';
 import {
   dismissForever,
+  hasPriorData,
   isSuppressed,
+  markPriorData,
   markPrivateWarned,
   markRecoveryStarted,
   readDismissed,
@@ -34,6 +40,8 @@ function counts(tasks: number, lists = 1): DataCounts {
 function base(overrides: Partial<ClassifyInput> = {}): ClassifyInput {
   return {
     priorUse: true,
+    // Mirrors `hasData: true` below: a store that holds rows is its own evidence of prior data.
+    priorData: true,
     hasData: true,
     lastBackupAt: NOW - 3 * DAY,
     absentDays: 0,
@@ -45,17 +53,53 @@ function base(overrides: Partial<ClassifyInput> = {}): ClassifyInput {
 }
 
 describe('boot classification (§3.4 table)', () => {
-  it('classifies an empty store with prior use as wiped and surfaces lastBackupAt', () => {
-    expect(classifyBoot(base({ hasData: false, lastBackupAt: NOW - 20 * DAY }))).toEqual({
+  it('row 1: an empty store WITH evidence it once held rows is wiped (and surfaces lastBackupAt)', () => {
+    expect(
+      classifyBoot(base({ hasData: false, priorData: true, lastBackupAt: NOW - 20 * DAY })),
+    ).toEqual({
       kind: 'wiped',
       lastBackupAt: NOW - 20 * DAY,
     });
   });
 
-  it('does NOT call a fresh profile a wipe — that row belongs to onboarding', () => {
-    expect(classifyBoot(base({ priorUse: false, hasData: false, lastBackupAt: null }))).toEqual({
+  it('row 4: a fresh profile with no memory of prior use is NOT a wipe — that row is onboarding', () => {
+    expect(
+      classifyBoot(base({ priorUse: false, priorData: false, hasData: false, lastBackupAt: null })),
+    ).toEqual({
       kind: 'normal',
     });
+  });
+
+  it('AC: a booted profile with settings but zero tasks is NOT a wipe (empty ≠ erased)', () => {
+    // Exactly what `run()` derives for a profile that booted, wrote settings and never held a
+    // task: no live rows, no backup, no durable "held rows" mark, no snapshot to compare.
+    const evidence = hasPriorDataEvidence({
+      hasData: false,
+      lastBackupAt: null,
+      markedPriorData: false,
+      snapshotCounts: null,
+    });
+    expect(evidence).toBe(false);
+
+    expect(
+      classifyBoot(
+        base({ priorUse: true, priorData: evidence, hasData: false, lastBackupAt: null }),
+      ),
+    ).toEqual({ kind: 'normal' });
+  });
+
+  it('AC: a genuinely wiped profile (durable evidence of rows, store now empty) is wiped', () => {
+    const evidence = hasPriorDataEvidence({
+      hasData: false,
+      lastBackupAt: null,
+      markedPriorData: true,
+      snapshotCounts: null,
+    });
+    expect(evidence).toBe(true);
+
+    expect(classifyBoot(base({ priorData: evidence, hasData: false, lastBackupAt: null }))).toEqual(
+      { kind: 'wiped', lastBackupAt: null },
+    );
   });
 
   it('suppresses the wipe once the same store instance was acknowledged', () => {
@@ -112,6 +156,66 @@ describe('boot classification (§3.4 table)', () => {
   });
 });
 
+describe('prior-data evidence (the §3.4 "store empty" discriminator)', () => {
+  it('is true while the store still holds rows, and once the durable mark is written', () => {
+    expect(
+      hasPriorDataEvidence({
+        hasData: true,
+        lastBackupAt: null,
+        markedPriorData: false,
+        snapshotCounts: null,
+      }),
+    ).toBe(true);
+    expect(
+      hasPriorDataEvidence({
+        hasData: false,
+        lastBackupAt: null,
+        markedPriorData: true,
+        snapshotCounts: null,
+      }),
+    ).toBe(true);
+  });
+
+  it('treats a recorded backup as proof this profile once held rows', () => {
+    expect(
+      hasPriorDataEvidence({
+        hasData: false,
+        lastBackupAt: NOW,
+        markedPriorData: false,
+        snapshotCounts: null,
+      }),
+    ).toBe(true);
+  });
+
+  it('treats rows inside the newest snapshot as proof (the IDB-side testimony)', () => {
+    expect(
+      hasPriorDataEvidence({
+        hasData: false,
+        lastBackupAt: null,
+        markedPriorData: false,
+        snapshotCounts: counts(4, 1),
+      }),
+    ).toBe(true);
+    // An empty snapshot proves nothing — that is exactly the "empty ≠ erased" line.
+    expect(
+      hasPriorDataEvidence({
+        hasData: false,
+        lastBackupAt: null,
+        markedPriorData: false,
+        snapshotCounts: counts(0, 0),
+      }),
+    ).toBe(false);
+    expect(
+      hasPriorDataEvidence({
+        hasData: false,
+        lastBackupAt: null,
+        markedPriorData: false,
+        snapshotCounts: null,
+      }),
+    ).toBe(false);
+  });
+});
+
 describe('durable flags (ADR-002 Decision 7 keys only)', () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -160,6 +264,27 @@ describe('durable flags (ADR-002 Decision 7 keys only)', () => {
     expect(window.localStorage.getItem('todo:prefs:v1:dismissedBanners')).toContain(
       `recovery-started@${String(NOW)}`,
     );
+  });
+
+  it('remembers that this profile held rows — in the allowed key, across a reload', () => {
+    expect(hasPriorData()).toBe(false);
+    markPriorData();
+    expect(hasPriorData()).toBe(true);
+    // The allowed key only: ADR-002 Decision 7's list stays closed.
+    expect(Object.keys(window.localStorage)).toEqual(['todo:prefs:v1:dismissedBanners']);
+    expect(window.localStorage.getItem('todo:prefs:v1:dismissedBanners')).toContain('had-data');
+
+    // A reload re-reads localStorage — the mark is the classifier's memory of past data.
+    resetFlags();
+    expect(hasPriorData()).toBe(true);
+  });
+
+  it('keeps the prior-data mark when a later snooze prunes expired entries', () => {
+    markPriorData();
+    snooze('backup-reminder', 7, NOW); // setEntry drops every expired `id@<epoch>` entry…
+    dismissForever('quota-warn'); // …and this one too — neither may take the evidence with it
+    expect(hasPriorData()).toBe(true);
+    expect(readDismissed()).toContain('had-data');
   });
 
   it('survives a corrupt flags payload without throwing', () => {

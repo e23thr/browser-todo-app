@@ -17,6 +17,10 @@
  *       `'backup-reminder@1793000000000'` snoozed until that epoch-ms
  *     One-shot acknowledgements (private-browsing, recovery "start fresh") are plain ids here
  *     too, so the key list stays closed and the budget stays tiny.
+ *   - the same array carries `had-data` (NOTICE_MARKS.priorData): "this profile once HELD
+ *     tasks/lists". That is the §3.4 wipe discriminator — `onboardingStep` proves the profile
+ *     was USED before, this proves it had DATA to lose, which is what separates "booted with
+ *     zero tasks" (normal) from "the rows are gone" (wiped) after IndexedDB itself is evicted.
  *
  * Nothing user-authored is ever written here (Decision 7: never task/list data).
  */
@@ -184,4 +188,32 @@ export function recoveryStartedAt(): number | null {
 export function markRecoveryStarted(now: number = Date.now()): void {
   load();
   setEntry(NOTICE_MARKS.recoveryStarted, `${NOTICE_MARKS.recoveryStarted}@${String(now)}`);
+}
+
+/* --------------------------- prior-data evidence --------------------------- */
+
+/**
+ * Has this profile ever HELD tasks/lists (§3.4 "store empty" evidence)?
+ *
+ * `onboardingStep` only says the profile was *used*; this says there was *data to lose*. They
+ * are different claims, and only the second one may turn an empty boot into a wipe.
+ */
+export function hasPriorData(): boolean {
+  load();
+  return dismissed.includes(NOTICE_MARKS.priorData);
+}
+
+/**
+ * Record that the profile holds (or held) rows — idempotent, best-effort, try-guarded like
+ * every other write here.
+ *
+ * Deliberately NOT routed through `setEntry()`: that helper prunes expired snoozes while it
+ * replaces an entry, and this mark must outlive every snooze — it is evidence about the past,
+ * not a suppression. It is a plain id (no `@<epoch>`), so the prune keeps it anyway.
+ */
+export function markPriorData(): void {
+  load();
+  if (dismissed.includes(NOTICE_MARKS.priorData)) return;
+  dismissed = [...dismissed, NOTICE_MARKS.priorData];
+  persistDismissed();
 }

@@ -24,7 +24,7 @@ import type { AppDBImpl } from '../../storage/db';
 import { LONG_ABSENCE_DAYS, MAX_SHRINK_PROBE_BYTES, SHRINK_RATIO } from './constants';
 import { deriveBanners } from './derive';
 import { invalidateCounts, probeData, readCounts, readLastBackupAt } from './dbAccess';
-import { readOnboardingStep, recoveryStartedAt } from './flags';
+import { hasPriorData, markPriorData, readOnboardingStep, recoveryStartedAt } from './flags';
 import { beginPriorUseProbe, resetPriorUseProbe } from './probe';
 import { patchState } from './state';
 import { refreshPersistence, refreshQuota } from './storageInfo';
@@ -38,6 +38,13 @@ import type { BootClassification, DataCounts } from './types';
 
 export interface ClassifyInput {
   readonly priorUse: boolean;
+  /**
+   * Evidence this profile once HELD tasks/lists — the real discriminator behind §3.4's row 1
+   * ("store empty AND remembers prior use"). Derived by `hasPriorDataEvidence()`; `false` on a
+   * profile that booted and wrote settings but never held a row, which is row 4 (normal), not a
+   * wipe. "Empty" is not the same claim as "erased".
+   */
+  readonly priorData: boolean;
   readonly hasData: boolean;
   readonly lastBackupAt: number | null;
   /** Whole days between `meta.lastOpenedAt` (pre-boot) and now; `null` = unknown. */
@@ -48,14 +55,45 @@ export interface ClassifyInput {
   readonly recoveryAckAt: number | null;
 }
 
+/** Everything `run()` knows when it asks "did this profile once hold rows?" (pure — unit tested). */
+export interface PriorDataEvidence {
+  /** Live rows right now (the store is its own proof). */
+  readonly hasData: boolean;
+  /** `settings.lastBackupAt` — a backup was taken from this profile. */
+  readonly lastBackupAt: number | null;
+  /** The durable `had-data` flags mark (ADR-002 Decision 7), written when rows first exist. */
+  readonly markedPriorData: boolean;
+  /** Live rows inside the newest snapshot payload; `null` when there is no snapshot to read. */
+  readonly snapshotCounts: DataCounts | null;
+}
+
+/**
+ * §3.4 row-1 discriminator: is there evidence that this profile once HELD tasks/lists?
+ *
+ * Every source is testimony about the PAST, because the wipe case is precisely the one where the
+ * store itself has nothing to say. The durable mark matters most: it is the only source that
+ * survives the eviction the recovery screen exists for (IndexedDB and its snapshots are what
+ * disappear; localStorage is assumed to remain, exactly as §3.4's row 1 assumes).
+ */
+export function hasPriorDataEvidence(evidence: PriorDataEvidence): boolean {
+  if (evidence.hasData) return true;
+  if (evidence.markedPriorData) return true;
+  if (evidence.lastBackupAt !== null) return true;
+  const snapshot = evidence.snapshotCounts;
+  return snapshot !== null && snapshot.lists + snapshot.tasks > 0;
+}
+
 /**
  * §3.4 table, in priority order: wiped → long absence → shrunken → normal. Pure — the unit
  * tests drive this directly with mocked inputs.
  */
 export function classifyBoot(input: ClassifyInput): BootClassification {
   if (!input.hasData) {
-    // Fresh profile (no evidence of prior use) is NOT a wipe: that row is onboarding's job.
-    if (!input.priorUse) return { kind: 'normal' };
+    // "Store empty" is only a WIPE when there is evidence this profile once held rows: a fresh
+    // profile has no memory at all (row 4 → onboarding), and a profile that booted, wrote
+    // settings and never had a task has use without data (row 4 → normal). Reading an empty
+    // store as an erased one is what put the recovery screen in front of ordinary boots.
+    if (!input.priorUse || !input.priorData) return { kind: 'normal' };
     // The user already acknowledged a wipe for THIS store instance: same episode, don't nag.
     const acknowledged =
       input.storeCreatedAt !== null &&
@@ -162,18 +200,33 @@ async function run(opts: { now?: () => number }): Promise<void> {
   const absentDays =
     probe === null ? null : Math.max(0, Math.floor((now() - probe.lastOpenedAt) / 86_400_000));
 
+  // Newest snapshot payload, read once and bounded (§9.1): it is the shrink baseline while the
+  // store still holds rows, and past-data testimony for the empty-store case below.
+  const baseline = snapshotRows.length > 0 ? await readBaseline(db) : null;
+
   let shrink: ClassifyInput['shrink'] = null;
-  if (hasData && snapshotRows.length > 0) {
-    const baseline = await readBaseline(db);
-    if (baseline !== null) {
-      shrink = { current: probed ?? (await readCounts(db)), baseline };
-    }
+  if (hasData && baseline !== null) {
+    shrink = { current: probed ?? (await readCounts(db)), baseline };
   }
 
   const priorUse = hasFlaggedPriorUse() || probe !== null || lastBackupAt !== null || hasData;
 
+  const priorData = hasPriorDataEvidence({
+    hasData,
+    lastBackupAt,
+    markedPriorData: hasPriorData(),
+    snapshotCounts: baseline,
+  });
+  // Make the evidence durable the moment it holds: the wipe this classifier exists to catch is
+  // the one where IndexedDB — rows, snapshots, settings, meta — is already gone at the next
+  // boot, so the flags mark is the witness that outlives it (§3.4 row 1's "localStorage
+  // remembers"). A profile that has never held a row never writes it, so an ordinary boot with
+  // zero tasks classifies as normal instead of "wiped".
+  if (priorData) markPriorData();
+
   const classification = classifyBoot({
     priorUse,
+    priorData,
     hasData,
     lastBackupAt,
     absentDays,
