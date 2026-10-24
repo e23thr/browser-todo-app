@@ -352,6 +352,90 @@ describe('§8.1 pointer drag (F9, item 31)', () => {
     expect(spy.mock.calls[0]?.[1]?.position).toBe('last');
     sidebarLink.remove();
   });
+
+  // Review R1 (t_4fbe8392): a drop that resolves to the row's CURRENT slot, and a
+  // drop on the task's OWN sidebar list, are both cancels — never a write and never
+  // failure feedback (§8.1 drop semantics, §8.3, §16 items 31/34, F11.1).
+
+  it('drop into the gap directly below the dragged row = cancel: no write, no failure (R1 B1)', async () => {
+    const built = await seed({ lists: LISTS, tasks: threeTasks() });
+    const spy = vi.spyOn(built.runner, 'moveTask');
+    await startDrag('T2');
+    render(<ToastHost />); // the failure toast would need the host mounted to show
+
+    // 60 px pitch: T2 spans 60..116 (mid 88), T3 120..176 (mid 148). y=95 is
+    // below T2's midpoint but above T3's → the line marks the slot T2 already
+    // occupies (before T3), which used to resolve to `{afterId: <self>}`.
+    fireEvent.pointerMove(document, { clientX: 10, clientY: 95, pointerId: 1 });
+    await waitFor(() => {
+      expect(rowOf('T3').getAttribute('data-drop-before')).toBe('true');
+    });
+    fireEvent.pointerUp(document, { clientX: 10, clientY: 95, pointerId: 1 });
+
+    await waitFor(() => {
+      expect(regions.polite?.textContent).toBe('Move cancelled');
+    });
+    expect(rowOrder()).toEqual(['T1', 'T2', 'T3']);
+    expect(spy).not.toHaveBeenCalled();
+    expect(regions.assertive?.textContent ?? '').not.toContain('undone');
+    expect(screen.queryByText("Couldn't save", { exact: true })).toBeNull();
+  });
+
+  it('drop into the slot directly above the dragged row = cancel, not a write (R1 B1)', async () => {
+    const built = await seed({ lists: LISTS, tasks: threeTasks() });
+    const spy = vi.spyOn(built.runner, 'moveTask');
+    await startDrag('T2');
+
+    // y=64 sits below T1's midpoint (28) and above T2's (88) → "before T2" is
+    // also the slot T2 already occupies.
+    fireEvent.pointerMove(document, { clientX: 10, clientY: 64, pointerId: 1 });
+    await waitFor(() => {
+      expect(rowOf('T2').getAttribute('data-dragging')).toBe('true'); // ghost; never a line on self
+    });
+    fireEvent.pointerUp(document, { clientX: 10, clientY: 64, pointerId: 1 });
+
+    await waitFor(() => {
+      expect(regions.polite?.textContent).toBe('Move cancelled');
+    });
+    expect(rowOrder()).toEqual(['T1', 'T2', 'T3']);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("drag onto the task's OWN sidebar list = cancel: no reorder, no highlight (R1 B2)", async () => {
+    const built = await seed({ lists: LISTS, tasks: threeTasks() });
+    const spy = vi.spyOn(built.runner, 'moveTask');
+    const ownLink = document.createElement('a');
+    ownLink.setAttribute('data-drop-list-id', 'L1'); // T1's OWN list (F11.1: not a target)
+    ownLink.getBoundingClientRect = (): DOMRect => ({
+      left: 0,
+      top: 0,
+      right: 200,
+      bottom: 400,
+      width: 200,
+      height: 400,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    document.body.append(ownLink);
+
+    await startDrag('T1');
+    fireEvent.pointerMove(document, { clientX: 50, clientY: 100, pointerId: 1 });
+    // Let the rAF-queued hover decision run before judging the highlight.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 40));
+    });
+    expect(getDropHoverListId()).toBeNull(); // the own list is never highlighted
+
+    fireEvent.pointerUp(document, { clientX: 50, clientY: 100, pointerId: 1 });
+    await waitFor(() => {
+      expect(regions.polite?.textContent).toBe('Move cancelled');
+    });
+    expect(rowOrder()).toEqual(['T1', 'T2', 'T3']); // no teleport to the bottom
+    expect(spy).not.toHaveBeenCalled();
+    expect(state.value.tasks.get('T1')?.listId).toBe('L1');
+    ownLink.remove();
+  });
 });
 
 describe('F11 move-to-list dialog (item 35)', () => {
