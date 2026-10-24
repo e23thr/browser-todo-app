@@ -7,9 +7,10 @@
  * 1. The settings journey runs TODAY against the app's real persistence path (the ADR-002
  *    `settings` record through the storage layer) and proves: write while offline -> reload
  *    offline -> data present.
- * 2. The TASK journey (add -> complete -> reload -> data present) needs the E2 core-UI task
- *    editor (card t_a2c647e1), which does not exist yet — this file therefore self-skips that
- *    test with an explicit reason until the composer lands, and then runs unchanged.
+ * 2. The TASK journey (add -> complete -> reload -> data present) drives the E2 core-UI task
+ *    editor (card t_a2c647e1). It kept its self-skipping probe from the days before the
+ *    composer existed — it now passes the probe and runs; the skip only fires if the
+ *    composer placeholder ever goes missing again.
  *
  * QA note (card t_be7f0810): the task journey is written to the BINDING design contract
  * (docs/design/core-domain.md) — S2 view membership, S3 composer states, F1 defaults, F3
@@ -31,7 +32,7 @@ import { expect, test } from '@playwright/test';
 import { FIXTURES, ensureFixtures } from './fixtures/build-fixtures.mjs';
 import type { StaticServer } from './fixtures/static-server.mjs';
 import { BASE_PATH } from './helpers';
-import { startFixtureServer, waitForControlled } from './sw-utils';
+import { completeFirstRunOnboarding, startFixtureServer, waitForControlled } from './sw-utils';
 
 let server: StaticServer;
 let appUrl = '';
@@ -53,6 +54,7 @@ test('offline data journey: an offline write survives an offline reload', async 
 }) => {
   await page.goto(appUrl);
   await waitForControlled(page);
+  await completeFirstRunOnboarding(page);
   await context.setOffline(true);
 
   // Write while offline through the real settings surface…
@@ -73,6 +75,7 @@ test('offline task journey: add -> complete -> reload -> data present (E2 core U
 }) => {
   await page.goto(appUrl);
   await waitForControlled(page);
+  await completeFirstRunOnboarding(page);
 
   // Activation gate: the composer ships with the E2 core-UI card (t_a2c647e1). Until then this
   // journey cannot run — it self-skips here with the dependency named instead of failing. The

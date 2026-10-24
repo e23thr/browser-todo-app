@@ -13,6 +13,7 @@ import type { StaticServer } from './fixtures/static-server.mjs';
 import { BASE_PATH } from './helpers';
 import {
   cacheNames,
+  completeFirstRunOnboarding,
   countMainNavigations,
   expectSingleVersionedCache,
   noReloadMarkerPresent,
@@ -88,6 +89,7 @@ test('E9: a mid-edit session is never force-reloaded; Apply flushes the draft fi
   page,
 }) => {
   await bootBuildA(page);
+  await completeFirstRunOnboarding(page);
 
   // The REAL editor (E2 core UI): a fresh profile has no lists, so the composer stays
   // disabled until one exists (S3 `composer.needsList` + `list.action.new`).

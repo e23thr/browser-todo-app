@@ -115,6 +115,22 @@ export function updateNotice(page: Page): ReturnType<Page['locator']> {
   return page.locator('[data-update-notice]');
 }
 
+/**
+ * A fresh profile lands on E3's first-run onboarding ("Before you start"), which REPLACES the
+ * whole shell until it is dismissed (§7 "shown before task UI") — the same first step every
+ * real user takes. Wait for whichever surface shows up first and complete onboarding when it
+ * is the one on screen; on an already-seen profile the shell wins the race and this is a no-op.
+ */
+export async function completeFirstRunOnboarding(page: Page): Promise<void> {
+  const getStarted = page.getByRole('button', { name: 'Get started', exact: true });
+  const shell = page.getByRole('heading', { name: 'Today', exact: true, level: 1 });
+  const surfaced = await Promise.race([
+    getStarted.waitFor({ state: 'visible', timeout: 15_000 }).then(() => 'onboarding' as const),
+    shell.waitFor({ state: 'attached', timeout: 15_000 }).then(() => 'shell' as const),
+  ]).catch(() => 'unknown' as const);
+  if (surfaced === 'onboarding') await getStarted.click();
+}
+
 /** Assert the page did not reload since a window marker was planted (E9 evidence). */
 export async function plantNoReloadMarker(page: Page): Promise<void> {
   await page.evaluate(() => {
