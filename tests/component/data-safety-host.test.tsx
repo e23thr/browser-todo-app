@@ -20,10 +20,24 @@ import {
 } from '../../src/features/data-safety/storageInfo';
 import { resetPendingWrites } from '../../src/features/data-safety/pendingWrites';
 
+/**
+ * CLOCK PIN — do not bump this constant to silence a red suite.
+ *
+ * `ready()` seeds `lastBackupAt = NOW - 20 * DAY`, and `<DataSafetyHost>` derives the nudge
+ * copy from the REAL clock (`deriveBanners()` / `visibleBanners()` both default to
+ * `Date.now()`), so the "It's been 20 days…" copy only held while the real calendar day was
+ * still <= NOW (it went red at 2026-10-24 12:00 UTC). The clock is therefore INSTALLED at
+ * `NOW` in `beforeEach` and restored in `afterEach`, keeping every assertion in this file
+ * tied to the pinned instant instead of the day the suite happens to run on. Never move this
+ * timestamp to make a failure go away — that just re-arms the bomb.
+ */
 const NOW = Date.UTC(2026, 9, 23, 12, 0, 0);
 const DAY = 86_400_000;
 
 beforeEach(() => {
+  // Fake ONLY `Date`: timers/promises stay real, so `waitFor` keeps its 1 s timeout.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(NOW);
   window.localStorage.clear();
   resetFlags();
   clearBanners();
@@ -35,6 +49,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   resetDialogs();
 });
 

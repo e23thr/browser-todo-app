@@ -30,10 +30,25 @@ import {
   resetStorageInfo,
 } from '../../../src/features/data-safety/storageInfo';
 
+/**
+ * CLOCK PIN — do not bump this constant to silence a red suite.
+ *
+ * `NOW` is an *expected* instant, not an observation: the production seams these tests drive
+ * (`deriveBanners(now = Date.now())`, `snooze(id, days, now = Date.now())`, `visibleBanners`)
+ * read the REAL clock unless they are told otherwise, so a bare `NOW` was a wall-clock time
+ * bomb — the assertions held only while the real clock was still <= NOW (this file went red
+ * at 2026-10-24 12:00 UTC). The clock is therefore INSTALLED at `NOW` in `beforeEach` and
+ * restored in `afterEach`; any test added here stays deterministic for the same reason.
+ * If a new assertion needs a different instant, inject it (`snooze(id, days, t)`,
+ * `deriveBanners(t)`, `visibleBanners(t)`) — never move this timestamp.
+ */
 const NOW = Date.UTC(2026, 9, 23, 12, 0, 0);
 const DAY = 86_400_000;
 
 beforeEach(() => {
+  // Fake ONLY `Date`: timers/promises stay real, so async helpers keep their timeouts.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(NOW);
   window.localStorage.clear();
   resetFlags();
   clearBanners();
@@ -45,6 +60,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   resetDialogs();
 });
 
