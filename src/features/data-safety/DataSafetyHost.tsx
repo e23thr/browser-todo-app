@@ -29,7 +29,7 @@ import {
   type QueuedDialog,
   type Toast,
 } from './notices';
-import { retryPendingWrites } from './pendingWrites';
+import { pendingWrites, retryPendingWrites } from './pendingWrites';
 import { NudgeBanner, type BannerAction, type BannerKind } from './NudgeBanner';
 import { runRequestPersist } from './persistGate';
 import { SafetyDialog } from './SafetyDialog';
@@ -172,11 +172,19 @@ export function DataSafetyHost(): JSX.Element {
   const state = dataSafetyState.value;
   const quota = quotaState.value;
   const persistence = persistenceState.value;
+  // Render-time read SUBSCRIBES the host to the pending-write queue: when the queue changes the
+  // host re-renders and the derive effect below re-runs (its deps include `pending`).
+  const pending = pendingWrites.value;
 
-  // Re-derive candidates whenever any input changes (reads subscribe the component).
+  // Re-derive candidates whenever any input changes (boot classification, quota, persistence
+  // grant, pending writes). A plain `useEffect` keyed on the render-time reads is deliberate —
+  // NOT `useSignalEffect`: `deriveBanners` transitively reads AND writes the `candidates` signal
+  // via `setBanner`, so a signal effect would resubscribe to its own write and loop forever.
+  // Keying on `pending` fixes D1 — a write queued after mount (quota dialog → Escape) now
+  // surfaces its persistent T2 "N changes waiting" banner immediately, not on an unrelated trigger.
   useEffect(() => {
     deriveBanners();
-  }, [state, quota, persistence]);
+  }, [state, quota, persistence, pending]);
 
   const { visible, overflow } = visibleBanners();
   const dialog = currentDialog();
