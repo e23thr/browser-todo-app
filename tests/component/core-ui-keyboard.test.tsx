@@ -1,7 +1,8 @@
 /**
- * Keyboard-only pass over the five core flows (design §16 item 42 / this card's AC-3):
+ * Keyboard-only pass over the core flows (design §16 item 42 / this card's AC-3):
  *
  *   F1 capture · F2 edit · F3 complete · F4 delete (confirm) · F6 delete list (disposition)
+ *   F8 search · F10 keyboard reorder · F11 move to list  (M5/M6 card)
  *
  * Only focus() + key events drive these flows — no pointer events anywhere. Two jsdom
  * limits are documented in the evidence file: jsdom does not implement default Tab
@@ -18,6 +19,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/pre
 
 import { Composer } from '../../src/features/tasks/Composer';
 import { ListsManageView } from '../../src/features/lists/ListsManageView';
+import { SearchView } from '../../src/features/search/SearchView';
 import { TaskScreen } from '../../src/features/tasks/TaskScreen';
 import { resetTaskStore, state } from '../../src/features/tasks/store';
 import { clearToasts } from '../../src/features/tasks/toasts';
@@ -304,5 +306,177 @@ describe('keyboard-only: F6 delete list with disposition', () => {
       expect(regions.polite?.textContent).toBe('List "Archive" deleted (1 tasks)');
     });
     record('F6 delete list (disposition)', steps);
+  });
+});
+
+describe('keyboard-only: F8 search', () => {
+  it('types a query, reads results, opens a row, then Escape clears', async () => {
+    await seed({
+      lists: [makeList({ id: 'L1', name: 'Personal' })],
+      tasks: [makeTask({ id: 'T1', listId: 'L1', title: 'Buy milk' })],
+    });
+    render(<SearchView />);
+    const steps: string[] = [];
+
+    const field = await waitFor(() => {
+      const el = screen.queryByLabelText<HTMLInputElement>('Search tasks', { exact: true });
+      expect(el).toBeTruthy();
+      return el as HTMLInputElement;
+    });
+    tabTo(field);
+    steps.push('Tab → search field (autofocused on the pushed screen, F8.1)');
+    fireEvent.input(field, { target: { value: 'milk' } });
+    steps.push('type "milk" → instant results with <mark> highlight');
+
+    const row = await waitFor(() => {
+      const el = document.querySelector('ul.task-list [data-task-id]');
+      expect(el).toBeTruthy();
+      return el as HTMLLIElement;
+    });
+    expect(row.querySelector('mark')?.textContent).toBe('milk');
+    tabTo(row);
+    steps.push('ArrowDown/Tab → result row (cursor); <mark> around "milk"');
+    fireEvent.keyDown(row, { key: 'Enter' });
+    steps.push('Enter → task editor opens');
+
+    const editor = await screen.findByRole('dialog', { name: 'Edit task' });
+    fireEvent.keyDown(editor, { key: 'Escape' });
+    steps.push('Escape → editor closes, focus returns to the row');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Edit task' })).toBeNull();
+    });
+    fireEvent.keyDown(field, { key: 'Escape' });
+    steps.push('Escape → query cleared, hint state back');
+    await waitFor(() => {
+      expect(field.value).toBe('');
+    });
+    record('F8 search', steps);
+  });
+});
+
+describe('keyboard-only: F10 keyboard reorder', () => {
+  it('Alt+arrows reorder with announcements; menu Move up/down mirror the command', async () => {
+    await seed({
+      lists: [makeList({ id: 'L1', name: 'Personal' })],
+      tasks: [
+        makeTask({ id: 'T1', listId: 'L1', title: 'First', sortOrder: 'a' }),
+        makeTask({ id: 'T2', listId: 'L1', title: 'Second', sortOrder: 'b' }),
+        makeTask({ id: 'T3', listId: 'L1', title: 'Third', sortOrder: 'c' }),
+      ],
+    });
+    render(
+      <TaskScreen
+        view={{ kind: 'list', listId: 'L1' }}
+        title="Personal"
+        emptyIcon="folder"
+        emptyTitle="No tasks"
+        emptyBody="x"
+      />,
+    );
+    const steps: string[] = [];
+
+    const row = await waitFor(() => {
+      const el = document.querySelector('[data-task-id="T1"]');
+      expect(el).toBeTruthy();
+      return el as HTMLLIElement;
+    });
+    tabTo(row);
+    steps.push('Tab → first row (roving cursor)');
+    fireEvent.keyDown(row, { key: 'ArrowDown', altKey: true });
+    steps.push('Alt+↓ → moved to position 2 of 3 in Personal; focus stays on the row');
+    await waitFor(() => {
+      expect(regions.polite?.textContent).toBe('Moved to position 2 of 3 in Personal');
+    });
+    await waitFor(() => {
+      expect(document.activeElement?.getAttribute('data-task-id')).toBe('T1');
+    });
+
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'ArrowUp', altKey: true });
+    steps.push('Alt+↑ → back to position 1');
+    await waitFor(() => {
+      expect(regions.polite?.textContent).toBe('Moved to position 1 of 3 in Personal');
+    });
+
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'ArrowUp', altKey: true });
+    steps.push('Alt+↑ at the top → boundary no-op, "Already at the top" announced');
+    await waitFor(() => {
+      expect(regions.polite?.textContent).toBe('Already at the top');
+    });
+
+    const trigger = await screen.findByRole('button', { name: 'Actions for "First"' });
+    tabTo(trigger);
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+    steps.push(
+      'row menu opens: Edit / Move to list… / Move up (aria-disabled) / Move down / Delete',
+    );
+    const menu = await screen.findByRole('menu');
+    await waitFor(() => {
+      expect(document.activeElement?.textContent).toBe('Edit');
+    });
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    steps.push('ArrowDown x2 → "Move up" (disabled at the top, announced by AT)');
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    await waitFor(() => {
+      expect(document.activeElement?.textContent).toBe('Move down');
+    });
+    activate(document.activeElement as HTMLElement);
+    steps.push('Enter on "Move down" → same single-record write, row moves');
+    await waitFor(() => {
+      expect(document.querySelector('[data-task-id="T2"]+li[data-task-id="T1"]')).not.toBeNull();
+    });
+    record('F10 keyboard reorder', steps);
+  });
+});
+
+describe('keyboard-only: F11 move to list', () => {
+  it('opens the move dialog from the menu, picks with arrows, Enter moves', async () => {
+    await seed({
+      lists: [makeList({ id: 'L1', name: 'Personal' }), makeList({ id: 'L2', name: 'Work' })],
+      tasks: [makeTask({ id: 'T1', listId: 'L1', title: 'Report' })],
+    });
+    render(
+      <TaskScreen
+        view={{ kind: 'list', listId: 'L1' }}
+        title="Personal"
+        emptyIcon="folder"
+        emptyTitle="No tasks"
+        emptyBody="x"
+      />,
+    );
+    const steps: string[] = [];
+
+    const trigger = await screen.findByRole('button', { name: 'Actions for "Report"' });
+    tabTo(trigger);
+    steps.push('Tab → row menu trigger');
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+    const menu = await screen.findByRole('menu');
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    await waitFor(() => {
+      expect(document.activeElement?.textContent).toBe('Move to list…');
+    });
+    steps.push('ArrowDown → "Move to list…"');
+    activate(document.activeElement as HTMLElement);
+    steps.push('Enter → F11 dialog: radio-list semantics, initial focus on the first option');
+
+    const dialog = await screen.findByRole('dialog', { name: 'Move to list…' });
+    await waitFor(() => {
+      expect((document.activeElement as HTMLInputElement).type).toBe('radio');
+    });
+    steps.push('current list "Personal" is marked, not a target; "Work" is the first radio');
+    const confirm = within(dialog).getByRole('button', { name: 'Move to list…' });
+    tabTo(confirm);
+    steps.push('Tab → "Move to list…" (confirm)');
+    activate(confirm);
+    steps.push('Enter → task moved to Work, announced');
+
+    await waitFor(() => {
+      expect(state.value.tasks.get('T1')?.listId).toBe('L2');
+    });
+    await waitFor(() => {
+      expect(regions.polite?.textContent).toBe('"Report" moved to Work');
+    });
+    record('F11 move to list', steps);
   });
 });

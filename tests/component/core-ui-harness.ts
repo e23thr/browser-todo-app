@@ -7,8 +7,10 @@
  * announcement assertions (announce() is a silent no-op without them).
  */
 
+import { resetSearchIndexForTest } from '../../src/features/search/searchIndexCache';
 import { bindRunnerForTest, resetTaskStore } from '../../src/features/tasks/store';
 import { clearToasts } from '../../src/features/tasks/toasts';
+import { setDropHoverListId } from '../../src/app/lists';
 import {
   makeList,
   makeTask,
@@ -38,6 +40,8 @@ export const regions = {
 /** Reset the store signals + toasts and mount fresh live regions. */
 export function setUpCoreUi(): void {
   resetTaskStore();
+  resetSearchIndexForTest();
+  setDropHoverListId(null);
   clearToasts();
   mounted?.dispose();
   mounted = mountLiveRegions();
@@ -52,6 +56,8 @@ export function tearDownCoreUi(): void {
 export async function seed(input: {
   tasks?: readonly import('../../src/domain/model').Task[];
   lists?: readonly import('../../src/domain/model').List[];
+  hangWrites?: boolean;
+  failMoves?: boolean;
 }): Promise<TestRunner> {
   const built = makeTestRunner(input);
   bindRunnerForTest(built.runner);

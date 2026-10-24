@@ -293,7 +293,7 @@ describe('§9.1 row focus model + row menu (§9.2)', () => {
     expect(row.tabIndex).toBe(0);
   });
 
-  it('row menu: opens, lists Edit then Delete, Escape closes and restores focus (§9.2)', async () => {
+  it('row menu: opens, lists Edit, Move to list… then Delete, Escape closes and restores focus (§9.2 / §16.11)', async () => {
     await seed({
       lists: [makeList({ id: 'L1', name: 'Personal' })],
       tasks: [makeTask({ id: 'T1', listId: 'L1', title: 'Buy milk' })],
@@ -306,7 +306,8 @@ describe('§9.1 row focus model + row menu (§9.2)', () => {
 
     const menu = await screen.findByRole('menu');
     const items = within(menu).getAllByRole('menuitem');
-    expect(items.map((item) => item.textContent)).toEqual(['Edit', 'Delete']);
+    // Aggregate view (D1): no Move up/Move down — the visible alternative is Move to list.
+    expect(items.map((item) => item.textContent)).toEqual(['Edit', 'Move to list…', 'Delete']);
 
     fireEvent.keyDown(menu, { key: 'Escape' });
     await waitFor(() => {

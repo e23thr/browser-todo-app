@@ -112,6 +112,8 @@ export function makeTestRunner(
     lists?: readonly List[];
     settings?: Partial<Settings>;
     hangWrites?: boolean;
+    /** Every `move` write fails (§8.3 rollback probe: row returns + saveFailed). */
+    failMoves?: boolean;
   } = {},
 ): TestRunner {
   const tasks = new Map<string, Task>((seed.tasks ?? []).map((task) => [task.id, task]));
@@ -181,6 +183,9 @@ export function makeTestRunner(
       return ok(next);
     },
     async move(id: string, target: MoveTarget): Promise<Result<MoveOutcome<Task>, AppError>> {
+      if (seed.failMoves === true) {
+        return { ok: false, error: { code: 'TX_ABORTED', cause: new Error('move write failed') } };
+      }
       const current = tasks.get(id);
       if (current === undefined)
         return { ok: false, error: { code: 'RULE', rule: 'TASK_MISSING', message: id } };
