@@ -18,6 +18,7 @@ import { BASE_PATH } from './helpers';
 import {
   BOOT_BUDGET_MS,
   cacheEntryUrls,
+  completeFirstRunOnboarding,
   cspViolations,
   expectSingleVersionedCache,
   installCspCollector,
@@ -64,6 +65,7 @@ test('cold load online, then offline boot keeps the whole app working (M9)', asy
 }) => {
   await page.goto(appUrl);
   await waitForControlled(page);
+  await completeFirstRunOnboarding(page);
 
   // Precache = exactly one versioned cache holding the whole artifact set (Decision 2)…
   const cacheName = await expectSingleVersionedCache(page);
@@ -99,6 +101,7 @@ test('warm and offline start-to-interactive stay inside the boot budget (§9.1)'
 }) => {
   await page.goto(appUrl);
   await waitForControlled(page);
+  await completeFirstRunOnboarding(page);
 
   // Warm (online, SW active): a reload is served cache-first.
   await page.reload();
@@ -127,6 +130,7 @@ test('warm and offline start-to-interactive stay inside the boot budget (§9.1)'
 test('a failing update check is completely silent (Decision 6)', async ({ page, context }) => {
   await page.goto(appUrl);
   await waitForControlled(page);
+  await completeFirstRunOnboarding(page);
 
   server.setFailingSw(true);
   await triggerUpdateCheck(page);
@@ -158,6 +162,7 @@ test('scope and cache naming are correct under a root base path (Decision 8)', a
     const rootUrl = `${rootServer.origin}/`;
     await page.goto(rootUrl);
     await waitForControlled(page);
+    await completeFirstRunOnboarding(page);
 
     const scope = await page.evaluate(
       async () => (await navigator.serviceWorker.getRegistration())?.scope,
@@ -203,6 +208,7 @@ test('no CSP violations fire across offline boot and lazy navigation (Decision 9
   await installCspCollector(page);
   await page.goto(appUrl);
   await waitForControlled(page);
+  await completeFirstRunOnboarding(page);
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Today', level: 1, exact: true })).toBeVisible();

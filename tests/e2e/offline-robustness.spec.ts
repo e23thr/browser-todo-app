@@ -22,6 +22,7 @@ import type { StaticServer } from './fixtures/static-server.mjs';
 import { BASE_PATH } from './helpers';
 import {
   cacheEntryUrls,
+  completeFirstRunOnboarding,
   expectSingleVersionedCache,
   startFixtureServer,
   triggerUpdateCheck,
@@ -43,10 +44,15 @@ test.afterAll(async () => {
   await server.close();
 });
 
-/** Boot the app on build A with a claimed service-worker controller. */
+/**
+ * Boot the app on build A with a claimed service-worker controller, past E3's first-run screen
+ * (§7): a fresh profile is onboarding, not the shell, until "Get started" is taken — the same
+ * first step every real user takes before any of these scenarios are about.
+ */
 async function bootBuildA(page: Page): Promise<void> {
   await page.goto(appUrl);
   await waitForControlled(page);
+  await completeFirstRunOnboarding(page);
 }
 
 /** Every shipped file of a fixture build, as dist-relative POSIX paths. */
