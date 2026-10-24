@@ -163,14 +163,29 @@ Measured (10k fixtures, Node 22 / jsdom on the dev host, 2026-10-23; CI gate is 
 
 ```ts
 computeWindow({ count, heightAt, uniformPx?, viewportPx, scrollTop, overscan? = 8, pin? })
-  : { start, end, padTop, padBottom }   // render rows [start, end), pad the spacers
+  : { start, end, padTop, padBottom, pins }
+// window = rows [start, end) + its spacers; pins = pinned rows OUTSIDE the window
 ```
 
 Uniform fast path when `uniformPx` is set (`--row-height-task`); prefix-sum + binary search for
-variable heights. `pin` forces the focused row into the window (a11y contract: `aria-rowcount` /
-`aria-rowindex`, focus never dies on scroll). ~25–35 DOM rows at phone/desktop; >200 rows must
-never render. The UI owns `requestAnimationFrame` coalescing (one call per frame) and keying rows
-by task id (cross-tab refreshes must not reset `scrollTop`).
+variable heights. The window is the **scroll-viewport window only** (§9.1 / defect V1): a `pin`
+(the roving cursor) never widens it toward the scroll position — a cursor parked at the top of a
+1 200-row list with the scroll at the bottom used to render all 1 200 rows. A pinned index
+outside `[start, end)` comes back in `pins` as `{ index, padBefore }` and the UI renders, in list
+order:
+
+```text
+[above-window pin segments] padTop [window rows] [below-window pin segments] padBottom
+```
+
+Each segment's `padBefore` is the gap since the previously rendered element; `padTop` absorbs the
+gap between the last above-segment (or the list start) and the window, `padBottom` the tail after
+the last below-segment — pads + segments tile the exact list height, so the cursor row keeps its
+real offset and `aria-posinset` while total DOM rows stay ~25–35 + 1 at any scroll position
+(> 200 must never render). A pin already inside the window is not listed in `pins`. The UI owns
+`requestAnimationFrame` coalescing (one call per frame), keying rows by task id (cross-tab
+refreshes must not reset `scrollTop`), and re-focuses the cursor row with `preventScroll` when
+the keyed boundary move drops focus (Chromium blurs a moved node).
 
 ## 7. Concurrent tabs (`src/domain/sync.ts` + `src/app/tabSync.ts`)
 

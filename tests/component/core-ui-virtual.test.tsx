@@ -3,13 +3,14 @@
  *
  * Beyond ~200 rows the list windows rows through the domain `computeWindow`:
  * DOM rows stay capped (~35 at any viewport), pad spacers carry the full scroll
- * height, the roving cursor PINS its target into the window (keyboard End /
- * PageDown / arrow across the window boundary all focus the right row), and
- * `aria-posinset`/`aria-setsize` report the REAL list position (not the
- * window's). The scroll listener coalesces to one geometry decision per
- * animation frame (§5.7 60 fps contract); the AC evidence records the DOM row
- * cap + window-math cost at 1k/10k rows (real-browser scroll fps is outside
- * jsdom — the e2e lane owns that number).
+ * height, and the roving cursor stays materialized as window slice OR as its own
+ * out-of-window segment (V1: never by widening the window toward the scroll
+ * position) — keyboard End / PageDown / arrow across the window boundary all
+ * focus the right row — while `aria-posinset`/`aria-setsize` report the REAL
+ * list position (not the window's). The scroll listener coalesces to one
+ * geometry decision per animation frame (§5.7 60 fps contract); the AC evidence
+ * records the DOM row cap + window-math cost at 1k/10k rows (real-browser scroll
+ * fps is outside jsdom — the e2e lane owns that number).
  */
 
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -62,6 +63,9 @@ beforeEach(() => {
 afterEach(() => {
   tearDownCoreUi();
   resetTaskStore();
+  // The V1 test shadows `window.scrollY` (jsdom has no layout to scroll); restore
+  // jsdom's default so later suites don't boot "already scrolled to the bottom".
+  Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 });
 });
 
 afterAll(async () => {
@@ -190,6 +194,55 @@ describe('keyboard navigation across the virtual window', () => {
     await waitFor(() => {
       expect(focusedTaskId()).toBe('T0010');
     });
+  });
+});
+
+describe('V1 regression: pinned cursor vs. scroll position (§9.1 < 200 DOM rows)', () => {
+  it('keeps the window viewport-sized and the cursor mounted/focused at the far scroll end', async () => {
+    await seed({ lists: [makeList({ id: 'L1', name: 'Personal' })], tasks: makeMany(1200) });
+    renderList();
+    await waitFor(() => {
+      expect(domRowCount()).toBeGreaterThan(0);
+    });
+    const cursorEl = (): HTMLElement | null =>
+      document.querySelector<HTMLElement>('[data-task-id="T0000"]');
+
+    // Park the roving cursor on the first row — it holds DOM focus (AC3's premise).
+    const first = document.querySelector<HTMLElement>('ul.task-list [data-task-id]');
+    await act(async () => {
+      first?.focus();
+    });
+    expect(focusedTaskId()).toBe('T0000');
+
+    // jsdom has no layout: emulate scrolling the page to the very bottom and fire
+    // the scroll event the app listens to (rAF-coalesced → one window decision).
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 66_000 });
+    window.dispatchEvent(new Event('scroll'));
+
+    // The window follows the SCROLL POSITION: the real list end renders —
+    await waitFor(() => {
+      const rows = document.querySelectorAll('ul.task-list [data-task-id]');
+      expect(rows[rows.length - 1]?.getAttribute('aria-posinset')).toBe('1200');
+    });
+    // …and total DOM rows stay viewport-sized + the ONE pinned cursor row (V1:
+    // pre-fix this rendered all 1 200 rows — the window spanned cursor→scroll).
+    expect(domRowCount()).toBeLessThan(60);
+    expect(domRowCount()).toBeLessThan(VIRTUALIZE_ROWS);
+    // The cursor row never unmounted: it keeps its REAL aria position and focus.
+    const cursor = cursorEl();
+    expect(cursor).not.toBeNull();
+    expect(cursor?.getAttribute('aria-posinset')).toBe('1');
+    expect(document.activeElement).toBe(cursor);
+
+    // Scrolling back INTO the cursor's range moves the row into the window slice —
+    // focus must survive that keyed move too (AC3: never dropped to document.body).
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 });
+    window.dispatchEvent(new Event('scroll'));
+    await waitFor(() => {
+      expect(focusedTaskId()).toBe('T0000');
+    });
+    expect(domRowCount()).toBeLessThan(60);
+    expect(cursorEl()?.getAttribute('aria-posinset')).toBe('1');
   });
 });
 

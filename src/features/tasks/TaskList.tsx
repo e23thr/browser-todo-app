@@ -23,10 +23,13 @@
  * M5/M6 virtualization (§5.7): beyond `VIRTUALIZE_ROWS` the list windows the rows
  * through the domain's `computeWindow` (prefix-sum + binary search over measured
  * heights, uniform estimate `--row-height-task` for unmeasured rows), listening to the
- * nearest scroll parent with one geometry decision per animation frame. The roving
- * cursor PINS its row into the window before focusing it, so keyboard navigation and
- * focus survive any scroll position; every rendered row carries `aria-posinset`/
- * `aria-setsize` (its real position in the FULL list, not the window).
+ * nearest scroll parent with one geometry decision per animation frame. The window is
+ * the SCROLL-VIEWPORT window only (§9.1, defect V1): a roving cursor outside it stays
+ * mounted as its own pad+row segment — never a cursor→scroll span that would
+ * materialise the whole list — keyboard navigation scrolls the cursor back into view,
+ * and focus is restored in-layout when the keyed row move drops it (Chromium blurs a
+ * moved node). Every rendered row carries `aria-posinset`/`aria-setsize` (its real
+ * position in the FULL list, not the window).
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
@@ -35,7 +38,7 @@ import type { JSX, TargetedEvent } from 'preact';
 import type { List, Task } from '../../domain/model';
 import type { TaskPosition } from '../../domain/ports';
 import type { ViewRow } from '../../domain/views';
-import { computeWindow } from '../../domain/windowing';
+import { computeWindow, type PinnedSegment } from '../../domain/windowing';
 import { setDropHoverListId } from '../../app/lists';
 import { groupTitle } from './labels';
 import { beginPointerDrag, type DropIntent, type ListRect, type RowRect } from './reorderDrag';
@@ -253,9 +256,12 @@ export function TaskList({
   const currentIndexOf = (id: string | null): number =>
     id === null ? -1 : rows.findIndex((row) => row.type === 'task' && row.task.id === id);
 
-  // DERIVED pin (§5.7 a11y contract): the cursor row is ALWAYS materialized —
-  // focus can't live on a node the window destroyed, so the window math simply
-  // includes the current row (domain-api §6 `pin`).
+  // DERIVED pin (§5.7 a11y contract + §9.1 V1): the cursor row is ALWAYS
+  // materialized — but never by widening the window from the cursor to the scroll
+  // position (that rendered the whole list). The window stays the scroll-viewport
+  // window; a cursor outside it comes back from `computeWindow` as its own pad+row
+  // segment (domain-api §6 `pins`), so DOM rows stay < VIRTUALIZE_ROWS at every
+  // scroll position.
   const currentIndex = currentIndexOf(currentId);
   const window_ = virtualized
     ? computeWindow({
@@ -269,7 +275,7 @@ export function TaskList({
         scrollTop,
         ...(currentIndex >= 0 ? { pin: [currentIndex] } : {}),
       })
-    : { start: 0, end: rows.length, padTop: 0, padBottom: 0 };
+    : { start: 0, end: rows.length, padTop: 0, padBottom: 0, pins: [] };
 
   // Keep the cursor on a live row: default to the first row, and when the current row
   // vanishes (deleted here or in another tab) take over the neighbour's position —
@@ -313,8 +319,12 @@ export function TaskList({
 
   // The derived pin guarantees the cursor row exists after the commit that moved
   // the cursor; apply DOM focus once it materializes (§5.7: "the focused row must
-  // be materialized before it can hold focus").
-  useEffect(() => {
+  // be materialized before it can hold focus"). LAYOUT phase, not passive: the
+  // passive flush waits for rAF/35 ms (preact/hooks afterPaint), which lost the
+  // race against observers reading focus right after a key press — the documented
+  // `End focuses the LAST row` probe flake. Focus + scroll land inside the commit,
+  // before paint, so keyboard navigation is deterministic.
+  useLayoutEffect(() => {
     const id = pendingFocusRef.current;
     if (id === null) return;
     if (!ids.includes(id)) {
@@ -328,7 +338,27 @@ export function TaskList({
     if (typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'nearest' });
   });
 
+  // V1 / §9.1 (AC3): when the window crosses the cursor row, the keyed diff MOVES
+  // the row between its pin segment and the window slice — Chromium drops focus to
+  // the document body on a move (verified in the fix's design probe). Pull focus
+  // back in the SAME commit, before paint; `preventScroll` keeps the restore from
+  // fighting the scroll position the user is driving, and nothing is stolen:
+  // only the body counts as "focus lost", and only once a row actually held focus
+  // (`cursorHeldFocusRef` is set in `onRowFocus` — never on load).
+  const cursorHeldFocusRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!cursorHeldFocusRef.current || currentId === null) return;
+    const active = document.activeElement;
+    // Focus held by any CONNECTED element elsewhere wins; body/null/an element the
+    // diff already detached all mean "the move dropped focus".
+    if (active !== null && active !== document.body && active.isConnected) return;
+    const el = rowElement(currentId);
+    if (el === null) return;
+    if (document.activeElement !== el) el.focus({ preventScroll: true });
+  }, [window_.start, window_.end, currentId, ids.join(',')]);
+
   const onRowFocus = (id: string): void => {
+    cursorHeldFocusRef.current = true;
     setCurrentId(id);
   };
 
@@ -585,6 +615,43 @@ export function TaskList({
     );
   };
 
+  /** Spacers are `aria-hidden` list items, never `role="presentation"` (axe's list rule, B1). */
+  const renderPad = (height: number): JSX.Element | null =>
+    height > 0 ? (
+      <li class="task-list-pad" aria-hidden="true" style={{ height: `${String(height)}px` }} />
+    ) : null;
+
+  // ONE flat children array (§9.1 V1): cursor segments, window rows and pads are all
+  // direct `ul` children in list order — pads + segments tile the exact list height
+  // while the window stays viewport-sized (a cursor outside it never widens the
+  // window toward the scroll position). One key scope means a cursor row crossing
+  // the window boundary is MOVED by the keyed diff — same node, never unmounted
+  // (§5.7 focus retention; the restore effect above catches the blur Chromium does
+  // even on a move).
+  const content: JSX.Element[] = [];
+  const pushPad = (height: number): void => {
+    const pad = renderPad(height);
+    if (pad !== null) content.push(pad);
+  };
+  const pushSegment = (segment: PinnedSegment): void => {
+    pushPad(segment.padBefore);
+    const row = rows[segment.index];
+    if (row !== undefined) content.push(renderRow(row));
+  };
+  for (const segment of window_.pins) {
+    if (segment.index < window_.start) pushSegment(segment);
+  }
+  pushPad(window_.padTop);
+  if (virtualized) {
+    for (const row of visibleRows) content.push(renderRow(row));
+  } else {
+    for (const row of rows) content.push(renderRow(row));
+  }
+  for (const segment of window_.pins) {
+    if (segment.index >= window_.end) pushSegment(segment);
+  }
+  pushPad(window_.padBottom);
+
   return (
     <ul
       class="task-list"
@@ -592,23 +659,7 @@ export function TaskList({
       ref={listRef}
       data-virtualized={virtualized ? 'true' : undefined}
     >
-      {/* Padding items are `aria-hidden` list items, never `role="presentation"`: axe's
-          `list` rule rejects any `ul` child whose role is not a list item (B1). */}
-      {window_.padTop > 0 ? (
-        <li
-          class="task-list-pad"
-          aria-hidden="true"
-          style={{ height: `${String(window_.padTop)}px` }}
-        />
-      ) : null}
-      {virtualized ? visibleRows.map((row) => renderRow(row)) : rows.map((row) => renderRow(row))}
-      {window_.padBottom > 0 ? (
-        <li
-          class="task-list-pad"
-          aria-hidden="true"
-          style={{ height: `${String(window_.padBottom)}px` }}
-        />
-      ) : null}
+      {content}
     </ul>
   );
 }

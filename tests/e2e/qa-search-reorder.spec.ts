@@ -1070,8 +1070,9 @@ test.describe('M5/M6 virtualization', () => {
       record(`virtual_scroll_${label}`, result);
       console.warn(`QA[virtual-scroll:${label}] ${JSON.stringify(result)}`);
       expect(result['scrolledPx'], `${label}: scroll distance`).toBeGreaterThan(500);
-      // Still virtualizing while scrolling (the window may legitimately span from the pinned
-      // cursor row to the scroll position — the exact span is recorded as evidence).
+      // Still virtualizing while scrolling: since the V1 fix the window never spans from
+      // the pinned cursor to the scroll position (window + at most the single pinned row —
+      // exact numbers recorded as evidence; the loose bound keeps load-flake slack).
       expect(result['maxDomRows'], `${label}: DOM rows while scrolling`).toBeLessThan(1_200);
       return result;
     };
@@ -1084,18 +1085,16 @@ test.describe('M5/M6 virtualization', () => {
   });
 
   /**
-   * DEFECT V1 (open) — expected to FAIL while the defect is live.
+   * DEFECT V1 REGRESSION GUARD — the `test.fail()` marker is GONE with the fix and the
+   * assertion below is UNCHANGED (it failed loudly while the defect was live).
    *
-   * The roving cursor is pinned into EVERY window computation (design §5.7 "the cursor row is
-   * ALWAYS materialized"), so the window spans from the pinned cursor row all the way to the
-   * scroll position: scrolling far from the cursor renders O(distance) rows instead of a
-   * viewport-sized window, up to the entire list (§9.1 "virtualize beyond ~200 DOM rows").
-   *
-   * `test.fail()` keeps the shared suite green while the defect is open and FLIPS loudly the
-   * moment it is fixed ("expected to fail, but passed") — delete the marker with the fix.
+   * The roving cursor stays materialized WITHOUT the window spanning from the pinned cursor
+   * row to the scroll position: scrolling far from the cursor keeps a viewport-sized window
+   * plus the single pinned row (§9.1 "virtualize beyond ~200 DOM rows" — pre-fix this
+   * rendered all 1 200 rows), and focus stays on the cursor row the whole way (never
+   * dropped to document.body, AC3).
    */
   test('V1: scrolling far from the pinned cursor materialises the whole list', async ({ page }) => {
-    test.fail();
     const listId = listIdFor(2_500_000);
     const count = 1_200;
     await bootAndSeed(page, {
@@ -1140,6 +1139,9 @@ test.describe('M5/M6 virtualization', () => {
       bottom.after,
       `DOM rows after scrolling away from the pinned cursor (span ${bottom.firstPos}→${bottom.lastPos})`,
     ).toBeLessThan(200);
+    // AC3: the cursor row never unmounts and never loses focus while scrolling away
+    // (same measurement, new strength — the row count above is untouched).
+    expect(bottom.focusedPos, 'pinned cursor keeps focus + its real aria-posinset').toBe('1');
   });
 });
 

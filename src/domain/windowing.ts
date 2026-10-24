@@ -3,8 +3,11 @@
  * (rows are flat: group headers are rows too). Uniform-height fast path for task
  * rows (`uniformPx`, one CSS custom property co-designed with h_designer);
  * variable heights go through an O(n) prefix-sum + binary-search path (10k rows
- * sum in < 0.1 ms). The UI layer owns the a11y/scroll glue: `pin` forces the
- * focused row into the window so focus never dies while scrolling.
+ * sum in < 0.1 ms). The UI layer owns the a11y/scroll glue: the window is the
+ * SCROLL-VIEWPORT window only (§9.1 V1 — it never spans from a pinned cursor to
+ * the scroll position, which materialised the whole list), and a `pin` that
+ * falls outside it comes back as its own spacer+row segment, so the focused row
+ * stays mounted without O(distance) DOM rows.
  */
 
 export type WindowSpec = {
@@ -16,16 +19,34 @@ export type WindowSpec = {
   scrollTop: number;
   /** Rows rendered beyond the visible range on each side. Default 8. */
   overscan?: number;
-  /** Indices forced into the window (focused row). */
+  /** Indices that must stay mounted (roving cursor), even outside the window. */
   pin?: number[];
 };
 
+/** A pinned row rendered OUTSIDE `[start, end)` so focus never dies on scroll (V1). */
+export type PinnedSegment = {
+  /** Row index — a valid integer outside `[start, end)` (pins inside it render in the window). */
+  index: number;
+  /**
+   * Spacer rendered immediately BEFORE the row (px): the gap since the previously
+   * rendered element (list top, the previous segment's row, or the window end).
+   * The gap AFTER the last segment of a side belongs to `padTop`/`padBottom`, so
+   * the render order `[above segments] padTop [window rows] [below segments]
+   * padBottom` tiles the exact list height.
+   */
+  padBefore: number;
+};
+
 export type WindowResult = {
-  /** `[start, end)` row indices to render. */
+  /** `[start, end)` row indices to render — scroll-viewport window ± overscan. */
   start: number;
   end: number;
+  /** Spacer directly above the window rows (0 while an above-segment chain is open). */
   padTop: number;
+  /** Trailing spacer after the below-segment chain (0 while such a chain is open). */
   padBottom: number;
+  /** Pinned rows outside the window, ascending — rendered as pad+row segments. */
+  pins: readonly PinnedSegment[];
 };
 
 const DEFAULT_OVERSCAN = 8;
@@ -33,7 +54,7 @@ const DEFAULT_OVERSCAN = 8;
 export function computeWindow(spec: WindowSpec): WindowResult {
   const { count, viewportPx, uniformPx } = spec;
   const overscan = Math.max(0, spec.overscan ?? DEFAULT_OVERSCAN);
-  if (count <= 0) return { start: 0, end: 0, padTop: 0, padBottom: 0 };
+  if (count <= 0) return { start: 0, end: 0, padTop: 0, padBottom: 0, pins: [] };
 
   const uniform = uniformPx !== undefined && uniformPx > 0;
   // Prefix sums over [0, i) — or the O(1) closed form on the uniform path.
@@ -45,6 +66,9 @@ export function computeWindow(spec: WindowSpec): WindowResult {
   const visibleTop = scrollTop;
   const visibleBottom = scrollTop + Math.max(0, viewportPx);
 
+  // V1 / §9.1: the window is the scroll-viewport window ONLY — never widened
+  // toward a pinned cursor (a cursor parked at the top + a scroll at the bottom
+  // would otherwise materialise O(distance) rows, up to the entire list).
   let start = uniform
     ? Math.floor(visibleTop / uniformPx)
     : firstIndexAtOrAfter(spec.heightAt, count, visibleTop);
@@ -54,17 +78,44 @@ export function computeWindow(spec: WindowSpec): WindowResult {
   start = Math.max(0, start - overscan);
   end = Math.min(count, Math.max(start, end) + overscan);
 
-  for (const pin of spec.pin ?? []) {
-    if (!Number.isInteger(pin) || pin < 0 || pin >= count) continue;
-    start = Math.min(start, pin);
-    end = Math.max(end, pin + 1);
-  }
+  // Pins outside the window (deduped, valid): each side tiles its own gap chain —
+  // `padBefore` fills the gap since the previously rendered element, the trailing
+  // gap falls to padTop/padBottom. Pins inside [start, end) render with the window.
+  const outside = [...new Set(spec.pin ?? [])]
+    .filter(
+      (pin) => Number.isInteger(pin) && pin >= 0 && pin < count && (pin < start || pin >= end),
+    )
+    .sort((a, b) => a - b);
+
+  const chain = (
+    pins: readonly number[],
+    from: number,
+  ): { readonly segments: PinnedSegment[]; readonly covered: number } => {
+    let previousBottom = from;
+    const segments: PinnedSegment[] = [];
+    for (const pin of pins) {
+      const top = offsetAt(pin);
+      const bottom = offsetAt(pin + 1);
+      segments.push({ index: pin, padBefore: Math.max(0, top - previousBottom) });
+      previousBottom = bottom;
+    }
+    return { segments, covered: Math.max(0, previousBottom - from) };
+  };
+  const above = chain(
+    outside.filter((pin) => pin < start),
+    0,
+  );
+  const below = chain(
+    outside.filter((pin) => pin >= end),
+    offsetAt(end),
+  );
 
   return {
     start,
     end,
-    padTop: offsetAt(start),
-    padBottom: Math.max(0, total - offsetAt(end)),
+    padTop: Math.max(0, offsetAt(start) - above.covered),
+    padBottom: Math.max(0, total - offsetAt(end) - below.covered),
+    pins: [...above.segments, ...below.segments],
   };
 }
 
