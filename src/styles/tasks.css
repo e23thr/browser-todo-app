@@ -731,3 +731,108 @@
   min-width: 36px;
   min-height: 36px;
 }
+
+/* ------------------------------------------------- reorder & drag (M6, §8) */
+
+.task-list {
+  /* Insertion line + ghost need a positioning context inside the row. */
+  position: relative;
+}
+
+.task-list-pad {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+/* §8.1 handle: 24 px grip glyph in a 44 px hit area; visible on hover/focus on
+   pointer devices, ALWAYS visible on touch; drag entry point only. */
+.reorder-handle {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  cursor: grab;
+  opacity: 0;
+  touch-action: none;
+}
+
+.reorder-handle:focus-visible,
+.reorder-handle:focus {
+  opacity: 1;
+  outline: 3px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.task-row:hover .reorder-handle,
+.task-row:focus-within .reorder-handle {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .reorder-handle {
+    opacity: 1;
+  }
+}
+
+.task-row[data-dragging='true'] {
+  /* §8.1 ghost: 50% opacity while the pointer carries the row. */
+  opacity: 0.5;
+}
+
+.task-row {
+  position: relative;
+}
+
+/* §8.1 insertion line (3 px, accent) above/below the row the drop would land on. */
+.task-row[data-drop-before='true']::before,
+.task-row[data-drop-after='true']::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--color-accent);
+  border-radius: 2px;
+}
+
+.task-row[data-drop-before='true']::before {
+  top: -3px;
+}
+
+.task-row[data-drop-after='true']::after {
+  bottom: -3px;
+}
+
+/* §8.1 drop: 600 ms "moved" highlight — a visual nicety, skipped entirely under
+   prefers-reduced-motion (WCAG 2.2.2 / §5.9 motion). */
+@media (prefers-reduced-motion: no-preference) {
+  .task-row[data-moved='true'] {
+    background: var(--color-surface-hover);
+    border-color: var(--color-accent);
+    transition: background var(--dur-fast) var(--ease-standard);
+  }
+}
+
+/* §8.1 desktop extra: sidebar list hovered during a task drag. */
+a[data-drop-list-id][data-drop-hover='true'] {
+  background: var(--color-surface-hover);
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+
+/* §5.7 virtualization: the desktop breakpoint's row estimate (the list reads
+   this custom property for its uniform fast path). */
+@media (min-width: 768px) {
+  .task-list {
+    --row-height-task: 44px;
+  }
+}

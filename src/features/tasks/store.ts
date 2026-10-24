@@ -34,7 +34,7 @@ import { msUntilNextLocalMidnight, todayStr } from '../../domain/dates';
 import { err, ok, type AppError, type Result } from '../../domain/kernel';
 import type { List, Priority, Task } from '../../domain/model';
 import { MutationRunner } from '../../domain/pipeline';
-import type { ListRemoveDisposition, ListPosition } from '../../domain/ports';
+import type { ListRemoveDisposition, ListPosition, TaskPosition } from '../../domain/ports';
 import { emptyState, type State } from '../../domain/state';
 import { classifyUnknown } from '../../storage/errors';
 import { defaultErrorLog } from '../../storage/errorLog';
@@ -402,6 +402,22 @@ export function recolorList(id: string, color: string): Promise<Result<List, App
   const r = runner;
   if (r === null) return noRunner();
   return guard(() => r.recolorList(id, color));
+}
+
+/**
+ * One task move — the single-record write behind keyboard/menu reorder (§8.2),
+ * drag drop (§8.1) and move-to-list (F11). `position` is a `MoveTarget` position
+ * (ADR-002 fractional order key): the pipeline mints ONE new order key and the
+ * repo persists ONE record — never a renumbering transaction (§5.7).
+ */
+export function moveTaskTo(
+  id: string,
+  listId: string,
+  position: TaskPosition,
+): Promise<Result<Task, AppError>> {
+  const r = runner;
+  if (r === null) return noRunner();
+  return guard(() => r.moveTask(id, { group: { listId, parentTaskId: null }, position }));
 }
 
 /** `delta` = ±1 along the list order; boundary moves reject so callers can announce. */

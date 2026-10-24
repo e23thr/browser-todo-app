@@ -8,6 +8,11 @@
  * full toggle sentence including the visible title (label-in-name ✓), the title is a
  * real button (opens the editor), badges that are icons-only carry `aria-label`/`role=img`
  * text, and status is never colour alone (overdue = text + `!` marker, priority = shape).
+ *
+ * M5/M6 additions (checklist items 11, 25, 31–35): search results highlight the query
+ * with `<mark>` (plus a clamped notes excerpt when the match came from notes), per-list
+ * rows carry a `ReorderHandle` (drag entry point, §8.1) and the row menu gains
+ * `Move to list…` + per-list `Move up`/`Move down` (`aria-disabled` at the ends, §8.2).
  */
 
 import type { JSX, TargetedEvent } from 'preact';
@@ -15,8 +20,13 @@ import type { JSX, TargetedEvent } from 'preact';
 import { getLocale, t } from '../../app/i18n';
 import { Icon } from '../../app/icons';
 import type { Task } from '../../domain/model';
+import { highlightSegments, notesExcerptNeeded, queryTokens } from '../search/highlight';
 import { dueBadge } from './labels';
+import { ReorderHandle } from './ReorderHandle';
 import { RowMenu } from './RowMenu';
+
+/** Keyboard/menu move delta: one step, or to an edge (§8.2 Alt+Home/End). */
+export type MoveDelta = -1 | 1 | 'top' | 'bottom';
 
 export interface TaskRowProps {
   readonly task: Task;
@@ -29,15 +39,56 @@ export interface TaskRowProps {
   readonly today: string;
   /** A just-completed row held in place for 900 ms before it collapses out (F3). */
   readonly retained?: boolean;
+  /** Search query (S5): segments the title into `<mark>` runs + notes excerpt. */
+  readonly highlight?: string;
+  /** Per-list view only (D1): render the ReorderHandle + Move up/down items (§8). */
+  readonly reorderable?: boolean;
+  /** Menu Move up/Move down `aria-disabled` at the list ends (§8.2). */
+  readonly moveDisabled?: { readonly up: boolean; readonly down: boolean };
+  /** 600 ms post-drop highlight (§8.1; skipped visually under reduced motion). */
+  readonly moved?: boolean;
+  /** Live drag state (§8.1): ghost, insertion line before this row / after the last. */
+  readonly dragState?: 'dragging' | 'drop-before' | 'drop-after';
+  /** Virtualization a11y: real position in the FULL list, not just the window. */
+  readonly posInSet?: number;
+  readonly setSize?: number;
   readonly onToggle: (task: Task, done: boolean) => void;
   readonly onOpen: (id: string) => void;
   readonly onDelete: (id: string) => void;
+  readonly onMove?: (id: string, delta: MoveDelta) => void;
+  readonly onMoveToList?: (id: string) => void;
+  readonly onHandleDragStart?: (
+    event: TargetedEvent<HTMLButtonElement, PointerEvent>,
+    id: string,
+  ) => void;
   readonly onRowFocus: (id: string) => void;
-  readonly onRowKeyDown: (event: TargetedEvent<HTMLLIElement, KeyboardEvent>) => void;
+  readonly onRowKeyDown: (event: TargetedEvent<HTMLElement, KeyboardEvent>) => void;
 }
 
 const PRIORITY_ICON = { 1: 'flag-medium', 2: 'flag-high' } as const;
 const PRIORITY_KEY = { 1: 'priority.medium', 2: 'priority.high' } as const;
+
+/** Render `text` with `<mark>` around every query-token occurrence (S5). */
+function SegmentedText({
+  text,
+  query,
+}: {
+  readonly text: string;
+  readonly query: string;
+}): JSX.Element {
+  const segments = highlightSegments(text, queryTokens(query));
+  return (
+    <>
+      {segments.map((segment, index) =>
+        segment.hit ? (
+          <mark key={index}>{segment.text}</mark>
+        ) : (
+          <span key={index}>{segment.text}</span>
+        ),
+      )}
+    </>
+  );
+}
 
 export function TaskRow({
   task,
@@ -48,9 +99,19 @@ export function TaskRow({
   listName,
   today,
   retained = false,
+  highlight,
+  reorderable = false,
+  moveDisabled,
+  moved = false,
+  dragState,
+  posInSet,
+  setSize,
   onToggle,
   onOpen,
   onDelete,
+  onMove,
+  onMoveToList,
+  onHandleDragStart,
   onRowFocus,
   onRowKeyDown,
 }: TaskRowProps): JSX.Element {
@@ -61,6 +122,8 @@ export function TaskRow({
     task.priority === 2 ? PRIORITY_KEY[2] : task.priority === 1 ? PRIORITY_KEY[1] : null;
   const priorityIcon =
     task.priority === 2 ? PRIORITY_ICON[2] : task.priority === 1 ? PRIORITY_ICON[1] : null;
+  const tokens = highlight === undefined ? [] : queryTokens(highlight);
+  const showNotesExcerpt = notesExcerptNeeded(task.title, task.notes, tokens);
 
   const metaText = done
     ? task.completedAt === undefined
@@ -87,6 +150,53 @@ export function TaskRow({
     onRowKeyDown(event);
   };
 
+  // §16 item 11: Edit, Move to list…, Move up, Move down (per-list; aria-disabled at
+  // the ends), Delete — in that order; Delete in danger tone.
+  const menuItems = [
+    {
+      key: 'edit',
+      label: t('task.action.edit'),
+      onSelect: () => {
+        onOpen(task.id);
+      },
+    },
+    {
+      key: 'move-to-list',
+      label: t('task.action.moveToList'),
+      onSelect: () => {
+        onMoveToList?.(task.id);
+      },
+    },
+    ...(reorderable && onMove !== undefined
+      ? ([
+          {
+            key: 'move-up',
+            label: t('task.action.moveUp'),
+            disabled: moveDisabled?.up ?? false,
+            onSelect: () => {
+              onMove(task.id, -1);
+            },
+          },
+          {
+            key: 'move-down',
+            label: t('task.action.moveDown'),
+            disabled: moveDisabled?.down ?? false,
+            onSelect: () => {
+              onMove(task.id, 1);
+            },
+          },
+        ] as const)
+      : []),
+    {
+      key: 'delete',
+      label: t('task.action.delete'),
+      danger: true,
+      onSelect: () => {
+        onDelete(task.id);
+      },
+    },
+  ];
+
   return (
     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- design §9.1: one composite widget; the row carries the roving cursor keys.
     <li
@@ -96,6 +206,12 @@ export function TaskRow({
       data-done={done ? 'true' : undefined}
       data-retained={retained ? 'true' : undefined}
       data-overdue={overdue ? 'true' : undefined}
+      data-moved={moved ? 'true' : undefined}
+      data-dragging={dragState === 'dragging' ? 'true' : undefined}
+      data-drop-before={dragState === 'drop-before' ? 'true' : undefined}
+      data-drop-after={dragState === 'drop-after' ? 'true' : undefined}
+      {...(posInSet !== undefined ? { 'aria-posinset': posInSet } : {})}
+      {...(setSize !== undefined ? { 'aria-setsize': setSize } : {})}
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- design §9.1 roving tabindex on a real li.
       tabIndex={current ? 0 : -1}
       onFocus={(event) => {
@@ -129,7 +245,13 @@ export function TaskRow({
             onOpen(task.id);
           }}
         >
-          <span class="task-title-text">{task.title}</span>
+          <span class="task-title-text">
+            {highlight === undefined ? (
+              task.title
+            ) : (
+              <SegmentedText text={task.title} query={highlight} />
+            )}
+          </span>
         </button>
 
         <span class="row-badges">
@@ -176,25 +298,30 @@ export function TaskRow({
           class="row-actions"
           label={t('task.rowMenu', { title: task.title })}
           tabIndex={innerTabIndex}
-          items={[
-            {
-              key: 'edit',
-              label: t('task.action.edit'),
-              onSelect: () => {
-                onOpen(task.id);
-              },
-            },
-            {
-              key: 'delete',
-              label: t('task.action.delete'),
-              danger: true,
-              onSelect: () => {
-                onDelete(task.id);
-              },
-            },
-          ]}
+          items={menuItems}
         />
+
+        {reorderable && onHandleDragStart !== undefined ? (
+          <ReorderHandle
+            taskId={task.id}
+            title={task.title}
+            tabIndex={innerTabIndex}
+            onDragStart={(event) => {
+              onHandleDragStart(event, task.id);
+            }}
+            onMoveKey={(event) => {
+              // §9.1 inner-control map: the handle performs the SAME move commands.
+              onRowKeyDown(event);
+            }}
+          />
+        ) : null}
       </div>
+
+      {showNotesExcerpt && task.notes !== null ? (
+        <p class="row-meta row-notes-excerpt">
+          <SegmentedText text={task.notes} query={highlight ?? ''} />
+        </p>
+      ) : null}
 
       {metaText !== '' ? <p class="row-meta">{metaText}</p> : null}
     </li>

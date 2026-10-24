@@ -25,14 +25,18 @@ import { startQuickAdd } from '../../app/quickAdd';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { EmptyState, View } from '../../components/View';
 import type { Task } from '../../domain/model';
+import type { TaskPosition } from '../../domain/ports';
 import { selectView, type ViewId, type ViewRow } from '../../domain/views';
 import type { IconName } from '../../app/icons';
 import { Composer } from './Composer';
+import { MoveToListDialog } from './MoveToListDialog';
+import type { MoveDelta } from './TaskRow';
 import { TaskEditor } from './TaskEditor';
 import { TaskList } from './TaskList';
 import {
   deleteTask,
   liveLists,
+  moveTaskTo,
   setTaskDone,
   state,
   status,
@@ -44,6 +48,9 @@ import { resetBootSingleton } from '../../storage/boot';
 
 /** Rows just completed stay visible this long so the user sees what they checked (F3). */
 export const RETAIN_COMPLETED_MS = 900;
+
+/** Post-drop "moved" highlight (§8.1; visual only — skipped under reduced motion). */
+export const MOVED_HIGHLIGHT_MS = 600;
 
 type Retained = { readonly id: string; readonly anchor: string | null };
 
@@ -140,6 +147,8 @@ export function TaskScreen({
   const wide = useMediaQuery(WIDE_QUERY);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [movingId, setMovingId] = useState<string | null>(null);
+  const [movedId, setMovedId] = useState<string | null>(null);
   const [retained, setRetained] = useState<readonly Retained[]>([]);
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
@@ -162,6 +171,7 @@ export function TaskScreen({
   const showListBadge = view.kind !== 'list';
   const editingTask = editingId === null ? undefined : storeState.tasks.get(editingId);
   const confirmingTask = confirmingId === null ? undefined : storeState.tasks.get(confirmingId);
+  const movingTask = movingId === null ? undefined : storeState.tasks.get(movingId);
 
   /* ------------------------------ interactions ------------------------------ */
 
@@ -211,6 +221,113 @@ export function TaskScreen({
     });
   };
 
+  /* ------------------------------- reorder (M6) ------------------------------- */
+
+  /**
+   * The displayed task rows (manual per-list order, D1). Reorder is legal ONLY
+   * in a per-list view (§8.2); every other view hears `a11y.reorderUnavailable`.
+   */
+  const taskIds = rows.flatMap((row) => (row.type === 'task' ? [row.task.id] : []));
+
+  const flashMoved = (id: string): void => {
+    setMovedId(id);
+    const timer = timers.current.get(`moved:${id}`);
+    if (timer !== undefined) clearTimeout(timer);
+    const next = setTimeout(() => {
+      setMovedId((current) => (current === id ? null : current));
+      timers.current.delete(`moved:${id}`);
+    }, MOVED_HIGHLIGHT_MS);
+    timers.current.set(`moved:${id}`, next);
+  };
+
+  const announceMoved = (id: string): void => {
+    // Read the POST-move rows from the live signal — the write is optimistic, so
+    // by the time the promise settles the store already shows the new order.
+    const latest = selectView(state.value, view, { today: today.value });
+    const idsNow = latest.rows.flatMap((row) => (row.type === 'task' ? [row.task.id] : []));
+    const position = idsNow.indexOf(id) + 1;
+    const listName = state.value.lists.get(view.kind === 'list' ? view.listId : '')?.name ?? '';
+    announce(t('a11y.taskMoved', { position, total: idsNow.length, list: listName }));
+    flashMoved(id);
+  };
+
+  /** Keyboard/menu move (§8.2): one position per press; boundaries announce, never move. */
+  const onMove = (id: string, delta: MoveDelta): void => {
+    if (view.kind !== 'list') {
+      // D1: aggregate/search views derive their order — the alternative is Move to list.
+      announce(t('a11y.reorderUnavailable'));
+      return;
+    }
+    const index = taskIds.indexOf(id);
+    if (index < 0) return;
+    const target =
+      delta === 'top'
+        ? 0
+        : delta === 'bottom'
+          ? taskIds.length - 1
+          : Math.max(0, Math.min(taskIds.length - 1, index + delta));
+    if (target === index) {
+      announce(
+        t('a11y.reorderBoundary', {
+          edge: delta === -1 || delta === 'top' ? t('common.top') : t('common.bottom'),
+        }),
+      );
+      return;
+    }
+    // One order-key write for the new position (§5.7 — never a renumbering).
+    const position: TaskPosition =
+      delta === 'top'
+        ? 'first'
+        : delta === 'bottom'
+          ? 'last'
+          : delta === -1
+            ? taskIds[index - 2] === undefined
+              ? 'first'
+              : { afterId: taskIds[index - 2] as string }
+            : { afterId: taskIds[index + 1] as string };
+    void moveTaskTo(id, view.listId, position).then((result) => {
+      if (result.ok) announceMoved(id);
+    });
+  };
+
+  /** Drag drop onto a row position (§8.1) — same single write + announcement. */
+  const onMoveTo = (id: string, position: TaskPosition): void => {
+    if (view.kind !== 'list') return;
+    void moveTaskTo(id, view.listId, position).then((result) => {
+      if (result.ok) announceMoved(id);
+    });
+  };
+
+  /** Desktop drag onto a sidebar list (§8.1 extra) = move-to-list (F11 via pointer). */
+  const onDropOnList = (id: string, listId: string): void => {
+    const target = storeState.lists.get(listId);
+    if (target === undefined) return;
+    void moveTaskTo(id, listId, 'last').then((result) => {
+      if (result.ok) {
+        announce(
+          t('a11y.taskMovedToList', {
+            title: storeState.tasks.get(id)?.title ?? '',
+            list: target.name,
+          }),
+        );
+      }
+    });
+  };
+
+  const confirmMoveToList = (targetListId: string): void => {
+    const task = movingId === null ? undefined : storeState.tasks.get(movingId);
+    setMovingId(null);
+    if (task === undefined) return;
+    const target = storeState.lists.get(targetListId);
+    if (target === undefined) return;
+    void moveTaskTo(task.id, targetListId, 'last').then((result) => {
+      if (result.ok) {
+        announce(t('a11y.taskMovedToList', { title: task.title, list: target.name }));
+        document.querySelector<HTMLElement>(`[data-task-id="${task.id}"]`)?.focus();
+      }
+    });
+  };
+
   /* --------------------------------- chrome --------------------------------- */
 
   const header = (
@@ -253,9 +370,20 @@ export function TaskScreen({
         lists={lists}
         showListBadge={showListBadge}
         retainedIds={retained.map((entry) => entry.id)}
+        reorderable={view.kind === 'list'}
+        movedId={movedId}
         onToggle={onToggle}
         onOpen={onOpen}
         onDelete={onDelete}
+        onMove={onMove}
+        onMoveTo={onMoveTo}
+        onMoveToList={(id) => {
+          setMovingId(id);
+        }}
+        onDropOnList={onDropOnList}
+        onDragCancel={() => {
+          announce(t('a11y.reorderCancelled'));
+        }}
       />
     );
   }
@@ -272,6 +400,17 @@ export function TaskScreen({
           lists={lists}
           onClose={() => {
             setEditingId(null);
+          }}
+        />
+      ) : null}
+
+      {movingTask !== undefined ? (
+        <MoveToListDialog
+          task={movingTask}
+          lists={lists}
+          onMove={confirmMoveToList}
+          onCancel={() => {
+            setMovingId(null);
           }}
         />
       ) : null}

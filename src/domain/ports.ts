@@ -33,6 +33,9 @@ export type MoveTarget = {
 
 export type ListPosition = 'first' | 'last' | { afterId: string } | { beforeId: string };
 
+/** Insertion position of a task move — `MoveTarget['position']` (ADR-002 Decision 4). */
+export type TaskPosition = MoveTarget['position'];
+
 export type ListRemoveDisposition = { mode: 'move'; targetListId: string } | { mode: 'tombstone' };
 
 /**
