@@ -444,6 +444,24 @@
   outline-offset: 2px;
 }
 
+/* §16 item 7 / §7 S2 / §10 7-state contract: hover + pressed for both row kinds, on the
+   design tokens (`color.bg.raised` equivalent = `--color-surface-hover`). Hover is an
+   ENHANCEMENT only — the checkbox, title button and row menu are always visible, so no
+   affordance ever lives in the hover state alone (§5.1). The pointer query keeps the
+   pressed/hover feedback off touch screens, where :hover would stick. */
+@media (hover: hover) {
+  .task-row:hover,
+  .list-row:hover {
+    background: var(--color-surface-hover);
+  }
+}
+
+.task-row:active,
+.list-row:active {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-control);
+}
+
 .task-row[data-depth='1'] .row-main {
   padding-left: var(--space-6);
 }
@@ -465,14 +483,25 @@
   min-height: 56px;
 }
 
+/* The hit area is the LABEL, in normal flow: 44 × 44 around a 24 px visual (§5.1) with
+   no negative margins, so no sibling can cover any part of it — axe `target-size`
+   (SC 2.5.8) rejects a negative-margin hit box, and a covered click opened the editor. */
+.task-check-hit {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  cursor: pointer;
+}
+
 .task-check {
   flex: none;
   width: 24px;
   height: 24px;
-  /* 44 px hit area around a 24 px visual (§5.1). */
-  padding: 10px;
-  box-sizing: content-box;
-  margin: -10px;
+  padding: 0;
+  box-sizing: border-box;
   accent-color: var(--color-accent);
 }
 
@@ -560,7 +589,8 @@
 
 .row-meta {
   margin: 0;
-  padding: 0 var(--space-3) var(--space-2) calc(var(--space-3) + 24px + var(--space-2));
+  /* Aligns under the title: row padding + the 44 px checkbox hit area + row gap. */
+  padding: 0 var(--space-3) var(--space-2) calc(var(--space-3) + var(--touch-min) + var(--space-2));
   color: var(--color-text-secondary);
   font-size: var(--font-caption);
   line-height: var(--line-caption);
@@ -723,13 +753,14 @@
 }
 
 .toast-action {
-  min-height: 36px;
+  /* §5.1 / §16-5: toast actions are ≥ 44 × 44 like every other target. */
+  min-height: var(--touch-min);
   padding: 0 var(--space-3);
 }
 
 .toast-close {
-  min-width: 36px;
-  min-height: 36px;
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
 }
 
 /* ------------------------------------------------- reorder & drag (M6, §8) */

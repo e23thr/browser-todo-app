@@ -31,11 +31,29 @@ export interface RowMenuProps {
   readonly tabIndex?: number;
 }
 
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+/** Everything a Tab press could land on, in DOM order (tab stops AND roving rows). */
+const FOCUS_TARGETS =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]';
 
-function focusablesIn(root: HTMLElement): HTMLElement[] {
-  return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)];
+/**
+ * Where `Tab`/`Shift+Tab` must land after the menu closes: every focusable in the
+ * document that sits AFTER (or BEFORE, for `Shift+Tab`) the whole `.row-menu` container,
+ * never one inside it. Real tab stops come first — that is the sequential focus order a
+ * closed menu would produce — then programmatically focusable neighbours such as the
+ * next roving `li[tabindex="-1"]`, which promotes its own row when it receives focus.
+ * Ordered nearest-first inside each tier.
+ */
+function candidatesBeyond(anchor: HTMLElement, backward: boolean): HTMLElement[] {
+  const bit = backward ? Node.DOCUMENT_POSITION_PRECEDING : Node.DOCUMENT_POSITION_FOLLOWING;
+  const relative = [...document.body.querySelectorAll<HTMLElement>(FOCUS_TARGETS)].filter(
+    (el) =>
+      el !== anchor && !anchor.contains(el) && (anchor.compareDocumentPosition(el) & bit) !== 0,
+  );
+  if (backward) relative.reverse();
+  return [
+    ...relative.filter((el) => el.tabIndex >= 0),
+    ...relative.filter((el) => el.tabIndex < 0),
+  ];
 }
 
 export function RowMenu({ label, items, class: className, tabIndex }: RowMenuProps): JSX.Element {
@@ -71,19 +89,25 @@ export function RowMenu({ label, items, class: className, tabIndex }: RowMenuPro
     if (returnFocus) triggerRef.current?.focus();
   };
 
-  /** §9.2: Tab closes and lands on the next control after the trigger. */
-  const focusAfterTrigger = (): void => {
-    setOpen(false);
+  /**
+   * §9.2: `Tab` closes the menu and lands on the next control AFTER the trigger — i.e.
+   * after the whole `.row-menu` container, never on one of the open menu's own items
+   * (they unmount in the same tick, which used to drop focus on `document.body`). When
+   * nothing follows in the document (last row), the trigger keeps focus: focus is never
+   * dropped on the body, so the next `Tab` does not restart from the top of the page.
+   */
+  const focusAfterStep = (backward: boolean): void => {
     const trigger = triggerRef.current;
+    setOpen(false);
     if (trigger === null) return;
-    const scope = trigger.closest('li, section, div');
-    const candidates = focusablesIn(
-      scope instanceof HTMLElement ? (scope.parentElement ?? document.body) : document.body,
-    );
-    const at = candidates.indexOf(trigger);
-    const next = at >= 0 ? candidates[at + 1] : undefined;
-    if (next !== undefined && next !== trigger) next.focus();
-    else trigger.focus();
+    const container = trigger.closest('.row-menu');
+    const anchor = container instanceof HTMLElement ? container : trigger;
+    for (const candidate of candidatesBeyond(anchor, backward)) {
+      candidate.focus();
+      // A candidate the browser refuses (display:none) cannot take focus: keep walking.
+      if (document.activeElement === candidate) return;
+    }
+    trigger.focus();
   };
 
   const onTriggerKeyDown = (event: TargetedEvent<HTMLButtonElement, KeyboardEvent>): void => {
@@ -107,7 +131,7 @@ export function RowMenu({ label, items, class: className, tabIndex }: RowMenuPro
         return;
       case 'Tab':
         event.preventDefault();
-        focusAfterTrigger();
+        focusAfterStep(event.shiftKey);
         return;
       case 'ArrowDown':
         event.preventDefault();

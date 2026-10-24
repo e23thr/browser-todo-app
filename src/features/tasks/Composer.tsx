@@ -28,7 +28,7 @@ import type { List, Priority } from '../../domain/model';
 import { ListDialog } from '../lists/ListDialog';
 import { DateField, ListSelect, PriorityField } from './fields';
 import { useEditSession } from './editSession';
-import { addList, addTask, liveLists, state } from './store';
+import { addList, addTask, lastUsedListId, liveLists, state } from './store';
 import { Dialog } from '../../components/Dialog';
 
 /**
@@ -63,17 +63,24 @@ export function Composer({ variant, onClose }: ComposerProps): JSX.Element {
   const lists: List[] = liveLists(storeState);
   const hasLists = lists.length > 0;
 
-  // Default list: the durable default-list setting, else the first live list (F1.4).
+  // Default list (F1.4 / §16-14): the durable `defaultListId`, else the LAST-USED list,
+  // else the first live list — each only while it still exists (a deleted default or a
+  // last-used list from before a wipe must not win over a live one).
   const configuredDefault = storeState.settings?.defaultListId ?? null;
+  const fallbackListId =
+    [configuredDefault, lastUsedListId.value].find(
+      (candidate) => candidate !== null && lists.some((list) => list.id === candidate),
+    ) ??
+    lists[0]?.id ??
+    '';
   const [listId, setListId] = useState<string | null>(null);
   const effectiveListId =
-    listId !== null && lists.some((list) => list.id === listId)
-      ? listId
-      : configuredDefault !== null && lists.some((list) => list.id === configuredDefault)
-        ? configuredDefault
-        : (lists[0]?.id ?? '');
+    listId !== null && lists.some((list) => list.id === listId) ? listId : fallbackListId;
 
-  const dirty = title.trim() !== '' || notes.trim() !== '' || due !== null || priority !== 0;
+  const contentDirty = title.trim() !== '' || notes.trim() !== '' || due !== null || priority !== 0;
+  // A LIST-ONLY pick is a draft too (review N2): the S7.3 close paths must ask before
+  // dropping it. It cannot be flushed (no title), so the discard confirm is its exit.
+  const dirty = contentDirty || (listId !== null && listId !== fallbackListId);
 
   // Wide screens: the quick-add seam points at THIS input (FAB/empty-state → focus,
   // no sheet). Compact screens register nothing, so quick-add opens the sheet instead.
@@ -171,6 +178,9 @@ export function Composer({ variant, onClose }: ComposerProps): JSX.Element {
     setError(null);
     setExpanded(false);
     setDiscarding(false);
+    // The explicit list pick goes back to the fallback too, or a discarded list-only
+    // draft would stay dirty and re-ask on the next close (review N2).
+    setListId(null);
     onClose?.();
   };
 
@@ -306,7 +316,9 @@ export function Composer({ variant, onClose }: ComposerProps): JSX.Element {
 
   const discardConfirm = discarding ? (
     <ConfirmDialog
-      titleKey="confirm.discard.title"
+      // §16-17 / S7.3: a composer close discards a DRAFT, so it asks the register's
+      // `confirm.discardDraft` variant (review N2 — it was never used before).
+      titleKey="confirm.discard.discardDraft"
       bodyKey="confirm.discard.body"
       confirmKey="confirm.discard.confirm"
       cancelKey="confirm.discard.keepEditing"

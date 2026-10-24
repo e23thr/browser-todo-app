@@ -220,21 +220,27 @@ export function TaskRow({
       onKeyDown={onRowKey}
     >
       <div class="row-main">
-        <input
-          type="checkbox"
-          class="task-check"
-          checked={done}
-          aria-label={
-            done
-              ? t('a11y.untoggleTask', { title: task.title })
-              : t('a11y.toggleTask', { title: task.title })
-          }
-          tabIndex={innerTabIndex}
-          onChange={(event) => {
-            // The native control's post-click state IS the desired state (F3).
-            onToggle(task, event.currentTarget.checked);
-          }}
-        />
+        {/* The label IS the 44 px hit area around the 24 px visual (§5.1): a click on its
+            padding toggles the checkbox natively, and because the box sits in normal flow
+            (no negative margins) neither the row border nor the title button overlaps it —
+            axe `target-size` (SC 2.5.8) measured the old overlap as 22 × 24 px safe. */}
+        <label class="task-check-hit">
+          <input
+            type="checkbox"
+            class="task-check"
+            checked={done}
+            aria-label={
+              done
+                ? t('a11y.untoggleTask', { title: task.title })
+                : t('a11y.toggleTask', { title: task.title })
+            }
+            tabIndex={innerTabIndex}
+            onChange={(event) => {
+              // The native control's post-click state IS the desired state (F3).
+              onToggle(task, event.currentTarget.checked);
+            }}
+          />
+        </label>
 
         <button
           type="button"

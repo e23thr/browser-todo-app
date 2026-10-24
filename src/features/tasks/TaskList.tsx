@@ -1,8 +1,9 @@
 /**
  * Task list (design §7 S2 + §9.1 focus model + §8 reorder + §5.7 virtualization).
  *
- * One real `ul`/`li` list carrying interleaved group headers (`li[role=presentation]`
- * holding a real `h2`) and task rows, with ROW-LEVEL ROVING FOCUS: exactly one row is
+ * One real `ul`/`li` list carrying interleaved group headers (a real `li` holding a real
+ * `h2` — never `role="presentation"`, which axe's `list` rule rejects on `ul` children,
+ * WCAG 2.2 AA / M13) and task rows, with ROW-LEVEL ROVING FOCUS: exactly one row is
  * tabbable, the inner controls of every other row are `tabindex="-1"`, and the arrow
  * keys move the row cursor (scrolling the target into view).
  *
@@ -477,7 +478,10 @@ export function TaskList({
   const renderRow = (row: ViewRow): JSX.Element => {
     if (row.type === 'group') {
       return (
-        <li class="group-row" role="presentation" key={row.key}>
+        // A group header IS a list item: axe `list` (serious, WCAG 2.2 AA) rejects
+        // `li[role=presentation]` children, and an `h2` inside a plain `li` keeps the
+        // §5.3 heading + list semantics the views promise.
+        <li class="group-row" key={row.key}>
           <h2 class="group-header">
             <span class="group-title">
               {groupTitle(
@@ -534,10 +538,11 @@ export function TaskList({
       ref={listRef}
       data-virtualized={virtualized ? 'true' : undefined}
     >
+      {/* Padding items are `aria-hidden` list items, never `role="presentation"`: axe's
+          `list` rule rejects any `ul` child whose role is not a list item (B1). */}
       {window_.padTop > 0 ? (
         <li
           class="task-list-pad"
-          role="presentation"
           aria-hidden="true"
           style={{ height: `${String(window_.padTop)}px` }}
         />
@@ -546,7 +551,6 @@ export function TaskList({
       {window_.padBottom > 0 ? (
         <li
           class="task-list-pad"
-          role="presentation"
           aria-hidden="true"
           style={{ height: `${String(window_.padBottom)}px` }}
         />

@@ -40,7 +40,7 @@ import { classifyUnknown } from '../../storage/errors';
 import { defaultErrorLog } from '../../storage/errorLog';
 import { newUlid } from '../../storage/id';
 import { orderKeyBetween, orderKeyFirst } from '../../storage/orderKey';
-import { boot } from '../../storage/boot';
+import { boot, resetBootSingleton } from '../../storage/boot';
 import { ListRepo, SettingsRepo, TaskRepo, readRows } from '../../storage/repos';
 import { noteWriteFailure } from '../data-safety/pendingWrites';
 import { newToastId, pushToast, dismissToast } from './toasts';
@@ -55,6 +55,12 @@ export const bootError = signal<AppError | null>(null);
 export const state = signal<State>(emptyState());
 /** Local calendar day (`YYYY-MM-DD`) every date selector compares against (D9). */
 export const today = signal<string>(todayStr(Date.now));
+/**
+ * Last list a task was actually created or saved into (F1.4 / §16-14: the composer's
+ * default is `defaultListId`, else THIS list, else the first live one). Session-scoped —
+ * persisting it belongs to the domain `Settings` record, which is not this card's scope.
+ */
+export const lastUsedListId = signal<string | null>(null);
 
 const clock = (): number => Date.now();
 
@@ -235,18 +241,29 @@ export function resetTaskStore(): void {
   bootError.value = null;
   state.value = emptyState();
   today.value = todayStr(Date.now);
+  lastUsedListId.value = null;
   setListOptions([]);
+}
+
+/**
+ * Boot retry for the §14 error rows: drop the storage boot singleton (closing its live
+ * IDB connections) and boot again. The UI reaches storage ONLY through this module —
+ * ADR-003 composition root — so screens call `retryBoot()`, never `src/storage/boot`.
+ */
+export function retryBoot(): void {
+  resetBootSingleton();
+  void startTaskStore();
 }
 
 /* ------------------------------- failure UX ------------------------------- */
 
 /**
  * Report a failed (or pathologically slow) write exactly once: assertive
- * `a11y.saveFailed` + an `error.save.title` toast carrying Retry. Retry re-runs the
+ * `<failureMessage>` + an `error.save.title` toast carrying Retry. Retry re-runs the
  * SAME mutation through a fresh `guard`, so a second failure reports again.
  */
-function reportFailure(id: string, rerun: () => void): void {
-  announce(t('a11y.saveFailed'), 'assertive');
+function reportFailure(id: string, rerun: () => void, failureMessage: string): void {
+  announce(t(failureMessage), 'assertive');
   pushToast({
     id,
     tone: 'error',
@@ -261,7 +278,15 @@ function reportFailure(id: string, rerun: () => void): void {
   });
 }
 
-async function guard<T>(op: () => Promise<Result<T, AppError>>): Promise<Result<T, AppError>> {
+/**
+ * `failureMessage` is the assertive announcement for THIS operation's failure: the
+ * default `a11y.saveFailed` ("Your change was undone") is only true when the pipeline
+ * rolled that write back, so a leg whose effects persist elsewhere must say so (review N3).
+ */
+async function guard<T>(
+  op: () => Promise<Result<T, AppError>>,
+  failureMessage = 'a11y.saveFailed',
+): Promise<Result<T, AppError>> {
   const id = newToastId();
   // Object holder (not a `let`): the flag flips inside a closure, and TS would
   // otherwise narrow it to `false` in the straight-line flow below.
@@ -269,7 +294,7 @@ async function guard<T>(op: () => Promise<Result<T, AppError>>): Promise<Result<
   const report = (rerun: () => void): void => {
     if (flag.reported) return;
     flag.reported = true;
-    reportFailure(id, rerun);
+    reportFailure(id, rerun, failureMessage);
   };
   // Rerun = the same op again, wrapped so a second failure reports again.
   const rerun = (): void => {
@@ -333,16 +358,21 @@ export function addTask(input: TaskInput): Promise<Result<Task, AppError>> {
     // E3 §5.5: the first successfully created task IS "first meaningful use" — request
     // navigator.storage.persist() exactly once (fire-and-forget inside; it never blocks or
     // fails this write, and it is what flips the Settings storage row to granted/denied).
-    if (result.ok) void noteFirstMeaningfulWrite();
+    if (result.ok) {
+      void noteFirstMeaningfulWrite();
+      lastUsedListId.value = input.listId; // F1.4: the next composer defaults to THIS list
+    }
     return result;
   });
 }
 
 /**
- * Save every edited field (S4): one field-scoped patch transaction, plus a separate
- * single-record move when the list changed (ADR-003 Decision 4 — a membership change
- * IS a `move`, never a patch). The optimistic apply paints both before any I/O, so the
- * user sees one atomic save; each write rolls back independently on failure.
+ * Save every edited field (S4). Two guarded writes — one field-scoped patch, plus a
+ * single-record move when the list changed (ADR-003 Decision 4: a membership change IS
+ * a `move`, never a patch) — and ONE honest outcome per leg: the patch rolls back with
+ * the generic `a11y.saveFailed`, while the move announces `a11y.moveFailed`, because by
+ * then the field edits HAVE persisted (review N3 — "Your change was undone" was false
+ * for exactly that branch). Each leg's Retry re-runs only the write that failed.
  */
 export async function saveTask(id: string, input: TaskInput): Promise<Result<void, AppError>> {
   const r = runner;
@@ -363,14 +393,17 @@ export async function saveTask(id: string, input: TaskInput): Promise<Result<voi
   if (!patched.ok) return err(patched.error);
 
   if (input.listId !== current.listId) {
-    const moved = await guard(() =>
-      r.moveTask(id, {
-        group: { listId: input.listId, parentTaskId: null },
-        position: 'last',
-      }),
+    const moved = await guard(
+      () =>
+        r.moveTask(id, {
+          group: { listId: input.listId, parentTaskId: null },
+          position: 'last',
+        }),
+      'a11y.moveFailed', // the patch above already landed — nothing was "undone"
     );
     if (!moved.ok) return err(moved.error);
   }
+  lastUsedListId.value = input.listId;
   return ok(undefined);
 }
 

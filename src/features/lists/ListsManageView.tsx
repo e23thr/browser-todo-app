@@ -26,6 +26,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { EmptyState, View } from '../../components/View';
 import type { List } from '../../domain/model';
 import { ListDialog, makeListNameValidator } from './ListDialog';
+import { BootErrorPanel } from '../tasks/BootErrorPanel';
 import { RowMenu } from '../tasks/RowMenu';
 import {
   addList,
@@ -55,6 +56,18 @@ function countWhere(
 
 function focusViewHeading(): void {
   document.querySelector<HTMLElement>('main [data-view-title]')?.focus();
+}
+
+/**
+ * The row element for `id`, found by scanning `data-list-id` instead of interpolating the
+ * id into a selector: imported ids are not guaranteed to be ULIDs, so a raw id containing
+ * quotes would make `querySelector` throw (review N6; same approach as `TaskList.rowElement`).
+ */
+function listRowElement(id: string): HTMLElement | null {
+  for (const el of document.querySelectorAll<HTMLElement>('[data-list-id]')) {
+    if (el.dataset['listId'] === id) return el;
+  }
+  return null;
 }
 
 type DialogState =
@@ -92,7 +105,7 @@ export function ListsManageView(): JSX.Element {
     }
     void moveList(id, delta).then((result) => {
       if (result.ok) announce(t('a11y.listMoved'));
-      document.querySelector<HTMLElement>(`[data-list-id="${id}"]`)?.focus();
+      listRowElement(id)?.focus();
     });
   };
 
@@ -127,10 +140,8 @@ export function ListsManageView(): JSX.Element {
     return (
       <>
         {header}
-        <div class="error-panel" role="alert" data-testid="boot-error">
-          <h2>{t('error.boot.title')}</h2>
-          <p>{t('error.boot.body')}</p>
-        </div>
+        {/* §14 error rows carry `common.retry` — same panel as the task views (review N5). */}
+        <BootErrorPanel />
       </>
     );
   }
@@ -192,7 +203,7 @@ export function ListsManageView(): JSX.Element {
                     }}
                     onCancel={() => {
                       setRenamingId(null);
-                      document.querySelector<HTMLElement>(`[data-list-id="${list.id}"]`)?.focus();
+                      listRowElement(list.id)?.focus();
                     }}
                   />
                 ) : (
@@ -204,7 +215,7 @@ export function ListsManageView(): JSX.Element {
                     </a>
                     <RowMenu
                       class="row-actions"
-                      label={t('task.rowMenu', { title: list.name })}
+                      label={t('list.rowMenu', { title: list.name })}
                       items={[
                         {
                           key: 'rename',

@@ -29,22 +29,12 @@ import type { TaskPosition } from '../../domain/ports';
 import { selectView, type ViewId, type ViewRow } from '../../domain/views';
 import type { IconName } from '../../app/icons';
 import { Composer } from './Composer';
+import { BootErrorPanel } from './BootErrorPanel';
 import { MoveToListDialog } from './MoveToListDialog';
 import type { MoveDelta } from './TaskRow';
 import { TaskEditor } from './TaskEditor';
 import { TaskList } from './TaskList';
-import {
-  deleteTask,
-  liveLists,
-  moveTaskTo,
-  setTaskDone,
-  state,
-  status,
-  today,
-  bootError,
-  startTaskStore,
-} from './store';
-import { resetBootSingleton } from '../../storage/boot';
+import { deleteTask, liveLists, moveTaskTo, setTaskDone, state, status, today } from './store';
 
 /** Rows just completed stay visible this long so the user sees what they checked (F3). */
 export const RETAIN_COMPLETED_MS = 900;
@@ -103,35 +93,6 @@ function SkeletonList(): JSX.Element {
       <div class="skeleton-row" />
       <div class="skeleton-row" />
       <div class="skeleton-row" />
-    </div>
-  );
-}
-
-function ErrorPanel(): JSX.Element {
-  return (
-    <div class="error-panel" role="alert" data-testid="boot-error">
-      <h2>{t('error.boot.title')}</h2>
-      <p>{t('error.boot.body')}</p>
-      <div class="error-actions">
-        <button
-          type="button"
-          class="button button-primary"
-          onClick={() => {
-            resetBootSingleton();
-            void startTaskStore();
-          }}
-        >
-          {t('common.retry')}
-        </button>
-        <a class="button button-secondary" href="#/settings">
-          {t('settings.storage')}
-        </a>
-      </div>
-      {bootError.value !== null ? (
-        <p class="error-code" data-testid="boot-error-code">
-          {bootError.value.code}
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -344,7 +305,7 @@ export function TaskScreen({
   if (phase === 'loading' || phase === 'idle') {
     body = <SkeletonList />;
   } else if (phase === 'error') {
-    body = <ErrorPanel />;
+    body = <BootErrorPanel />;
   } else if (!listResolved) {
     body = <SkeletonList />;
   } else if (taskCount === 0) {
