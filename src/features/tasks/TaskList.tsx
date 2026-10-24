@@ -135,13 +135,34 @@ function sidebarListRects(): ListRect[] {
   return out;
 }
 
-/** `MoveTarget` position for an insertion intent (single order-key write, §5.7). */
-function positionForIntent(intent: DropIntent, taskIds: readonly string[]): TaskPosition | null {
+/**
+ * `MoveTarget` position for an insertion intent (single order-key write, §5.7).
+ *
+ * `null` = the drop resolves to the row's CURRENT slot: nothing may be written
+ * (§8.1 drop semantics + checklist item 39 — the domain rejects a self-`afterId`
+ * as `REORDER_TARGET_NOT_IN_GROUP`, and a gesture that moved nothing must never
+ * surface a save failure; the keyboard path guards the same case in `onMove`).
+ */
+function positionForIntent(
+  intent: DropIntent,
+  taskIds: readonly string[],
+  draggedId: string,
+): TaskPosition | null {
   if (intent.kind === 'list' || intent.kind === 'none') return null;
-  if (intent.kind === 'after-last') return 'last';
+  if (intent.kind === 'after-last') {
+    // Anchor on the row the insertion line actually marks (the last RENDERED
+    // row) instead of the literal absolute end of the FULL list — identical
+    // outcome when the true last row is rendered, and never a self-anchor.
+    if (intent.rowId === draggedId || !taskIds.includes(intent.rowId)) return null;
+    return { afterId: intent.rowId };
+  }
   const at = taskIds.indexOf(intent.rowId);
   if (at < 0) return null;
+  // `before <itself>` and `before <the row after itself>` are exactly the slot
+  // the dragged row already occupies.
+  if (intent.rowId === draggedId) return null;
   const previous = taskIds[at - 1];
+  if (previous === draggedId) return null;
   return previous === undefined ? 'first' : { afterId: previous };
 }
 
@@ -184,11 +205,21 @@ export function TaskList({
     if (!virtualized) return;
     const list = listRef.current;
     if (list === null) return;
-    // Measure what is actually rendered (real heights feed the prefix sums);
-    // jsdom reports 0 and keeps the uniform estimate — deterministic in tests.
-    for (const el of list.querySelectorAll<HTMLElement>('[data-task-id]')) {
+    // Measure what is actually rendered — task rows keyed by id AND group
+    // headers keyed by `row.key` (headers used to keep the uniform estimate,
+    // drifting the prefix sums in grouped aggregate views past 200 rows);
+    // jsdom reports 0 and keeps the estimate — deterministic in tests.
+    for (const el of list.querySelectorAll<HTMLElement>('[data-task-id], [data-row-key]')) {
       const height = el.getBoundingClientRect().height;
-      if (height > 0) heights.current.set(el.dataset['taskId'] ?? '', height);
+      if (height <= 0) continue;
+      const key = el.dataset['taskId'] ?? el.dataset['rowKey'] ?? '';
+      if (key !== '') heights.current.set(key, height);
+    }
+    // Evict rows that left the view (deleted / filtered out) so the cache
+    // cannot grow without bound inside a long session.
+    const live = new Set(rows.map((row) => (row.type === 'task' ? row.task.id : row.key)));
+    for (const key of [...heights.current.keys()]) {
+      if (!live.has(key)) heights.current.delete(key);
     }
   });
 
@@ -421,27 +452,48 @@ export function TaskList({
   ): void => {
     if (!reorderable || onMoveTo === undefined) return;
     sessionRef.current?.dispose();
+    // §8.1 desktop extra "executes F11 semantics": the task's CURRENT list is
+    // not a move target (F11.1 / §16-35), so it is never highlighted and a
+    // drop on it cancels instead of reordering the task to its own list's end
+    // (review R1 B2).
+    const ownListId =
+      rows.find(
+        (row): row is Extract<ViewRow, { type: 'task' }> =>
+          row.type === 'task' && row.task.id === taskId,
+      )?.task.listId ?? null;
+    const isOwnList = (listId: string): boolean => ownListId !== null && listId === ownListId;
     sessionRef.current = beginPointerDrag({
       taskId,
       readRows: () => renderedRowRects(listRef.current),
       readLists: () => (onDropOnList === undefined ? [] : sidebarListRects()),
       onHover: (intent) => {
         setDrag({ taskId, intent });
-        setDropHoverListId(intent.kind === 'list' ? intent.listId : null);
+        setDropHoverListId(
+          intent.kind === 'list' && !isOwnList(intent.listId) ? intent.listId : null,
+        );
       },
       onDrop: (intent) => {
         sessionRef.current = null;
         setDrag(null);
         setDropHoverListId(null);
         if (intent.kind === 'list') {
+          if (isOwnList(intent.listId)) {
+            onDragCancel?.(); // own list = not a target → cancel, never a write
+            return;
+          }
           onDropOnList?.(taskId, intent.listId);
           return;
         }
-        const position = positionForIntent(intent, ids);
-        if (position !== null) {
-          refocusRef.current = taskId;
-          onMoveTo(taskId, position);
+        const position = positionForIntent(intent, ids, taskId);
+        if (position === null) {
+          // Dropped into the row's own slot (§8.1): nothing to write and NO
+          // failure feedback — the same "no move happened" cancel the keyboard
+          // boundary guard announces (review R1 B1).
+          onDragCancel?.();
+          return;
         }
+        refocusRef.current = taskId;
+        onMoveTo(taskId, position);
       },
       onCancel: () => {
         sessionRef.current = null;
@@ -480,8 +532,10 @@ export function TaskList({
       return (
         // A group header IS a list item: axe `list` (serious, WCAG 2.2 AA) rejects
         // `li[role=presentation]` children, and an `h2` inside a plain `li` keeps the
-        // §5.3 heading + list semantics the views promise.
-        <li class="group-row" key={row.key}>
+        // §5.3 heading + list semantics the views promise. `data-row-key` lets the
+        // virtualizer measure header heights under the same key it lookups in
+        // `heightAt` (review R1 N3).
+        <li class="group-row" key={row.key} data-row-key={row.key}>
           <h2 class="group-header">
             <span class="group-title">
               {groupTitle(

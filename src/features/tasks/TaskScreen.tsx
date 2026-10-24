@@ -261,13 +261,22 @@ export function TaskScreen({
 
   /** Desktop drag onto a sidebar list (§8.1 extra) = move-to-list (F11 via pointer). */
   const onDropOnList = (id: string, listId: string): void => {
+    const task = storeState.tasks.get(id);
     const target = storeState.lists.get(listId);
-    if (target === undefined) return;
+    if (task === undefined || target === undefined) return;
+    // §8.1 says the sidebar drop "executes F11 semantics", and F11 excludes the
+    // task's CURRENT list as a target (F11.1 / §16-35): dropping on it changes
+    // nothing — a cancel, never a reorder to the bottom of its own list
+    // (review R1 B2; the drag layer already withholds the highlight).
+    if (task.listId === listId) {
+      announce(t('a11y.reorderCancelled'));
+      return;
+    }
     void moveTaskTo(id, listId, 'last').then((result) => {
       if (result.ok) {
         announce(
           t('a11y.taskMovedToList', {
-            title: storeState.tasks.get(id)?.title ?? '',
+            title: task.title,
             list: target.name,
           }),
         );
