@@ -9,6 +9,11 @@
  * rows"): a task whose parent is a member of the SAME group renders at depth 1
  * directly under its parent (in view order among its siblings); otherwise at
  * depth 0. Collapse/expand is UI state that filters rows.
+ *
+ * NEVER-DROPPED invariant (QA-D1): every live member row renders exactly once.
+ * Chains deeper than one level (only reachable via import — `upsertImported`
+ * validates format, not depth) flatten to depth 1; no live row is ever
+ * silently invisible in a tree-grouped view.
  */
 
 import { addDays, isOverdue } from './dates';
@@ -77,6 +82,11 @@ function byDueThenCreated(a: Task, b: Task): number {
  * Flat rows with one level of nesting: members sorted by `compare`, a member
  * whose parent is also in this member set renders at depth 1 right after its
  * parent; everyone else at depth 0.
+ *
+ * NEVER-DROPPED invariant (QA-D1): every member renders exactly once. Chains
+ * deeper than one level (import-reachable — `upsertImported` checks format,
+ * not depth) flatten to depth 1, and members no root reaches (a parent chain
+ * closing a cycle) render as their own depth-0 rows with their subtrees.
  */
 function treeRows(
   members: Task[],
@@ -98,10 +108,32 @@ function treeRows(
     }
   }
   const rows: ViewRow[] = [];
-  for (const task of roots) {
-    rows.push(taskRow(task, 0, today));
-    for (const child of childrenOf.get(task.id) ?? []) rows.push(taskRow(child, 1, today));
-  }
+  const emitted = new Set<string>();
+  // Pre-order DFS over the child buckets — iterative on purpose: an imported
+  // chain may be arbitrarily deep. Children render at depth 1 directly under
+  // their parent; anything deeper FLATTENS to depth 1 (rendered, never dropped).
+  const emitTree = (root: Task): void => {
+    if (emitted.has(root.id)) return;
+    emitted.add(root.id);
+    rows.push(taskRow(root, 0, today));
+    const stack: Task[] = [...(childrenOf.get(root.id) ?? [])].reverse();
+    while (stack.length > 0) {
+      const task = stack.pop();
+      if (task === undefined || emitted.has(task.id)) continue;
+      emitted.add(task.id);
+      rows.push(taskRow(task, 1, today));
+      const children = childrenOf.get(task.id);
+      if (children !== undefined) {
+        for (const child of [...children].reverse()) stack.push(child);
+      }
+    }
+  };
+  for (const root of roots) emitTree(root);
+  // Second pass: members whose parent chain closes a cycle reach no root
+  // (ADR-004 quarantines cycles on import, but a cross-device merge can still
+  // land one) — emit each as a depth-0 row with its subtree so no live row is
+  // ever silently invisible.
+  for (const task of sorted) emitTree(task);
   return rows;
 }
 

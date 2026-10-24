@@ -5,8 +5,9 @@
  * test narratives. Includes the recorded benchmarks (search@10k, domain
  * boot@10k, add→visible perceived latency) consumed by docs/qa/e2-domain.md.
  *
- * Characterization note: `DEFECT D1` below documents observed (buggy) behavior
- * on purpose — see docs/qa/e2-domain.md. When D1 is fixed that probe flips.
+ * Characterization note: `DEFECT D1` was fixed by the QA-D1 fix card — the probe
+ * below now pins the FIXED behavior (every row renders; a deeper chain
+ * flattens to depth 1) instead of the old silent drop.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -198,11 +199,11 @@ describe('QA: view-model boundary dates (§4.3–4.7)', () => {
     expect(rowShape(v.rows)).toEqual(['group:overdue', 'G1:0', 'group:day', 'G2:0']);
   });
 
-  it('DEFECT D1 (characterization): a depth-2 chain grandchild is silently DROPPED from tree-grouped views', () => {
-    // Reachable via TaskPort.upsertImported (validateTask checks parentTaskId is
-    // a ULID only — no depth rule), so a crafted/hostile import file can create
-    // chains treeRows() never renders. The row survives in state and in Search
-    // and Completed views, which are flat. See docs/qa/e2-domain.md D1.
+  it('QA-D1 fixed: a depth-2 chain renders every row — the grandchild flattens to depth 1', () => {
+    // Import-reachable (TaskPort.upsertImported validates parentTaskId format,
+    // not depth), so tree-grouped views must handle deeper chains themselves:
+    // the grandchild renders flattened at depth 1, never silently dropped.
+    // The row also survives in state and in the flat Search/Completed views.
     const tasks = [
       makeTask({ id: 'C1', listId: 'L1', sortOrder: 'h', createdAt: T0 }),
       makeTask({ id: 'C2', listId: 'L1', sortOrder: 'm', parentTaskId: 'C1', createdAt: T0 + 1 }),
@@ -210,7 +211,7 @@ describe('QA: view-model boundary dates (§4.3–4.7)', () => {
     ];
     const state = stateWith(tasks);
     const v = selectView(state, { kind: 'list', listId: 'L1' }, { today: TODAY });
-    expect(rowShape(v.rows)).toEqual(['C1:0', 'C2:1']); // C3 missing — CURRENT (buggy) behavior
+    expect(rowShape(v.rows)).toEqual(['C1:0', 'C2:1', 'C3:1']); // C3 visible, flattened
     // The same task IS visible in the flat views:
     const comp = selectView(
       applyOptimistic(emptyState(), {
