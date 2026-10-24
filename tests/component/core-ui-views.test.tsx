@@ -7,7 +7,7 @@
  * the count header, list badges, and the per-list deep-link error path.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/preact';
 import type { JSX } from 'preact';
 
@@ -16,7 +16,7 @@ import { CompletedView } from '../../src/features/completed/CompletedView';
 import { ListView } from '../../src/features/lists/ListView';
 import { TodayView } from '../../src/features/today/TodayView';
 import { WeekView } from '../../src/features/week/WeekView';
-import { bootError, resetTaskStore, status } from '../../src/features/tasks/store';
+import { bootError, resetTaskStore, status, today } from '../../src/features/tasks/store';
 import { clearToasts } from '../../src/features/tasks/toasts';
 import { makeList, makeTask, regions, seed, setUpCoreUi, tearDownCoreUi } from './core-ui-harness';
 
@@ -191,5 +191,43 @@ describe('M3 five views — grouping per the domain selector', () => {
       expect(regions.polite?.textContent).toBe('This task no longer exists');
     });
     window.location.hash = '';
+  });
+});
+
+describe('D9 day rollover — midnight timer + visibilitychange (§16 item 12)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('advances "today" at local midnight and again when a hidden tab becomes visible', async () => {
+    // Fake the clock BEFORE seeding so the store's armMidnight() schedules against it.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    vi.setSystemTime(new Date('2026-06-01T23:59:00'));
+    // Re-initialise `today` from the faked clock (module init used the real one).
+    resetTaskStore();
+
+    await seed({
+      lists: [makeList({ id: 'L1', name: 'Personal' })],
+      tasks: [makeTask({ id: 'T1', listId: 'L1', title: 'Due on the 1st', dueDate: '2026-06-01' })],
+    });
+    expect(today.value).toBe('2026-06-01');
+
+    render(<TodayView />);
+    expect(screen.getByRole('heading', { level: 2, name: 'Today (1)' })).toBeTruthy();
+
+    // Cross local midnight: the armed timer (msUntilNextLocalMidnight + 50 ms) fires
+    // and the view re-groups WITHOUT a reload — the task is now overdue, not today.
+    vi.setSystemTime(new Date('2026-06-02T00:00:30'));
+    await vi.advanceTimersByTimeAsync(61_000);
+    expect(today.value).toBe('2026-06-02');
+    expect(screen.getByRole('heading', { level: 2, name: 'Overdue (1)' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { level: 2, name: 'Today (1)' })).toBeNull();
+
+    // A tab the browser kept hidden across the rollover catches up on the next
+    // visibilitychange — no timer advance involved.
+    vi.setSystemTime(new Date('2026-06-03T09:00:00'));
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(today.value).toBe('2026-06-03');
+    expect(screen.getByRole('heading', { level: 2, name: 'Overdue (1)' })).toBeTruthy();
   });
 });
