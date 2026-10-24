@@ -5,9 +5,9 @@
  * test narratives. Includes the recorded benchmarks (search@10k, domain
  * boot@10k, add→visible perceived latency) consumed by docs/qa/e2-domain.md.
  *
- * Characterization note: `DEFECT D1` was fixed by the QA-D1 fix card — the probe
- * below now pins the FIXED behavior (every row renders; a deeper chain
- * flattens to depth 1) instead of the old silent drop.
+ * QA-D1 note: the D1 defect (a depth-2 chain grandchild silently dropped from
+ * tree-grouped views) is fixed — the probe below pins the FIXED behavior:
+ * every row renders and a deeper chain flattens to depth 1.
  */
 import { describe, expect, it } from 'vitest';
 
