@@ -104,8 +104,7 @@ export async function prepareImport(
   // — a corrupt file, not an empty backup. Snapshot metadata is informational-
   // only on import (Decisions 2.3/8 — never restored), so it must NOT count
   // toward the gate; accepted = settings + lists + tasks only.
-  const accepted =
-    (stageB.settings === null ? 0 : 1) + stageB.lists.length + stageB.tasks.length;
+  const accepted = (stageB.settings === null ? 0 : 1) + stageB.lists.length + stageB.tasks.length;
   if (accepted === 0) {
     // Reject with zero side effects; the recovery document rides the error so
     // the UX can offer the download (Decision 5.1 — quarantine is never silent).

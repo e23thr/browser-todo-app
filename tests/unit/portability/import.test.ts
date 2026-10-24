@@ -160,11 +160,7 @@ describe('NOTHING_TO_IMPORT gate — snapshot metadata is informational (drill 7
     };
     expect(recoveryDoc.source).toMatchObject({ kind: 'import', fileName: file });
     expect(recoveryDoc.entries).toHaveLength(3);
-    expect(recoveryDoc.entries.map((e) => e.store).sort()).toEqual([
-      'lists',
-      'settings',
-      'tasks',
-    ]);
+    expect(recoveryDoc.entries.map((e) => e.store).sort()).toEqual(['lists', 'settings', 'tasks']);
     // Entries are retrievable for hand-repair: raw rides verbatim with issues.
     const listEntry = recoveryDoc.entries.find((e) => e.store === 'lists');
     expect(listEntry?.raw).toMatchObject({ id: fixtureId(2), name: '' });
