@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { APP_URL } from './helpers';
+import { APP_URL, seedOnboardingDone } from './helpers';
 
 /**
  * No-flash theme boot (M7 / design §5.2): the hashed inline `#theme-boot` snippet must paint
@@ -10,9 +10,16 @@ import { APP_URL } from './helpers';
  * before any page script runs, timestamps the first non-null value, and a PerformanceObserver
  * records first-contentful-paint. The test asserts the theme was applied at-or-before FCP — a
  * late application (the flash the spec forbids) would land after it.
+ *
+ * First-run handshake (E3): a fresh profile's true first paint is the onboarding screen, so the
+ * shell-bound scenarios take `seedOnboardingDone()` on boot (the probe below is untouched); the
+ * 'absent preference' scenario additionally proves the ONBOARDING screen's own first paint is
+ * flash-free via the real, unseeded first-run journey.
  */
 
 const THEME_KEY = 'todo:prefs:v1:theme';
+/** The suite's seeded first-run handshake marker (ADR-002 Decision 7) — not an app write. */
+const ONBOARDING_KEY = 'todo:prefs:v1:onboardingStep';
 
 interface ThemeEvent {
   readonly value: string | null;
@@ -119,32 +126,90 @@ async function expectThemePaintedBeforeFirstPaint(
   }));
   expect(state.theme).toBe(expected);
   expect(state.colorScheme).toBe(expected);
-  // localStorage holds nothing but the boot-prefs mirror; the mirror itself is only written
-  // once a preference has actually been stored (ADR-002 Decision 7).
-  expect(state.storageKeys.filter((key) => key !== THEME_KEY)).toEqual([]);
+  // localStorage holds nothing but the boot-prefs mirror plus this suite's seeded first-run
+  // handshake marker (a harness init-script write, never an app one); the mirror itself is
+  // only written once a preference has actually been stored (ADR-002 Decision 7).
+  expect(state.storageKeys.filter((key) => key !== THEME_KEY && key !== ONBOARDING_KEY)).toEqual(
+    [],
+  );
 }
 
 test('explicit light preference paints light even when the OS is dark', async ({ page }) => {
   await instrument(page, 'light', 'dark');
+  await seedOnboardingDone(page);
   await expectThemePaintedBeforeFirstPaint(page, 'light');
 });
 
 test('explicit dark preference paints dark even when the OS is light', async ({ page }) => {
   await instrument(page, 'dark', 'light');
+  await seedOnboardingDone(page);
   await expectThemePaintedBeforeFirstPaint(page, 'dark');
 });
 
 test('system preference follows a dark OS colour scheme', async ({ page }) => {
   await instrument(page, 'system', 'dark');
+  await seedOnboardingDone(page);
   await expectThemePaintedBeforeFirstPaint(page, 'dark');
 });
 
 test('system preference follows a light OS colour scheme', async ({ page }) => {
   await instrument(page, 'system', 'light');
+  await seedOnboardingDone(page);
   await expectThemePaintedBeforeFirstPaint(page, 'light');
 });
 
-test('an absent preference behaves like system', async ({ page }) => {
+test('an absent preference behaves like system', async ({ page, browser }) => {
   await instrument(page, null, 'dark');
+  await seedOnboardingDone(page);
   await expectThemePaintedBeforeFirstPaint(page, 'dark');
+
+  // The true first paint on a fresh profile is the onboarding screen, so it must be
+  // flash-free too: replay the real, UNSEEDED first-run journey and check the probe
+  // BEFORE dismissing it.
+  const firstRun = await browser.newContext();
+  const onboardingPage = await firstRun.newPage();
+  await onboardingPage.emulateMedia({ colorScheme: 'dark' });
+  await instrument(onboardingPage, null, 'dark');
+  await onboardingPage.goto(APP_URL);
+
+  await expect(
+    onboardingPage.getByRole('heading', {
+      level: 1,
+      name: 'Your data lives in this browser',
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  // The existing shell-bound helper reads the probe only after the shell's heavier render, so
+  // the PerformanceObserver has always delivered FCP by then; the onboarding surface paints
+  // fast enough to race it, so wait for the delivery before reading (assertions unchanged).
+  await onboardingPage.waitForFunction(
+    () => ((window as WindowWithProbe).__themeProbe ?? null)?.fcp != null,
+  );
+
+  const probe = await onboardingPage.evaluate(
+    () => (window as WindowWithProbe).__themeProbe ?? null,
+  );
+  expect(probe, 'the pre-paint probe must have been installed').not.toBeNull();
+  expect(probe?.fcp, 'first-contentful-paint must have been observed').not.toBeNull();
+  const painted = probe?.events.find((event) => event.value !== null);
+  expect(painted, 'the inline boot snippet must set data-theme').toBeTruthy();
+  expect(painted?.value).toBe('dark');
+  // No flash on the onboarding screen's own first paint either.
+  expect(painted?.time).toBeLessThanOrEqual(probe?.fcp ?? Number.POSITIVE_INFINITY);
+
+  const state = await onboardingPage.evaluate((): Omit<DocumentState, 'storageKeys'> => ({
+    theme: document.documentElement.dataset['theme'] ?? null,
+    colorScheme: document.documentElement.style.colorScheme,
+  }));
+  expect(state.theme).toBe('dark');
+  expect(state.colorScheme).toBe('dark');
+
+  // The handshake completes exactly as a real first run: the shell mounts after "Get started".
+  await onboardingPage.getByRole('button', { name: 'Get started', exact: true }).click();
+  await expect(
+    onboardingPage.getByRole('heading', { level: 1, name: 'Today', exact: true }),
+  ).toBeVisible();
+
+  await firstRun.close();
 });
