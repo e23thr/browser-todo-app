@@ -12,6 +12,15 @@ import { APP_URL, BASE_PATH, PREVIEW_PORT } from './tests/e2e/helpers';
  * of silently serving old bytes. CI is unaffected — it already forced a fresh build.
  * CI jobs install a single browser (`npm run e2e:install`); the cross-browser matrix lives in
  * .github/workflows/nightly.yml.
+ *
+ * The preview MUST bind `--host 127.0.0.1` (t_46622f83): the readiness poll and every test hit
+ * `http://127.0.0.1:<port>` (APP_URL below), but `vite preview` with no `--host` binds
+ * `listen(port, 'localhost')` — a SINGLE address chosen by the host's DNS lookup order for
+ * `localhost`. Where that resolves to `::1` first (GitHub Actions runners), the server listens on
+ * `[::1]` only, the 127.0.0.1 poll gets ECONNREFUSED forever, and Playwright fails with
+ * "Timed out waiting 180000ms from config.webServer." (CI run 40194624821, e2e-smoke +
+ * a11y-axe). Pinning the bind address to the poll address makes startup deterministic
+ * regardless of resolver order.
  */
 export default defineConfig({
   testDir: './tests/e2e',
@@ -35,7 +44,7 @@ export default defineConfig({
     { name: 'chromium-th', use: { ...devices['Desktop Chrome'], locale: 'th-TH' } },
   ],
   webServer: {
-    command: `npm run build && npx vite preview --port ${String(PREVIEW_PORT)} --strictPort`,
+    command: `npm run build && npx vite preview --host 127.0.0.1 --port ${String(PREVIEW_PORT)} --strictPort`,
     url: APP_URL,
     reuseExistingServer: false,
     timeout: 180_000,
