@@ -56,13 +56,17 @@ describe('shortcut layer (S8)', () => {
     });
 
     press({ key: 'F', ctrlKey: true, shiftKey: true });
-    press({ key: 'e', metaKey: true, shiftKey: true });
-    press({ key: 'S', ctrlKey: true, shiftKey: true });
+    press({ key: '1', metaKey: true, shiftKey: true });
+    press({ key: '2', ctrlKey: true, shiftKey: true });
     press({ key: '?', shiftKey: true });
-    // Nothing else fires: plain letters, plain modifiers, wrong chords.
+    // Nothing else fires: plain letters, plain modifiers, wrong chords, and the
+    // RETIRED letters (Shift+S / Shift+E are floor-browser combos since the
+    // §9.4 re-audit — review B2).
     press({ key: 'f' });
     press({ key: 'F', ctrlKey: true });
     press({ key: 'x', ctrlKey: true, shiftKey: true });
+    press({ key: 'S', ctrlKey: true, shiftKey: true });
+    press({ key: 'e', metaKey: true, shiftKey: true });
     expect(calls).toEqual(['palette', 'quickAdd', 'search', 'help']);
 
     dispose();
@@ -230,6 +234,66 @@ describe('command palette (S8 core loop, keyboard-only)', () => {
     fireEvent.keyDown(input, { key: 'Escape' }); // root -> close
     expect(handlers.onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('describes the dialog with the keyboard hint (aria-describedby, review N5)', async () => {
+    await openPalette();
+    const dialog = document.querySelector('.dialog');
+    const describedBy = dialog?.getAttribute('aria-describedby') ?? '';
+    expect(describedBy).not.toBe('');
+    const hint = document.getElementById(describedBy);
+    expect(hint).not.toBeNull();
+    expect(hint?.className ?? '').toContain('palette-hint');
+  });
+
+  it('stays inside the §9.1 INP budget at 10k tasks on the component path (review N3)', async () => {
+    // The ranker budget is pinned in tests/unit/commands/paletteIndex.test.ts;
+    // this pins the SHIPPED component path (row memo + Map lookup included).
+    const many = Array.from({ length: 10_000 }, (_unused, index) =>
+      makeTask({
+        id: `T${String(index).padStart(5, '0')}`,
+        listId: 'L1',
+        title: `Task number ${String(index)} with a long descriptive title`,
+      }),
+    );
+    await seed({ lists: [makeList({ id: 'L1', name: 'Work' })], tasks: many });
+
+    const openT0 = performance.now();
+    render(
+      <CommandPalette
+        onClose={() => undefined}
+        onOpenHelp={() => undefined}
+        onMoveTask={() => undefined}
+        onSetReminder={() => undefined}
+      />,
+    );
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+    const openMs = performance.now() - openT0;
+
+    const input = document.querySelector<HTMLInputElement>('.palette-input');
+    expect(input).not.toBe(null);
+
+    const t0 = performance.now();
+    fireEvent.input(input!, { target: { value: 'number 999' } });
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+    const keystrokeMs = performance.now() - t0;
+
+    const t1 = performance.now();
+    fireEvent.input(input!, { target: { value: '' } });
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+    const clearMs = performance.now() - t1;
+
+    timings.push(
+      `palette @10k tasks: open ${openMs.toFixed(1)} ms / keystroke ${keystrokeMs.toFixed(1)} ms / clear ${clearMs.toFixed(1)} ms (budget 200 ms)`,
+    );
+    expect(keystrokeMs).toBeLessThan(200);
+    expect(clearMs).toBeLessThan(200);
+  });
 });
 
 describe('quick add via shortcut (P4 JTBD: < 5 seconds)', () => {
@@ -244,7 +308,7 @@ describe('quick add via shortcut (P4 JTBD: < 5 seconds)', () => {
     await addList({ name: 'Inbox', color: '#2e6fd9' });
 
     const started = performance.now();
-    press({ key: 'E', ctrlKey: true, shiftKey: true });
+    press({ key: '1', ctrlKey: true, shiftKey: true });
     const sheet = await screen.findByRole('dialog');
     const title = within(sheet).getByLabelText('Title', { exact: true });
     fireEvent.input(title, { target: { value: 'Water the plants' } });

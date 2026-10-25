@@ -21,6 +21,7 @@ import { Dialog } from '../../components/Dialog';
 import type { Task } from '../../domain/model';
 import { noteReminderFirstUse } from './firstUse';
 import { ReminderField } from './ReminderField';
+import { rescheduleReminders } from './reminders';
 import { patchSettings, setTaskReminder, state } from '../tasks/store';
 
 export interface ReminderDialogProps {
@@ -47,7 +48,14 @@ export function ReminderDialog({ task, onClose }: ReminderDialogProps): JSX.Elem
       if (state.value.settings?.notificationsEnabled !== true) {
         void patchSettings({ notificationsEnabled: true });
       }
-      void noteReminderFirstUse();
+      // The permission prompt is answered AFTER this save's own replans (both
+      // still saw permission 'default' → engine off), so the engine must be
+      // re-planned once the prompt resolves — otherwise the reminder the user
+      // just saved never fires while the page stays open (review B1; the
+      // mirror of NotificationsSettings.toggle).
+      void noteReminderFirstUse().then(() => {
+        rescheduleReminders();
+      });
       announce(t('a11y.reminderSaved'));
       onClose();
     });

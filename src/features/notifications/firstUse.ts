@@ -4,7 +4,8 @@
  *
  * "First use" is exactly two user gestures:
  *   1. turning the reminders toggle ON in Settings (`NotificationsSettings`),
- *   2. saving a task with a reminder from the task editor (`TaskEditor`).
+ *   2. saving a non-empty reminder from the reminder dialog (`ReminderDialog`,
+ *      opened from the command palette's "Set reminder…" action).
  *
  * Nothing else may call `requestPermission` — not the boot path, not the
  * scheduler, not the palette. One request per session while the state is

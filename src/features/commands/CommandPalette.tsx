@@ -10,10 +10,14 @@
  *    Escape there steps back to the root stage instead of closing, so the
  *    "complete" and "move" core-loop commands are always one keystroke deep.
  *  - Results are capped (`RESULT_LIMIT`) and ranked by `paletteIndex`, so a 10k
- *    task list stays inside the §9.1 INP budget (pinned in the unit suite).
+ *    task list stays inside the §9.1 INP budget (pinned in the unit suite AND
+ *    on this component path in tests/component/commands.test.tsx — review N3).
+ *  - The row table is memoized on the store snapshot + stage, and the ranked
+ *    ids resolve through a `Map`, so a keystroke costs one rank pass and no
+ *    per-row scans (review N3).
  */
 
-import { useId, useState } from 'preact/hooks';
+import { useId, useMemo, useState } from 'preact/hooks';
 import type { JSX, TargetedEvent } from 'preact';
 
 import { announce } from '../../app/announce';
@@ -33,6 +37,14 @@ interface Row {
   readonly run: () => void;
 }
 
+/** Focus a task's row without selector interpolation (ids are app-generated). */
+function focusTaskRow(taskId: string): void {
+  const row = [...document.querySelectorAll<HTMLElement>('[data-task-id]')].find(
+    (element) => element.dataset['taskId'] === taskId,
+  );
+  row?.focus();
+}
+
 export interface CommandPaletteProps {
   readonly onClose: () => void;
   /** Swap to the shortcuts help dialog (the palette closes first). */
@@ -50,11 +62,16 @@ export function CommandPalette({
   onSetReminder,
 }: CommandPaletteProps): JSX.Element {
   const listId = useId();
+  const hintId = `${listId}-hint`;
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const [stage, setStage] = useState<Stage>({ kind: 'root' });
 
-  const rows = ((): Row[] => {
+  // One snapshot per store revision: `state` is replaced (not mutated) on every
+  // mutation, so this memo is fresh whenever the data is and untouched by
+  // keystrokes.
+  const storeState = state.value;
+  const rows: Row[] = useMemo(() => {
     if (stage.kind === 'task') {
       const task = stage.task;
       const done = task.status === 'done';
@@ -70,7 +87,7 @@ export function CommandPalette({
             onClose();
             window.location.hash = `#/list/${encodeURIComponent(task.listId)}`;
             setTimeout(() => {
-              document.querySelector<HTMLElement>(`[data-task-id="${task.id}"]`)?.focus();
+              focusTaskRow(task.id);
             }, 0);
           },
         },
@@ -184,14 +201,14 @@ export function CommandPalette({
       },
     ];
 
-    const taskRows: Row[] = [...state.value.tasks.values()]
+    const taskRows: Row[] = [...storeState.tasks.values()]
       .filter((task) => task.deletedAt === null)
       .map((task) => ({
         entry: {
           id: task.id,
           kind: 'task' as const,
           label: task.title,
-          haystack: state.value.lists.get(task.listId)?.name ?? '',
+          haystack: storeState.lists.get(task.listId)?.name ?? '',
         },
         run: () => {
           setStage({ kind: 'task', task });
@@ -201,13 +218,18 @@ export function CommandPalette({
       }));
 
     return [...actionRows, ...taskRows];
-  })();
+    // The row closures capture the host handlers, which are semantically stable
+    // across renders (they route to module-level store actions and host state).
+  }, [storeState, stage]);
 
-  const visible = rankEntries(
-    query,
-    rows.map((row) => row.entry),
-    RESULT_LIMIT,
-  ).map((entry) => rows.find((row) => row.entry.id === entry.id) as Row);
+  const visible = useMemo(() => {
+    const byId = new Map(rows.map((row) => [row.entry.id, row]));
+    return rankEntries(
+      query,
+      rows.map((row) => row.entry),
+      RESULT_LIMIT,
+    ).map((entry) => byId.get(entry.id) as Row);
+  }, [rows, query]);
   const activeIndex = visible.length === 0 ? -1 : Math.min(active, visible.length - 1);
 
   const runActive = (): void => {
@@ -254,7 +276,12 @@ export function CommandPalette({
   };
 
   return (
-    <Dialog label={t('palette.title')} panelClass="command-palette" onClose={handleClose}>
+    <Dialog
+      label={t('palette.title')}
+      panelClass="command-palette"
+      describedById={hintId}
+      onClose={handleClose}
+    >
       <label class="visually-hidden" htmlFor={`${listId}-input`}>
         {t('palette.title')}
       </label>
@@ -279,7 +306,9 @@ export function CommandPalette({
         }}
         onKeyDown={onInputKeyDown}
       />
-      <p class="palette-hint">{t('palette.hint')}</p>
+      <p class="palette-hint" id={hintId}>
+        {t('palette.hint')}
+      </p>
       <ul class="palette-list" id={listId} role="listbox" aria-label={t('palette.listLabel')}>
         {visible.map((row, index) => (
           <li

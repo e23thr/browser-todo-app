@@ -60,6 +60,29 @@ describe('shortcut map (S8)', () => {
     }
   });
 
+  it('reserves every browser-verified combo from the §9.4 floor re-audit (review B2)', () => {
+    const reserved = (partial: Partial<Combo>): boolean =>
+      RESERVED_COMBOS.some((combo) =>
+        sameCombo(combo, { mod: true, shift: true, key: '', ...partial }),
+      );
+    // The retired chords and their siblings: one cited source per browser in
+    // docs/dev/commands-notify.md §1.1 (Firefox Screenshots / Edge Screenshot /
+    // macOS Save As on S; Firefox Network / Edge sidebar search on E; paste-
+    // plain V, Collections Y, move-URL X, …).
+    for (const key of ['s', 'e', 'v', 'y', 'x', 'g', 'w', 't', 'n', 'p', 'o', 'b', 'd', 'r', 'm']) {
+      expect(reserved({ key }), `Ctrl/⌘+Shift+${key} must stay reserved`).toBe(true);
+    }
+    // macOS system screenshots (support.apple.com/en-us/102650).
+    for (const key of ['3', '4', '5', '6']) {
+      expect(reserved({ key }), `⌘+Shift+${key} must stay reserved`).toBe(true);
+    }
+    // The single cleared letter chord is NOT reserved — the palette owns it.
+    expect(reserved({ key: 'f' })).toBe(false);
+    // The digit chords we ship are ours, not reserved territory.
+    expect(reserved({ key: '1' })).toBe(false);
+    expect(reserved({ key: '2' })).toBe(false);
+  });
+
   it('reserves no unmodified letter keys (screen-reader quick-nav family)', () => {
     for (const binding of SHORTCUTS) {
       const unmodified = !binding.combo.mod && !binding.combo.shift;
@@ -85,19 +108,39 @@ describe('matchShortcut', () => {
     expect(matchShortcut(keydown({ key: 'f' }))).toBe(null);
   });
 
-  it('matches quick add on Ctrl/⌘+Shift+E and search on Ctrl/⌘+Shift+S', () => {
-    expect(matchShortcut(keydown({ key: 'E', ctrlKey: true, shiftKey: true }))?.id).toBe(
+  it('matches quick add on Ctrl/⌘+Shift+1 and search on Ctrl/⌘+Shift+2', () => {
+    // Letters would shadow floor-browser combos (the §9.4 re-audit after review
+    // B2): quick add and search live on the digit family instead.
+    expect(matchShortcut(keydown({ key: '1', ctrlKey: true, shiftKey: true }))?.id).toBe(
       'quickAdd',
     );
-    expect(matchShortcut(keydown({ key: 'S', metaKey: true, shiftKey: true }))?.id).toBe('search');
+    expect(matchShortcut(keydown({ key: '2', metaKey: true, shiftKey: true }))?.id).toBe('search');
+    // The digit row arrives as a shifted symbol on some layouts — the `code`
+    // fallback (`Digit1`/`Digit2`) still matches.
+    expect(
+      matchShortcut(keydown({ key: '!', code: 'Digit1', ctrlKey: true, shiftKey: true }))?.id,
+    ).toBe('quickAdd');
+    expect(
+      matchShortcut(keydown({ key: '"', code: 'Digit2', ctrlKey: true, shiftKey: true }))?.id,
+    ).toBe('search');
+    // The retired chords are dead: Firefox Screenshots / Edge Screenshot /
+    // macOS Save As own Shift+S, Firefox Network / Edge sidebar search own
+    // Shift+E (docs/dev/commands-notify.md §1.1).
+    expect(matchShortcut(keydown({ key: 'S', ctrlKey: true, shiftKey: true }))).toBe(null);
+    expect(matchShortcut(keydown({ key: 'e', ctrlKey: true, shiftKey: true }))).toBe(null);
+    // Missing Shift / wrong digit are not ours.
+    expect(matchShortcut(keydown({ key: '1', ctrlKey: true, shiftKey: false }))).toBe(null);
+    expect(matchShortcut(keydown({ key: '3', ctrlKey: true, shiftKey: true }))).toBe(null);
   });
 
-  it('matches help on `?` (and Shift+Slash for layout variance)', () => {
+  it('matches help on the `?` character regardless of shift state (review N2)', () => {
     expect(matchShortcut(keydown({ key: '?', shiftKey: true }))?.id).toBe('help');
+    // Layouts that type `?` unshifted must still open help.
+    expect(matchShortcut(keydown({ key: '?', shiftKey: false }))?.id).toBe('help');
     expect(matchShortcut(keydown({ key: '/', code: 'Slash', shiftKey: true }))?.id).toBe('help');
     // `/` alone is Firefox quick-find territory — never ours.
     expect(matchShortcut(keydown({ key: '/', code: 'Slash' }))).toBe(null);
-    expect(matchShortcut(keydown({ key: '?', shiftKey: false }))).toBe(null);
+    expect(matchShortcut(keydown({ key: '/', code: 'Slash', shiftKey: false }))).toBe(null);
   });
 
   it('ignores events carrying extra modifiers', () => {
@@ -111,8 +154,10 @@ describe('matchShortcut', () => {
 describe('formatCombo', () => {
   it('renders the help-dialog notation', () => {
     const palette = SHORTCUTS.find((binding) => binding.id === 'palette');
+    const quickAdd = SHORTCUTS.find((binding) => binding.id === 'quickAdd');
     const help = SHORTCUTS.find((binding) => binding.id === 'help');
     expect(formatCombo(palette!.combo)).toBe('Ctrl/⌘ + Shift + F');
+    expect(formatCombo(quickAdd!.combo)).toBe('Ctrl/⌘ + Shift + 1');
     expect(formatCombo(help!.combo)).toBe('?');
   });
 });

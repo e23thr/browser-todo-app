@@ -3,9 +3,9 @@
  * instant in the model (ADR-003). Native `datetime-local` so keyboard and locale
  * behaviour stay the platform's (same rationale as the due-date field, §9.5).
  *
- * Setting a reminder counts as FIRST USE of the reminder feature: the task
- * editor calls `noteReminderFirstUse()` on save (never at boot — binding
- * decision on t_ee8ecb0b).
+ * Setting a reminder counts as FIRST USE of the reminder feature: the reminder
+ * dialog (`ReminderDialog`) calls `noteReminderFirstUse()` on save (never at
+ * boot — binding decision on t_ee8ecb0b).
  */
 
 import { useId } from 'preact/hooks';

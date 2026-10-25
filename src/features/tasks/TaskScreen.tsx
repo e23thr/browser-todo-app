@@ -333,7 +333,11 @@ export function TaskScreen({
     void moveTaskTo(task.id, targetListId, 'last').then((result) => {
       if (result.ok) {
         announce(t('a11y.taskMovedToList', { title: task.title, list: target.name }));
-        document.querySelector<HTMLElement>(`[data-task-id="${task.id}"]`)?.focus();
+        // No selector interpolation for the id (review N6) — scan the dataset.
+        const row = [...document.querySelectorAll<HTMLElement>('[data-task-id]')].find(
+          (element) => element.dataset['taskId'] === task.id,
+        );
+        row?.focus();
       }
     });
   };

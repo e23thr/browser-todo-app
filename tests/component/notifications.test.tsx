@@ -256,4 +256,69 @@ describe('permission timing (first use only — never at boot)', () => {
     // stays at zero and the quiet status line is the only surface (E11).
     expect(permissionRequests).toBe(0);
   });
+
+  it('granted from the reminder dialog → the reminder the user just saved fires (review B1)', async () => {
+    // Real timers: the prompt is answered AFTER this save's own replans (a human
+    // takes seconds), so the engine arms only through the post-grant
+    // rescheduleReminders() in ReminderDialog.save. This is probe A of the
+    // t_8f41af00 review, folded into the shipped suite (it failed as shipped).
+    fired = [];
+    permissionRequests = 0;
+    const GRANT_DELAY = 150;
+    class MockNotification {
+      static permission: NotificationPermission = 'default';
+      static requestPermission = vi.fn(async () => {
+        permissionRequests += 1;
+        await new Promise((resolve) => {
+          setTimeout(resolve, GRANT_DELAY);
+        });
+        MockNotification.permission = 'granted';
+        return 'granted';
+      });
+      onclick: (() => void) | null = null;
+      constructor(title: string, options?: { body?: string; tag?: string }) {
+        fired.push({ title, options });
+      }
+    }
+    vi.stubGlobal('Notification', MockNotification);
+
+    await seed({
+      lists: [makeList({ id: 'L1', name: 'Work' })],
+      tasks: [makeTask({ id: 'T1', title: 'Granted reminder', reminderAt: Date.now() + 1000 })],
+    });
+    startReminders();
+    render(<ReminderDialog task={state.value.tasks.get('T1')!} onClose={() => undefined} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(permissionRequests).toBe(1);
+    });
+    await waitFor(() => {
+      expect(state.value.settings?.notificationsEnabled).toBe(true);
+    });
+    await waitFor(
+      () => {
+        expect(fired.map((entry) => entry.title)).toEqual(['Granted reminder']);
+      },
+      { timeout: 8000 },
+    );
+  });
+
+  it('the status line tracks a permission changed in the browser UI (review N4)', async () => {
+    mockNotification('denied');
+    await seed({ lists: [makeList({ id: 'L1', name: 'Work' })], tasks: [] });
+    render(<NotificationsSettings />);
+    expect(screen.getByTestId('notifications-status').textContent).toContain('blocked');
+
+    // The user allows notifications in the browser's own UI while the row stays
+    // on screen — the line must not go stale.
+    mockNotification('granted');
+    window.dispatchEvent(new Event('focus'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('notifications-status').textContent).toContain(
+        'Reminders are saved but nothing is shown',
+      );
+    });
+  });
 });
