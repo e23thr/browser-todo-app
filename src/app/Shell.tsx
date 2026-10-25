@@ -18,6 +18,7 @@ import { Icon, IconSprite, type IconName } from './icons';
 import { t } from './i18n';
 import { useDropHoverListId, useListOptions } from './lists';
 import { useMediaQuery, WIDE_QUERY } from './media';
+import { openCommandPalette, openShortcutsHelp } from '../features/commands/openers';
 import { startQuickAdd } from './quickAdd';
 
 interface NavItem {
@@ -222,6 +223,32 @@ export function Shell({ pattern, children }: ShellProps): JSX.Element {
                     <span class="nav-label">{t('nav.settings')}</span>
                   </a>
                 </li>
+                {/* S8 discoverability: the palette and the shortcut map are also
+                    reachable without the keyboard (they are dialogs, §9.6). */}
+                <li>
+                  <button
+                    type="button"
+                    class="nav-action"
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      openCommandPalette();
+                    }}
+                  >
+                    <span class="nav-label">{t('nav.commandPalette')}</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    class="nav-action"
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      openShortcutsHelp();
+                    }}
+                  >
+                    <span class="nav-label">{t('nav.shortcuts')}</span>
+                  </button>
+                </li>
               </ul>
             </nav>
           </header>
@@ -363,6 +390,32 @@ export function Shell({ pattern, children }: ShellProps): JSX.Element {
                   >
                     <span class="nav-label">{t('nav.settings')}</span>
                   </a>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    class="nav-action"
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      closeDrawer(false);
+                      openCommandPalette();
+                    }}
+                  >
+                    <span class="nav-label">{t('nav.commandPalette')}</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    class="nav-action"
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      closeDrawer(false);
+                      openShortcutsHelp();
+                    }}
+                  >
+                    <span class="nav-label">{t('nav.shortcuts')}</span>
+                  </button>
                 </li>
               </ul>
             </nav>

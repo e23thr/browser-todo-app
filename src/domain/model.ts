@@ -89,7 +89,7 @@ export type TaskDraft = {
  */
 export type TaskPatch = Partial<
   Pick<Task, 'title' | 'notes' | 'priority' | 'dueDate' | 'tags' | 'reminderAt' | 'recurrence'>
-> & { dueDateUnset?: true };
+> & { dueDateUnset?: true; reminderAtUnset?: true };
 
 /** Settings used before the first `update()` persists the singleton row. */
 export const DEFAULT_SETTINGS: Settings = {

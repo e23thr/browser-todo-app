@@ -1,0 +1,162 @@
+/*
+ * Command palette (S8), shortcuts help (S8) and reminders (S5) styles.
+ *
+ * Layout only — tokens from tokens.css; the dialogs themselves reuse the
+ * shared `.dialog` shell (tasks.css §9.6 contract: focus ring, scrim, foot).
+ */
+
+/* ------------------------------ command palette ----------------------------- */
+
+.command-palette {
+  max-width: 34rem;
+}
+
+.palette-input {
+  font-size: var(--font-body);
+}
+
+.palette-hint {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-caption);
+  line-height: var(--line-caption);
+}
+
+.palette-list {
+  max-height: 40vh;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.palette-option {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--touch-min);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.palette-option[data-active='true'] {
+  background: var(--color-surface-subtle);
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.palette-option-label {
+  color: var(--color-text);
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+}
+
+.palette-option-group {
+  flex: none;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-caption);
+  line-height: var(--line-caption);
+}
+
+.palette-empty {
+  padding: var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--font-body-sm);
+}
+
+/* ----------------------------- shortcuts help ------------------------------ */
+
+.shortcuts-intro {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+}
+
+.shortcuts-group {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--font-caption);
+  line-height: var(--line-caption);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.shortcut-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shortcut-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-1) var(--space-3);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.shortcut-row:last-child {
+  border-bottom: 0;
+}
+
+.shortcut-label {
+  color: var(--color-text);
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+}
+
+.shortcut-combo {
+  justify-self: end;
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-caption);
+  line-height: var(--line-caption);
+  white-space: nowrap;
+}
+
+.shortcut-desc {
+  grid-column: 1 / -1;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-caption);
+  line-height: var(--line-caption);
+}
+
+.shortcuts-note {
+  margin: var(--space-4) 0 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-caption);
+  line-height: var(--line-caption);
+}
+
+.shortcuts-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* -------------------------------- reminders -------------------------------- */
+
+.reminder-task-title {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+}
+
+.notifications-field .checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-min);
+  color: var(--color-text);
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+}

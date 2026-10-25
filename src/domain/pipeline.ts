@@ -266,10 +266,13 @@ export class MutationRunner {
       deviceId: this.#deps.deviceId,
     };
     const cleared = patch.dueDateUnset === true ? omit(next, 'dueDate') : next;
+    // S5 (t_ee8ecb0b): clearing a reminder mirrors `dueDateUnset` — the field is
+    // removed from the record, never parked at a sentinel timestamp.
+    const clearedReminder = patch.reminderAtUnset === true ? omit(cleared, 'reminderAt') : cleared;
     return this.#run<Task>(
       'patch-task',
       opId,
-      { tasks: [cleared] },
+      { tasks: [clearedReminder] },
       { tasks: [id] },
       async () => this.#deps.tasks.patch(id, patch),
       (saved) => ({ tasks: [saved] }),

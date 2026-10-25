@@ -61,6 +61,9 @@ export function makeTask(over: Partial<Task> = {}): Task {
     deviceId: 'TEST',
     ...(over.dueDate !== undefined ? { dueDate: over.dueDate } : {}),
     ...(over.completedAt !== undefined ? { completedAt: over.completedAt } : {}),
+    // S5 (t_ee8ecb0b): reminder instants + recurrence seeding for notification tests.
+    ...(over.reminderAt !== undefined ? { reminderAt: over.reminderAt } : {}),
+    ...(over.recurrence !== undefined ? { recurrence: over.recurrence } : {}),
   };
 }
 
@@ -155,16 +158,22 @@ export function makeTestRunner(
         ...(patch.notes !== undefined ? { notes: patch.notes } : {}),
         ...(patch.priority !== undefined ? { priority: patch.priority } : {}),
         ...(patch.dueDate !== undefined ? { dueDate: patch.dueDate } : {}),
+        ...(patch.reminderAt !== undefined ? { reminderAt: patch.reminderAt } : {}),
+        ...(patch.recurrence !== undefined ? { recurrence: patch.recurrence } : {}),
         updatedAt: clock(),
       };
-      const cleaned =
-        patch.dueDateUnset === true
-          ? (() => {
-              const copy = { ...next };
-              delete copy.dueDate;
-              return copy;
-            })()
-          : next;
+      const withoutDue = (task: Task): Task => {
+        const copy = { ...task };
+        delete copy.dueDate;
+        return copy;
+      };
+      const withoutReminder = (task: Task): Task => {
+        const copy = { ...task };
+        delete copy.reminderAt;
+        return copy;
+      };
+      const clearedDue = patch.dueDateUnset === true ? withoutDue(next) : next;
+      const cleaned = patch.reminderAtUnset === true ? withoutReminder(clearedDue) : clearedDue;
       tasks.set(id, cleaned);
       return ok(cleaned);
     },

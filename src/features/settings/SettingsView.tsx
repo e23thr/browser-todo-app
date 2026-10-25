@@ -13,6 +13,7 @@ import {
 } from '../../app/settings';
 import { View } from '../../components/View';
 import { StoragePanelContainer } from '../data-safety/StoragePanelContainer';
+import { NotificationsSettings } from '../notifications/NotificationsSettings';
 
 /** One choice inside a radio row. */
 interface Choice {
@@ -176,6 +177,12 @@ export default function SettingsView(): JSX.Element {
             )}
           </select>
         </div>
+
+        {/* S5 (V1): local reminders/notifications master switch + quiet status. */}
+        <fieldset class="field-group">
+          <legend class="field-legend">{t('settings.notifications')}</legend>
+          <NotificationsSettings />
+        </fieldset>
       </section>
 
       {/* Storage & backup mount point (M14, filled by E3). */}

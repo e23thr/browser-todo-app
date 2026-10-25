@@ -33,7 +33,7 @@ import { noteFirstMeaningfulWrite } from '../data-safety/persistGate';
 import { noteTaskCreated } from '../install/installPrompt';
 import { msUntilNextLocalMidnight, todayStr } from '../../domain/dates';
 import { err, ok, type AppError, type Result } from '../../domain/kernel';
-import type { List, Priority, Task } from '../../domain/model';
+import type { List, Priority, Settings, Task } from '../../domain/model';
 import { MutationRunner } from '../../domain/pipeline';
 import type { ListRemoveDisposition, ListPosition, TaskPosition } from '../../domain/ports';
 import { emptyState, type State } from '../../domain/state';
@@ -385,6 +385,11 @@ export interface TaskInput {
   readonly dueDate: string | null;
   readonly listId: string;
   readonly priority: Priority;
+  /**
+   * `undefined` = leave the reminder unchanged (composer path), `null` = clear
+   * it, a number = the `reminderAt` instant (S5 reminder field).
+   */
+  readonly reminderAt?: number | null;
 }
 
 function noRunner(): Promise<Result<never, AppError>> {
@@ -441,6 +446,11 @@ export async function saveTask(id: string, input: TaskInput): Promise<Result<voi
       notes: input.notes,
       priority: input.priority,
       ...(input.dueDate !== null ? { dueDate: input.dueDate } : { dueDateUnset: true }),
+      ...(input.reminderAt === undefined
+        ? {}
+        : input.reminderAt !== null
+          ? { reminderAt: input.reminderAt }
+          : { reminderAtUnset: true as const }),
     }),
   );
   if (!patched.ok) return err(patched.error);
@@ -464,6 +474,33 @@ export function deleteTask(id: string): Promise<Result<void, AppError>> {
   const r = runner;
   if (r === null) return noRunner();
   return guard(() => r.removeTask(id));
+}
+
+/**
+ * Patch the ADR-002 `settings` singleton through the guarded write protocol
+ * (S5 `notificationsEnabled` toggle is the current caller).
+ */
+export function patchSettings(
+  patch: Partial<Omit<Settings, 'id'>>,
+): Promise<Result<Settings, AppError>> {
+  const r = runner;
+  if (r === null) return noRunner();
+  return guard(() => r.updateSettings(patch));
+}
+
+/**
+ * Set (a number) or clear (`null`) a task's `reminderAt` — one field-scoped
+ * guarded patch (S5; the command palette's reminder dialog is the V1 surface).
+ */
+export function setTaskReminder(
+  id: string,
+  reminderAt: number | null,
+): Promise<Result<Task, AppError>> {
+  const r = runner;
+  if (r === null) return noRunner();
+  return guard(() =>
+    r.patchTask(id, reminderAt === null ? { reminderAtUnset: true as const } : { reminderAt }),
+  );
 }
 
 export function setTaskDone(id: string, done: boolean): Promise<Result<Task, AppError>> {

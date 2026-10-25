@@ -93,7 +93,8 @@ export class TaskRepo implements TaskPort {
       if (patch.notes !== undefined) merged.notes = patch.notes;
       if (patch.priority !== undefined) merged.priority = patch.priority;
       if (patch.tags !== undefined) merged.tags = [...patch.tags];
-      if (patch.reminderAt !== undefined) merged.reminderAt = patch.reminderAt;
+      if (patch.reminderAtUnset === true) delete merged.reminderAt;
+      else if (patch.reminderAt !== undefined) merged.reminderAt = patch.reminderAt;
       if (patch.recurrence !== undefined) merged.recurrence = patch.recurrence;
       if (patch.dueDateUnset === true) delete merged.dueDate;
       else if (patch.dueDate !== undefined) merged.dueDate = patch.dueDate;

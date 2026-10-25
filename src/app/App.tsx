@@ -4,11 +4,16 @@ import type { ComponentType, JSX } from 'preact';
 import { announce } from './announce';
 import { t } from './i18n';
 import { NotFoundView } from './NotFoundView';
-import { registerQuickAddHandler } from './quickAdd';
+import { registerQuickAddHandler, startQuickAdd } from './quickAdd';
 import { createRouter, hashToPath, type RouteMatch } from './router';
 import { Shell } from './Shell';
 import { loadSettings } from './settings';
 import { notifyChunkLoadFailure } from './stale-tab';
+import { CommandPalette } from '../features/commands/CommandPalette';
+import { registerCommandOpeners } from '../features/commands/openers';
+import { installShortcutLayer } from '../features/commands/shortcutLayer';
+import { ShortcutsHelpDialog } from '../features/commands/ShortcutsHelpDialog';
+import type { Task } from '../domain/model';
 import { AllOpenView } from '../features/all/AllOpenView';
 import { CompletedView } from '../features/completed/CompletedView';
 import { DataSafetyHost } from '../features/data-safety/DataSafetyHost';
@@ -19,9 +24,12 @@ import { RecoveryScreen } from '../features/data-safety/RecoveryScreen';
 import { dataSafetyState, patchState } from '../features/data-safety/state';
 import { ListsManageView } from '../features/lists/ListsManageView';
 import { ListView } from '../features/lists/ListView';
+import { startReminders } from '../features/notifications/reminders';
+import { ReminderDialog } from '../features/notifications/ReminderDialog';
 import { SearchView } from '../features/search/SearchView';
 import { Composer, inlineComposerFocus } from '../features/tasks/Composer';
-import { startTaskStore } from '../features/tasks/store';
+import { MoveToListDialog } from '../features/tasks/MoveToListDialog';
+import { liveLists, moveTaskTo, startTaskStore, state as taskState } from '../features/tasks/store';
 import { ToastHost } from '../features/tasks/ToastHost';
 import { TodayView } from '../features/today/TodayView';
 import { WeekView } from '../features/week/WeekView';
@@ -81,8 +89,19 @@ export function App(): JSX.Element {
   const [route, setRoute] = useState<RouteMatch | null>(null);
   const [view, setView] = useState<ViewState>({ kind: 'loading' });
   const [composerSheet, setComposerSheet] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [moveTask, setMoveTask] = useState<Task | null>(null);
+  const [reminderTask, setReminderTask] = useState<Task | null>(null);
   const mounted = useRef(true);
   const firstPaint = useRef(true);
+
+  const safety = dataSafetyState.value;
+  // S1 first run (§7 "shown before task UI") and S5 recovery (§6.5) replace the
+  // WHOLE shell — the global shortcut layer and command openers are live only
+  // while the shell is.
+  const shellVisible =
+    !safety.onboarding && !(safety.status === 'ready' && safety.classification.kind === 'wiped');
 
   // Settings boot: mirror first (pre-paint state), then the durable ADR-002 record wins.
   useEffect(() => {
@@ -107,6 +126,42 @@ export function App(): JSX.Element {
       }),
     [],
   );
+
+  // S8: the global shortcut layer + command openers live exactly as long as the
+  // shell does (onboarding / recovery replace it — see `shellVisible` above).
+  useEffect(() => {
+    if (!shellVisible) return;
+    return installShortcutLayer({
+      palette: () => {
+        setPaletteOpen(true);
+      },
+      quickAdd: () => {
+        startQuickAdd();
+      },
+      search: () => {
+        window.location.hash = '#/search';
+      },
+      help: () => {
+        setHelpOpen(true);
+      },
+    });
+  }, [shellVisible]);
+
+  useEffect(() => {
+    if (!shellVisible) return;
+    return registerCommandOpeners({
+      palette: () => {
+        setPaletteOpen(true);
+      },
+      help: () => {
+        setHelpOpen(true);
+      },
+    });
+  }, [shellVisible]);
+
+  // S5: local reminder scheduling. Reads permission state only — it never
+  // prompts (first-use permission is requested by user gestures, never here).
+  useEffect(() => startReminders(), []);
 
   useEffect(() => {
     mounted.current = true;
@@ -203,8 +258,6 @@ export function App(): JSX.Element {
     }
   })();
 
-  const safety = dataSafetyState.value;
-
   // S1 first run (§7 "shown before task UI") and S5 recovery (§6.5) replace the WHOLE shell:
   // there is no background content for focus or a screen reader to land on.
   if (safety.onboarding) {
@@ -252,6 +305,59 @@ export function App(): JSX.Element {
           variant="sheet"
           onClose={() => {
             setComposerSheet(false);
+          }}
+        />
+      ) : null}
+      {paletteOpen ? (
+        <CommandPalette
+          onClose={() => {
+            setPaletteOpen(false);
+          }}
+          onOpenHelp={() => {
+            setPaletteOpen(false);
+            setHelpOpen(true);
+          }}
+          onMoveTask={(task) => {
+            setPaletteOpen(false);
+            setMoveTask(task);
+          }}
+          onSetReminder={(task) => {
+            setPaletteOpen(false);
+            setReminderTask(task);
+          }}
+        />
+      ) : null}
+      {helpOpen ? (
+        <ShortcutsHelpDialog
+          onClose={() => {
+            setHelpOpen(false);
+          }}
+        />
+      ) : null}
+      {moveTask !== null ? (
+        <MoveToListDialog
+          task={moveTask}
+          lists={liveLists(taskState.value)}
+          onMove={(targetListId) => {
+            const task = moveTask;
+            const listName = taskState.value.lists.get(targetListId)?.name ?? '';
+            setMoveTask(null);
+            void moveTaskTo(task.id, targetListId, 'last').then((result) => {
+              if (result.ok) {
+                announce(t('a11y.taskMovedToList', { title: task.title, list: listName }));
+              }
+            });
+          }}
+          onCancel={() => {
+            setMoveTask(null);
+          }}
+        />
+      ) : null}
+      {reminderTask !== null ? (
+        <ReminderDialog
+          task={reminderTask}
+          onClose={() => {
+            setReminderTask(null);
           }}
         />
       ) : null}

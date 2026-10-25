@@ -209,14 +209,16 @@ describe('compact pattern (< 1024 px)', () => {
     expect(document.querySelector('.shell-body')?.getAttribute('aria-hidden')).toBe('true');
 
     const closeButton = within(dialog).getByRole('button', { name: 'Close navigation menu' });
-    const lastLink = within(dialog).getByRole('link', { name: 'Settings' });
-    lastLink.focus();
+    // The S8 drawer entries (command palette + shortcuts help) end the tab order
+    // since t_ee8ecb0b; the trap wraps from the actual last focusable either way.
+    const lastFocusable = within(dialog).getByRole('button', { name: 'Keyboard shortcuts' });
+    lastFocusable.focus();
     fireEvent.keyDown(document, { key: 'Tab' });
     expect(document.activeElement).toBe(closeButton);
 
     closeButton.focus();
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
-    expect(document.activeElement).toBe(lastLink);
+    expect(document.activeElement).toBe(lastFocusable);
 
     fireEvent.keyDown(document, { key: 'Escape' });
     await waitFor(() => {

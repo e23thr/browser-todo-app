@@ -67,22 +67,30 @@
   list-style: none;
 }
 
-.nav-list a {
+.nav-list a,
+.nav-list button.nav-action {
   display: flex;
+  width: 100%;
   align-items: center;
   gap: var(--space-3);
   min-height: var(--touch-min);
   padding: var(--space-2) var(--space-3);
+  border: 0;
   border-radius: var(--radius-md);
+  background: none;
   color: var(--color-text-secondary);
+  font-family: inherit;
   font-size: var(--font-body-sm);
   line-height: var(--line-body-sm);
   font-weight: var(--weight-medium);
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease-standard);
 }
 
-.nav-list a:hover {
+.nav-list a:hover,
+.nav-list button.nav-action:hover {
   background: var(--color-surface-hover);
   color: var(--color-text);
 }
