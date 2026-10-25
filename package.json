@@ -19,6 +19,8 @@
     "test:coverage": "vitest run --coverage",
     "budget": "node scripts/check-bundle-budget.mjs",
     "perf:budget": "node scripts/check-perf-budget.mjs",
+    "icons": "node scripts/generate-icons.mjs",
+    "icons:check": "node scripts/generate-icons.mjs --check",
     "i18n:check": "node scripts/check-i18n.mjs",
     "audit:gate": "npm audit --omit=dev --audit-level=high",
     "e2e:install": "playwright install chromium",

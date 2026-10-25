@@ -258,5 +258,10 @@ it activates the moment the first file lands — verified: an uncovered `src/dom
 
 ## Not in the MVP (PO decisions)
 
-No web app manifest and no install prompt in MVP (PO Q12) — PWA installability is the first V1
+No web app manifest and no install prompt in MVP (PO Q12) — PWA installability was the first V1
 item. MVP keeps the service-worker app-shell cache, which arrives with ADR-003.
+
+**V1 update (2026-10-26)**: installability has landed — a base-aware web app manifest,
+self-hosted icons and the post-first-task install offer (ADR-008; see docs/dev/pwa-install.md).
+It is the structural fix for R1 (iOS Safari's 7-day storage eviction exempts installed
+home-screen apps); the `persist()` + backup discipline remain in force alongside it.
