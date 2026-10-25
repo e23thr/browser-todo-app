@@ -10,6 +10,8 @@ import { installDocumentMeta } from '../i18n/documentMeta';
 import { createSettingsLocalePersistence } from '../i18n/settingsPersistence';
 import { beginPriorUseProbe } from '../features/data-safety/probe';
 import { initFirstRunFlag } from '../features/data-safety/state';
+import { mountInstallNotice } from '../features/install/InstallNotice';
+import { bootInstallFlow } from '../features/install/installPrompt';
 import '../styles/global.css';
 
 // Durable settings live in the ADR-002 `settings` record (IndexedDB); register the adapter
@@ -51,6 +53,11 @@ async function start(root: HTMLElement): Promise<void> {
   // and settings so the restored data is visible WITHOUT a page reload.
   wireDataReplacedRefresh();
   render(<App />, root);
+  // PWA install flow (ADR-008 Decision 3, S13): capture `beforeinstallprompt` from the first
+  // moment it can fire (the offer itself only becomes eligible at the first task creation) and
+  // mount its non-modal surface into its own body-level container.
+  bootInstallFlow();
+  mountInstallNotice();
   // Service-worker registration + update flow (ADR-005) — after first render so the shell is
   // interactive before any SW work; also records the `app:interactive` mark (§9.1 budget).
   bootServiceWorker();

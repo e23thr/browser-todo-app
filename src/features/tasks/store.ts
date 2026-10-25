@@ -30,6 +30,7 @@ import { t } from '../../app/i18n';
 import { setListOptions } from '../../app/lists';
 import { createTabSync, type TabSync } from '../../app/tabSync';
 import { noteFirstMeaningfulWrite } from '../data-safety/persistGate';
+import { noteTaskCreated } from '../install/installPrompt';
 import { msUntilNextLocalMidnight, todayStr } from '../../domain/dates';
 import { err, ok, type AppError, type Result } from '../../domain/kernel';
 import type { List, Priority, Task } from '../../domain/model';
@@ -409,6 +410,9 @@ export function addTask(input: TaskInput): Promise<Result<Task, AppError>> {
     // fails this write, and it is what flips the Settings storage row to granted/denied).
     if (result.ok) {
       void noteFirstMeaningfulWrite();
+      // ADR-008 Decision 3 (S13): the same moment is when the install offer becomes eligible
+      // (once per session, never before the first task) — see src/features/install.
+      noteTaskCreated();
       lastUsedListId.value = input.listId; // F1.4: the next composer defaults to THIS list
     }
     return result;

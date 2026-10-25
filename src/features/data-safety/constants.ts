@@ -85,4 +85,10 @@ export const NOTICE_MARKS = {
    * plain id, never pruned: it is testimony about the past, not a suppression.
    */
   priorData: 'had-data',
+  /**
+   * The install offer (ADR-008 Decision 3, S13) was dismissed or the native install dialog
+   * was declined — a permanent "no thanks", remembered across sessions. Rides this key because
+   * Decision 7's allowed key list is closed and `flags.ts` is the single writer of the array.
+   */
+  installPrompt: 'install-prompt',
 } as const;

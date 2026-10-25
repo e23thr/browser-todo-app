@@ -1,0 +1,72 @@
+/*
+ * Install-prompt surface (ADR-008 Decision 3, S13). Fixed-position card, ≥ 44 px action
+ * targets (§8 WCAG 2.2 AA), plain fade only (prefers-reduced-motion safe), zero external bytes
+ * (§7.2). Shares the update toast's composition, but every value is a REAL tokens.css variable
+ * (`--color-bg`/`--color-text-muted`/`--radius-1` in update.css resolve to nothing — those are
+ * undefined; this file does not copy that).
+ */
+
+.install-notice-stack {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: min(24rem, calc(100vw - 2 * var(--space-4)));
+}
+
+.install-notice {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 18%);
+}
+
+.install-notice-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.install-notice-body {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.install-notice-steps {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+.install-notice-steps li + li {
+  margin-top: var(--space-1);
+}
+
+.install-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.install-action {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.install-action-primary {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}

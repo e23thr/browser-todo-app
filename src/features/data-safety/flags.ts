@@ -174,6 +174,21 @@ export function markPrivateWarned(): void {
   dismissForever(NOTICE_MARKS.privateWarned);
 }
 
+/**
+ * Has the install offer been dismissed for good (ADR-008 Decision 3)? A dismissal is
+ * permanent by design ("never aggressive"): once the user says no — or declines the native
+ * install dialog — the offer never returns.
+ */
+export function wasInstallPromptDismissed(): boolean {
+  return entryFor(NOTICE_MARKS.installPrompt) !== null;
+}
+
+/** Remember that the install offer will not be shown again for this profile. */
+export function markInstallPromptDismissed(): void {
+  load();
+  dismissForever(NOTICE_MARKS.installPrompt);
+}
+
 /** Epoch ms of the "Start fresh" acknowledgement, or `null` (§6.5 recovery screen). */
 export function recoveryStartedAt(): number | null {
   const entry = entryFor(NOTICE_MARKS.recoveryStarted);
