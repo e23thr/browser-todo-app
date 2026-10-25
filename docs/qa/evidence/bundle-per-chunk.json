@@ -1,0 +1,62 @@
+{
+  "method": "node zlib gzipSync level 9 (identical to scripts/check-bundle-budget.mjs)",
+  "totalJsGzipBytes": 87121,
+  "totalCssGzipBytes": 6845,
+  "maxSingleJsChunk": {
+    "file": "assets/index-CA0Rb68-.js",
+    "rawBytes": 145442,
+    "gzipBytes": 42275
+  },
+  "perFile": [
+    {
+      "file": "assets/index-CA0Rb68-.js",
+      "rawBytes": 145442,
+      "gzipBytes": 42275
+    },
+    {
+      "file": "assets/dbAccess-Bx1kHfMa.js",
+      "rawBytes": 48176,
+      "gzipBytes": 17417
+    },
+    {
+      "file": "assets/snapshots-api-B23rPcZQ.js",
+      "rawBytes": 22019,
+      "gzipBytes": 7416
+    },
+    {
+      "file": "assets/locale-th-0z_UgMXl.js",
+      "rawBytes": 39089,
+      "gzipBytes": 7090
+    },
+    {
+      "file": "assets/index-B7sWvTs_.css",
+      "rawBytes": 38271,
+      "gzipBytes": 6845
+    },
+    {
+      "file": "assets/locale-en-DcYtuBhM.js",
+      "rawBytes": 20176,
+      "gzipBytes": 5873
+    },
+    {
+      "file": "assets/SettingsView-LmaLPY36.js",
+      "rawBytes": 11482,
+      "gzipBytes": 3417
+    },
+    {
+      "file": "sw.js",
+      "rawBytes": 3205,
+      "gzipBytes": 1673
+    },
+    {
+      "file": "assets/boot-uZGUMpY0.js",
+      "rawBytes": 2434,
+      "gzipBytes": 1200
+    },
+    {
+      "file": "assets/actions-C-00EtfI.js",
+      "rawBytes": 1596,
+      "gzipBytes": 760
+    }
+  ]
+}

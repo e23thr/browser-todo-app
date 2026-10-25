@@ -1,0 +1,108 @@
+{
+  "ok": true,
+  "distDir": "/home/ubuntu/.hermes/profiles/h_senior_coder/cache/scratch/budgets/dist-ci",
+  "manifestEntries": 8,
+  "results": [
+    {
+      "name": "initial-js",
+      "kind": "size",
+      "measuredBytes": 67108,
+      "limitBytes": 102400,
+      "warnBytes": 81920,
+      "status": "PASS",
+      "detail": "3 entry-closure chunk(s)"
+    },
+    {
+      "name": "css",
+      "kind": "size",
+      "measuredBytes": 6845,
+      "limitBytes": 20480,
+      "warnBytes": null,
+      "status": "PASS",
+      "detail": "1 file(s)"
+    },
+    {
+      "name": "app-shell",
+      "kind": "size",
+      "measuredBytes": 83345,
+      "limitBytes": 204800,
+      "warnBytes": null,
+      "status": "PASS",
+      "detail": "8 file(s), 4 lazy chunk(s) excluded"
+    },
+    {
+      "name": "locales",
+      "kind": "size",
+      "measuredBytes": 12963,
+      "limitBytes": 20480,
+      "warnBytes": null,
+      "status": "PASS",
+      "detail": "2 locale pack(s)"
+    },
+    {
+      "name": "locales-lazy",
+      "kind": "count",
+      "measuredBytes": 0,
+      "limitBytes": 0,
+      "warnBytes": null,
+      "status": "PASS",
+      "detail": "no locale pack is inside the initial JS closure"
+    },
+    {
+      "name": "no-external-refs",
+      "kind": "count",
+      "measuredBytes": 0,
+      "limitBytes": 0,
+      "warnBytes": null,
+      "status": "PASS",
+      "detail": "scanned 12 shipped file(s)"
+    },
+    {
+      "name": "no-wasm",
+      "kind": "count",
+      "measuredBytes": 0,
+      "limitBytes": 0,
+      "warnBytes": null,
+      "status": "PASS",
+      "detail": "no .wasm asset in dist/ (MVP rule)"
+    }
+  ],
+  "context": {
+    "initialJsFiles": [
+      "assets/dbAccess-Bx1kHfMa.js",
+      "assets/index-CA0Rb68-.js",
+      "assets/snapshots-api-B23rPcZQ.js"
+    ],
+    "cssFiles": [
+      "assets/index-B7sWvTs_.css"
+    ],
+    "shellFiles": [
+      "assets/dbAccess-Bx1kHfMa.js",
+      "assets/index-B7sWvTs_.css",
+      "assets/index-CA0Rb68-.js",
+      "assets/locale-en-DcYtuBhM.js",
+      "assets/snapshots-api-B23rPcZQ.js",
+      "favicon.svg",
+      "index.html",
+      "sw.js"
+    ],
+    "lazyFiles": [
+      "assets/SettingsView-LmaLPY36.js",
+      "assets/actions-C-00EtfI.js",
+      "assets/boot-uZGUMpY0.js"
+    ],
+    "locales": [
+      "assets/locale-en-DcYtuBhM.js (en)",
+      "assets/locale-th-0z_UgMXl.js (th)"
+    ],
+    "serviceWorkerFiles": [
+      "sw.js"
+    ],
+    "measured": {
+      "initial-js": 67108,
+      "css": 6845,
+      "app-shell": 83345,
+      "locales": 12963
+    }
+  }
+}

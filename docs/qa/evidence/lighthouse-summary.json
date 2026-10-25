@@ -1,0 +1,41 @@
+{
+  "tool": "lighthouse 12.8.2",
+  "chromeUA": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+  "target": "https://e23thr.github.io/browser-todo-app/",
+  "runs": [
+    {
+      "profile": "mobile-slow4g-cpu4x",
+      "note": "PROJECT_ANALYSIS 9.1 measurement condition (Moto G class, 4x CPU, slow 4G); Lighthouse simulated throttling",
+      "fetchTime": "2026-10-25T16:38:07.663Z",
+      "LCP_ms": 1623.6465,
+      "TBT_ms": 8.5,
+      "CLS": 0,
+      "FCP_ms": 1515.1465,
+      "speedIndex_ms": 2874.3527415809667,
+      "TTI_ms": 1688.4965000000002,
+      "perfScore": 0.99
+    },
+    {
+      "profile": "desktop",
+      "note": "Lighthouse desktop preset (simulated cable, 1x CPU)",
+      "fetchTime": "2026-10-25T16:38:33.943Z",
+      "LCP_ms": 285.63599999999997,
+      "TBT_ms": 0,
+      "CLS": 0,
+      "FCP_ms": 281.13599999999997,
+      "speedIndex_ms": 281.13599999999997,
+      "perfScore": 1
+    },
+    {
+      "profile": "mobile-throttled-3g",
+      "note": "Task-stated DoD condition (throttled 3G): DevTools applied throttling 400 ms RTT / 400 kbps / 4x CPU",
+      "fetchTime": "2026-10-25T16:38:45.348Z",
+      "LCP_ms": 2436.41,
+      "TBT_ms": 0,
+      "CLS": 0,
+      "FCP_ms": 2436.41,
+      "speedIndex_ms": 2433,
+      "perfScore": 0.94
+    }
+  ]
+}
