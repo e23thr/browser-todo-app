@@ -1,0 +1,26 @@
+PASS  required members present — id,name,short_name,start_url,scope,display,background_color,theme_color,icons
+PASS  display is standalone — standalone
+PASS  start_url under base — /browser-todo-app/
+PASS  scope under base — /browser-todo-app/
+PASS  id under base — /browser-todo-app/
+PASS  scope equals start_url dir — /browser-todo-app/ vs /browser-todo-app/
+PASS  >=4 icons, both purposes — n=4
+PASS  all icon srcs under base — /browser-todo-app/icons/icon-192.png /browser-todo-app/icons/icon-512.png /browser-todo-app/icons/maskable-192.png /browser-todo-app/icons/maskable-512.png
+PASS  192 + 512 for any+maskable — ["any:192x192","any:512x512","maskable:192x192","maskable:512x512"]
+PASS  icon icons/icon-192.png valid PNG dims match manifest — ihdr=192x192 declared=192x192 bytes=2240
+PASS  icon icons/icon-512.png valid PNG dims match manifest — ihdr=512x512 declared=512x512 bytes=7803
+PASS  icon icons/maskable-192.png valid PNG dims match manifest — ihdr=192x192 declared=192x192 bytes=1275
+PASS  icon icons/maskable-512.png valid PNG dims match manifest — ihdr=512x512 declared=512x512 bytes=4780
+PASS  maskable icons/maskable-192.png glyph inside 80% safe zone — bbox=[57,65]-[134,128] safe=[19.200000000000003,19.200000000000003]-[172.8,172.8]
+PASS  maskable icons/maskable-512.png glyph inside 80% safe zone — bbox=[153,175]-[358,344] safe=[51.2,51.2]-[460.8,460.8]
+PASS  exactly one rel=manifest link — <link rel="manifest" href="/browser-todo-app/manifest.webmanifest" />
+PASS  manifest link under base — <link rel="manifest" href="/browser-todo-app/manifest.webmanifest" />
+PASS  apple-touch-icon link present — <link rel="apple-touch-icon" href="/browser-todo-app/icons/apple-touch-icon-180.png" />
+PASS  apple-mobile-web-app capable+title present — found 2 apple-mobile-web-app-* metas
+PASS  exactly one beforeinstallprompt site in shipped js — checked separately by offline-robustness guard
+PASS  manifest NOT precached — no *.webmanifest entry in precache list
+PASS  icons ARE precached — any+maskable icons in app shell
+PASS  sw.js built — dist/sw.js
+PASS  dist contains manifest.webmanifest — manifest.webmanifest
+
+TOTAL: 24/24 passed

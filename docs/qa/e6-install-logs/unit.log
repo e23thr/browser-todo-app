@@ -1,0 +1,17 @@
+
+> browser-todo-app@0.1.0 test
+> vitest run
+
+
+ RUN  v5.0.5 /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e6-install-qa
+
+
+ Test Files  87 passed (87)
+      Tests  980 passed (980)
+   Start at  02:31:09
+   Duration  27.42s (environment 65%, tests 18%, setup 9%, transform 5%, import 2%, worker 1%)
+
+Environment  jsdom was created 87 times · 159.53s total, 65% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+

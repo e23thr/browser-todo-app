@@ -1,0 +1,5 @@
+visit1-fresh (ms after nav): {"bip":null,"root":62,"prev":null,"n":0}
+visit2-warm (ms after nav): {"bip":null,"root":60,"prev":null,"n":0}
+task created: true
+offer after first task (native capture only): ABSENT
+final: {"bip":null,"root":60,"prev":null,"n":0}

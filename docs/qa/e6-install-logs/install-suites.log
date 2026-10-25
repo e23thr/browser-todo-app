@@ -1,0 +1,9 @@
+
+ RUN  v5.0.5 /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e6-install-qa
+
+
+ Test Files  4 passed (4)
+      Tests  40 passed (40)
+   Start at  02:50:04
+   Duration  1.29s (environment 67%, tests 19%, setup 11%, transform 2%, import 1%, worker 1%)
+

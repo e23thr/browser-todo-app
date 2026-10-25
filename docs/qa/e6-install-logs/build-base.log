@@ -1,0 +1,25 @@
+
+> browser-todo-app@0.1.0 build
+> tsc -b && vite build && node scripts/generate-precache.mjs && node scripts/build-sw.mjs
+
+vite v8.3.5 building client environment for production...
+transforming...
+✓ 143 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/manifest.webmanifest                0.95 kB
+dist/.vite/manifest.json                 2.00 kB │ gzip:  0.46 kB
+dist/index.html                          4.17 kB │ gzip:  1.96 kB
+dist/assets/index-BEoM4_nd.css          39.41 kB │ gzip:  6.94 kB
+dist/assets/actions-DUK6z9x3.js          1.59 kB │ gzip:  0.76 kB
+dist/assets/boot-BCWtXJUu.js             2.43 kB │ gzip:  1.19 kB
+dist/assets/SettingsView-DQBC6hJT.js    11.48 kB │ gzip:  3.40 kB
+dist/assets/locale-en-QwUFp39B.js       21.28 kB │ gzip:  6.20 kB
+dist/assets/snapshots-api-B23rPcZQ.js   22.01 kB │ gzip:  7.47 kB
+dist/assets/locale-th-B0dTFccO.js       41.54 kB │ gzip:  7.50 kB
+dist/assets/dbAccess-DmP7okfS.js        48.49 kB │ gzip: 17.75 kB
+dist/assets/index-CGlMlRut.js          149.64 kB │ gzip: 43.80 kB
+
+✓ built in 148ms
+precache: 16 entries (shellVersion 495873b9502f09fb) -> /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e6-install-qa/src/sw/precache-manifest.ts
+build-sw: dist/sw.js written (classic worker, unhashed, minified)

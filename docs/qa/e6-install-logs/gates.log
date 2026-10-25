@@ -1,0 +1,38 @@
+### date
+2026-10-26T02:30:38+07:00
+### git
+c4cb303 chore(sw): regenerate the precache manifest after the S13 icons/manifest seam (ADR-005 Decision 2)
+### format:check
+
+Checking formatting...
+All matched files use Prettier code style!
+exit=0
+### lint
+> browser-todo-app@0.1.0 lint
+> eslint . --max-warnings 0
+
+exit=0
+### typecheck
+> browser-todo-app@0.1.0 typecheck
+> tsc -b
+
+exit=0
+### i18n:check
+    features/tasks/fields.tsx:183
+    features/tasks/store.ts:309
+RESULT: PASS — en/th key sets, values and placeholders are consistent
+exit=0
+### icons:check
+icons: icon-192.png ok
+icons: icon-512.png ok
+icons: maskable-192.png ok
+icons: maskable-512.png ok
+icons: apple-touch-icon-180.png ok
+exit=0
+### audit:gate
+
+> browser-todo-app@0.1.0 audit:gate
+> npm audit --omit=dev --audit-level=high
+
+found 0 vulnerabilities
+exit=0
