@@ -27,11 +27,13 @@ never verified, never dropped.
    `ef83108`). Consequence: the run's `deploy` job was **skipped**, so **live Pages still serves
    the pre-fix build** (`index-CA0Rb68-.js`, last-modified 2026-10-25T16:30:07Z — re-checked by
    this compile). The a11y fix reaches production only after the follow-up card lands and a
-   green-main deploy runs (a11y F-3 re-check). Follow-up: `t_40f4faf5`.
+   green-main deploy runs (a11y F-3 re-check). Follow-up: fix card `t_27c2b0e8` (h_junior_coder).
 2. **First-ever nightly full-suite run** (`40216306668`, `workflow_dispatch` at `0a8702a`) is red
-   on **webkit + firefox** `e2e-full` (CSP-violation checks + update-toast tests); **chromium and
-   th-TH locale both green**. Not a Q15 criterion (the PR/push gate is chromium and is green),
-   but a real V1 signal given the Q10 browser floor (Firefox/Safari in scope). Follow-up: `t_1b7f519b`.
+   on **webkit + firefox** `e2e-full` — webkit: CSP-violation checks (`offline.spec.ts:204`,
+   `smoke.spec.ts:89`); firefox: keyboard `tabTo` budget + `persist()` probe; update-toast pair
+   flaky on both (pass on retry); **chromium and th-TH locale both green**. Not a Q15 criterion
+   (the PR/push gate is chromium and is green),
+   but a real V1 signal given the Q10 browser floor (Firefox/Safari in scope). Follow-up: fix card `t_e20c2adb` (h_junior_coder).
 3. **C3 functional finding F1** — restored data invisible in the *running* UI after import until
    a manual reload (**no data loss**; fidelity proven 100%). Fix card `t_85e19c39` open.
 4. **C4 finding F-1** — route change focuses the composer input, not the view `h1`; deviates from
@@ -214,8 +216,8 @@ not a nit.
 
 | # | Item | Severity | Routing |
 |---|---|---|---|
-| 1 | `precache-freshness` red at `0a8702a` (committed manifest stale after `64c0ee4`) → `deploy` skipped → live Pages still pre-fix; F-3 re-check pending | Release hygiene — **blocks shipping the a11y fix**, not a Q15 criterion | Fix card **`t_40f4faf5`** (h_junior_coder): regenerate + commit `src/sw/precache-manifest.ts` per ADR-005 D2, verify green-main run incl. deploy, confirm live asset hash ≠ `index-CA0Rb68-.js` |
-| 2 | Nightly `e2e-full` red on webkit + firefox at `0a8702a` (CSP-violation checks + update-toast tests); chromium + th-TH green | Cross-browser signal (Q10 floor) | Triage card **`t_1b7f519b`** (h_senior_coder) |
+| 1 | `precache-freshness` red at `0a8702a` (committed manifest stale after `64c0ee4`) → `deploy` skipped → live Pages still pre-fix; F-3 re-check pending | Release hygiene — **blocks shipping the a11y fix**, not a Q15 criterion | Fix card **`t_27c2b0e8`** (h_junior_coder): regenerate + commit `src/sw/precache-manifest.ts` per ADR-005 D2, verify green-main run incl. deploy, confirm live asset hash ≠ `index-CA0Rb68-.js` |
+| 2 | Nightly `e2e-full` red on webkit + firefox at `0a8702a` (webkit: CSP checks; firefox: keyboard `tabTo` + `persist()` probe; update-toast pair flaky on both); chromium + th-TH green | Cross-browser signal (Q10 floor) | Triage card **`t_e20c2adb`** (h_junior_coder) |
 | 3 | F1 post-import UI staleness (no data loss) | Moderate | Fix card **`t_85e19c39`** (h_senior_coder) |
 | 4 | F-1 route-change focus target deviates from design §5.2 | Non-blocking, decision needed | Design/PO ruling (amend impl or §5.2/F7.2) |
 | 5 | Mobile LCP 1.624 s vs §9.1 *recommended* <1.5 s | WARN (non-binding) | V1 perf follow-up |
