@@ -455,7 +455,7 @@ describe('<NudgeBanner> (5.5)', () => {
 });
 
 describe('<Onboarding> (6.1 — honest copy)', () => {
-  it('names the iOS Safari 7-day rule and the backup protection path', () => {
+  it('names the iOS Safari 7-day rule, the install path and the backup safety net', () => {
     render(<Onboarding onDone={() => undefined} />);
     expect(
       screen.getByRole('heading', { level: 1, name: 'Your data lives in this browser' }),
@@ -466,9 +466,17 @@ describe('<Onboarding> (6.1 — honest copy)', () => {
         { exact: true },
       ),
     ).toBeTruthy();
+    // ADR-008 / S13: install is presented AS the durable-storage option (the R1 structural
+    // fix), and the backup discipline stays visible — belt and braces (§5.5).
     expect(
       screen.getByText(
-        "Your protection is backups. Every so often, tap Back up now in Settings → Storage & back up to save a backup file, and keep that file somewhere safe. If the browser ever clears this app's data, you can restore everything from that file.",
+        "The strongest protection is installing Todo to your home screen: on iPhones and iPads, installed apps are exempt from that 7-day cleanup. After you add your first task the app offers to install — and you can always do it from your browser's Share or Menu button.",
+        { exact: true },
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Backups still matter after installing (belt and braces): every so often, tap Back up now in Settings → Storage & back up and keep that file somewhere safe. If the browser ever clears this app's data, you can restore everything from it.",
         { exact: true },
       ),
     ).toBeTruthy();
@@ -493,6 +501,12 @@ describe('<Onboarding> (6.1 — honest copy)', () => {
     expect(
       screen.getByText(
         'สิ่งสำคัญอย่างหนึ่ง: บน iPhone และ iPad ซาฟารีอาจลบข้อมูลของเว็บไซต์หลังจาก 7 วันหากคุณไม่เข้าชมเว็บไซต์ ซึ่งอาจรวมถึงงานของคุณด้วย',
+        { exact: true },
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        'การป้องกันที่ดีที่สุดคือการติดตั้ง Todo ลงบนหน้าจอโฮมของคุณ: บน iPhone และ iPad แอปที่ติดตั้งแล้วจะได้รับการยกเว้นจากการล้างข้อมูล 7 วันนั้น หลังจากคุณเพิ่มงานแรก แอปจะเสนอการติดตั้งให้ และคุณสามารถติดตั้งได้ตลอดเวลาจากปุ่มแชร์หรือเมนูของเบราว์เซอร์',
         { exact: true },
       ),
     ).toBeTruthy();

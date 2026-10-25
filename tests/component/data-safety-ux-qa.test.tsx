@@ -212,7 +212,7 @@ describe('S1 — first run: onboarding before task UI, honest copy, durable mark
     expect(window.localStorage.getItem('todo:prefs:v1:onboardingStep')).toBe('done');
   });
 
-  it('names the iOS 7-day rule + the backup path in English AND Thai (§11 QA checklist)', async () => {
+  it('names the iOS 7-day rule + the install and backup paths in English AND Thai (§11 QA checklist)', async () => {
     const english = render(<Onboarding onDone={() => undefined} />);
     expect(
       screen.getByText(
@@ -222,7 +222,15 @@ describe('S1 — first run: onboarding before task UI, honest copy, durable mark
         },
       ),
     ).toBeTruthy();
-    expect(screen.getByText(/Your protection is backups\./u, { exact: true })).toBeTruthy();
+    // ADR-008 / S13: install is the named durable-storage option; backups stay (belt and braces).
+    expect(
+      screen.getByText(/The strongest protection is installing Todo to your home screen/u, {
+        exact: true,
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/Backups still matter after installing/u, { exact: true }),
+    ).toBeTruthy();
     english.unmount();
 
     await setLocale('th');
@@ -230,7 +238,7 @@ describe('S1 — first run: onboarding before task UI, honest copy, durable mark
     expect(
       screen.getByText(/ซาฟารีอาจลบข้อมูลของเว็บไซต์หลังจาก 7 วัน/u, { exact: true }),
     ).toBeTruthy();
-    expect(screen.getByText(/ตัวปกป้องของคุณคือข้อมูลสำรอง/u, { exact: true })).toBeTruthy();
+    expect(screen.getByText(/การป้องกันที่ดีที่สุดคือการติดตั้ง/u, { exact: true })).toBeTruthy();
     await setLocale('en');
   });
 });
