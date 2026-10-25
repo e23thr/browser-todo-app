@@ -1,9 +1,12 @@
 # MVP Definition-of-Done release gate — PROJECT_ANALYSIS §12 Q15
 
 **Gate card:** `t_7f1e8f29` · **Compile card:** `t_7998ae0b` (h_reviewer) · **Compiled:** 2026-10-26 (+07)
-**Release HEAD verified:** `0a8702a` (`main == origin/main`; the local-only commit `6f0b731` is a
-docs/evidence commit — no `src/` difference). **Evidence commits:** functional `4fe59e0`, a11y
-`6f0b731`, budgets `b820ad7`, scope-fidelity `df331ae`, gate first run `6a3f5ab`.
+**Release HEAD verified:** `0a8702a` — every commit above it was docs/evidence only at report time
+(no `src/`/`tests/`/`scripts/`/`.github/` delta: `git diff --name-only 0a8702a..059c8f9 -- src tests
+scripts .github` is empty). Two routed fixes landed above it afterwards (`1fce11a` generated-manifest
+regen, `4ee55bb` F1 fix), each verified by its own card and re-battery-ed by this gate (§1).
+**Evidence commits:** functional `4fe59e0`, a11y `6f0b731`, budgets `b820ad7`, scope-fidelity
+`df331ae`, gate first run `6a3f5ab`.
 
 **Supersedes:** the gate's first-run report (committed at `6a3f5ab`, verdicts at `225a1f3`). That
 run's release-blocking SC 4.1.3 finding is now **provenance, not a blocker**: found pre-fix at
@@ -14,20 +17,25 @@ run's release-blocking SC 4.1.3 finding is now **provenance, not a blocker**: fo
 
 ## Verdict: ✅ PASS — MVP Definition of Done
 
-All five automatable Q15 criteria are **green at the release state `0a8702a`**; the scope-fidelity
+All five automatable Q15 criteria are **green at the release state `0a8702a`** and re-confirmed by
+this gate's closure battery at the then-current tip **`4ee55bb`** (§1 final row); the scope-fidelity
 audit is **13/13 PASS**. The *"30 days of daily use"* element is **PO-PENDING with an explicit
 PO-accepted deferral** to a separate sign-off (~2026-11-24) — decision quoted verbatim in §2 C1b;
 never verified, never dropped.
 
 **Non-blocking open items disclosed in full (§5) — none fails a Q15 criterion:**
 
-1. **main CI at release HEAD is red on one job (`precache-freshness`)** — fix commit `64c0ee4`
-   changed `src/` without regenerating the committed `src/sw/precache-manifest.ts` (the repo's
-   established pattern is a follow-up `chore(sw): regenerate…` commit; 5 precedents, latest
-   `ef83108`). Consequence: the run's `deploy` job was **skipped**, so **live Pages still serves
-   the pre-fix build** (`index-CA0Rb68-.js`, last-modified 2026-10-25T16:30:07Z — re-checked by
-   this compile). The a11y fix reaches production only after the follow-up card lands and a
-   green-main deploy runs (a11y F-3 re-check). Follow-up: fix card `t_27c2b0e8` (h_junior_coder).
+1. **main CI red on `precache-freshness` — RESOLVED, and the hazard recurs (audit trail):** fix
+   commit `64c0ee4` changed `src/` without regenerating the committed `src/sw/precache-manifest.ts`,
+   reddening `precache-freshness` and skipping `deploy` at `0a8702a`/`059c8f9` (live Pages served the
+   pre-fix build then). Card `t_27c2b0e8` landed `1fce11a` → CI run
+   [`40219201521`](https://github.com/e23thr/browser-todo-app/actions/runs/40219201521): **all 13
+   jobs green incl. `precache-freshness` + `deploy`**; live Pages re-checked by this gate — now
+   serves `index-BA2njR4y.js` (post-`64c0ee4` build, ≠ `index-CA0Rb68-.js`) → **a11y F-3 closed.**
+   It **recurred with `4ee55bb`** (F1 fix changed `src/` without a regen — the repo's 4th ADR-005 D2
+   recurrence): the next push reddens `precache-freshness`/skips `deploy` until the manifest is
+   regenerated. Routing: **`t_31327c08`** (h_junior_coder, regen + push + green-incl-deploy verify;
+   duplicate `t_619b87b9` closed without work). Detail: §5 row 1.
 2. **First-ever nightly full-suite run** (`40216306668`, `workflow_dispatch` at `0a8702a`) is red
    on **webkit + firefox** `e2e-full` — webkit: CSP-violation checks (`offline.spec.ts:204`,
    `smoke.spec.ts:89`); firefox: keyboard `tabTo` budget + `persist()` probe; update-toast pair
@@ -58,6 +66,16 @@ never verified, never dropped.
 | Gate first run (this file, previous state) | `t_7f1e8f29` / `6a3f5ab` | First-hand battery at `225a1f3` (local `e584488`): C1/C2/C3/C5 PASS, C4 blocker found → §C4 resolution trail |
 | Release-state re-check by this compile | `t_7998ae0b` @ `0a8702a` | `gh run view/list` (CI + nightly job matrices), live Pages asset hash + `last-modified`, `git ls-remote origin main`, `scripts/perf-budgets.json`, `ci.yml` job graph |
 | C3 / F1 resolution re-check (this card, C3 only) | `t_5586c72b` @ `4ee55bb` (local, on top of `1fce11a`) | `probe-export-restore` **11/11** incl. hard step `post-import-ui-live-without-reload`; unit+component **940/940** (83 files); `e2e:data-safety` **16/16**; format/lint/typecheck/bundle-budget clean |
+| Gate closure battery (this card, final run) @ `4ee55bb` | `t_7f1e8f29` | First-hand: `npm run ci` **exit 0** — format/lint/`--max-warnings 0`/typecheck/i18n 339/339/build/budget 7/7 PASS, **940/940 tests (83 files)**; `e2e:data-safety` **16/16**, `e2e:sw` **16/16**, `e2e:smoke` **8/8**, `e2e:a11y` **2/2**, keyboard core-loop **2/2** + F1 **×3 3/3** (earlier at `059c8f9`: F1 **×5 5/5**); scope greps 0 hits (Q12/Q7/§2-7.2), i18n 339/339, live Pages 200/asset 200/manifest 404, live entry `index-BA2njR4y.js` post-fix; CI runs `40218743233` (budget jobs green) + `40219201521` (all 13 green incl. deploy) |
+
+**Suite-count provenance (the `927` vs `926` question):** the `927/927 (81 files)` figures quoted
+for `0a8702a` come from `npm run ci` executed inside the RC verification copy, which also carried
+the **untracked 1-test diagnostic probe** `tests/unit/audit-race-repro.test.ts` (never committed;
+it exists only to reproduce the pre-fix SC 4.1.3 race — evidence `race-repro-unit-*.txt`). The
+repository suite on its own measures **926/926 (80 files)** — first-hand at the report push
+(`059c8f9`) and green in CI run `40218743233` (unit job, 80 files). At `4ee55bb` the repo suite is
+**940/940 (83 files)** (first-hand, this gate and the flip card). Every count is fully green and no
+verdict depends on the probe file.
 
 ## 2. Q15 criterion-by-criterion
 
@@ -92,8 +110,9 @@ this gate by explicit PO acceptance.
   per-item verification + UI cross-check.
 - `e2e:data-safety` **16/16** (hostile imports → zero DB writes; corrupt records quarantined;
   `QuotaExceededError` atomic abort; snapshot rotation + pre-import undo byte-equivalent);
-  unit suite **927/927** at `0a8702a` incl. storage-corruption drills and the purge/identity
-  drill (deviceId survives purge+reboot, ADR-002 §3.1).
+  unit suite **927/927** at `0a8702a` (RC-copy count incl. the diagnostic probe — §1 suite-count
+  note; repo-only 926/926, now **940/940** at `4ee55bb`) incl. storage-corruption drills and the
+  purge/identity drill (deviceId survives purge+reboot, ADR-002 §3.1).
 - No open data-loss defect. Documented non-findings: tombstones (`deletedAt`) per ADR-004;
   volatile `lastOpenedAt`; fresh boot's 1 empty auto-snapshot row.
 
@@ -145,7 +164,10 @@ production build of **release HEAD `0a8702a`**:
 - **SC 4.1.3 resolution trail:** race found pre-fix at `225a1f3`/`b820ad7` (deterministic unit
   repro — the gate's 6/8 keyboard e2e failures), **fixed in `64c0ee4`**, **re-verified PASS at
   `0a8702a`**: unit repro green, keyboard F1 e2e **5/5** isolated (was 6/8 failing), announcements
-  **12/12** en+th, `e2e:a11y` **2/2**, `npm run ci` exit 0 (**927/927**, 81 files).
+  **12/12** en+th, `e2e:a11y` **2/2**, `npm run ci` exit 0 (**927/927**, 81 files — RC-copy count,
+  see the §1 suite-count note). **Re-verified again by this gate's closure battery at `4ee55bb`:**
+  `e2e:a11y` **2/2**, keyboard core-loop **2/2**, F1 **×3 3/3** (plus **×5 5/5** at `059c8f9`),
+  `npm run ci` exit 0 **940/940**.
 - axe **0 violations across 61 scans** (desktop 9 routes × themes × locales + mobile @360 px,
   incl. `#/week` addendum); CI axe gate 2/2.
 - Contrast **0 failures**: 756 route samples + 30 UI-state samples (default/hover/focus/disabled
@@ -156,12 +178,16 @@ production build of **release HEAD `0a8702a`**:
 - Open, non-blocking on the a11y gate: **F-1** route-focus vs design §5.2 (needs design/PO
   ruling — either honor `[data-autofocus]` only where design grants it, or amend §5.2/F7.2);
   **F-2** stale probe-visual stage-6 matcher (test-infra nit; `probe-announcements` 12/12
-  authoritative); **F-3** live Pages still pre-fix at audit time (deploy re-check, see §5 item 1).
+  authoritative); **F-3 CLOSED** — live Pages re-checked by this gate: serves
+  `index-BA2njR4y.js` (post-`64c0ee4` build) since the green deploy in run `40219201521`,
+  i.e. the SC 4.1.3 fix is in production (was `index-CA0Rb68-.js` pre-fix).
 
 ### C5 — budgets green in CI (bundle §9.2 + measured perf §9.1) — **PASS**
 
 Verified in **real GitHub Actions at release HEAD `0a8702a`** — run
-[`40216294729`](https://github.com/e23thr/browser-todo-app/actions/runs/40216294729):
+[`40216294729`](https://github.com/e23thr/browser-todo-app/actions/runs/40216294729); **both budget
+jobs re-green in every later run** — `40218743233` (report push, budget jobs green while
+`precache-freshness` alone was red) and `40219201521` (`1fce11a`, all 13 jobs green incl. deploy):
 
 - **§9.2 bundle half:** `bundle-budget` job **PASS** (`scripts/check-bundle-budget.mjs`; all 7
   gates: initial-js 65.6/100 KB, css 6.7/20 KB, app-shell 81.4/200 KB, locales 12.6/20 KB,
@@ -203,7 +229,8 @@ Verified in **real GitHub Actions at release HEAD `0a8702a`** — run
 INFO (carried): the committed `src/sw/precache-manifest.ts` was already flagged stale by this
 audit at `6a3f5ab` — **it has since become a red CI job at `0a8702a`** (§5 item 1); the deployed
 worker was never affected (CI regenerates), but the repo-state divergence is now release hygiene,
-not a nit.
+not a nit. Status at gate closure: fixed once at `1fce11a` (green incl. deploy, run `40219201521`),
+recurred with `4ee55bb`, regeneration + push routed to `t_31327c08` (§5 row 1).
 
 ## 4. Handoff metadata — what V1 epics may assume is in place
 
@@ -229,20 +256,22 @@ not a nit.
    both green at `0a8702a`. `npm audit` 0 vulnerabilities. `npm run ci` = format/lint/typecheck/
    i18n/coverage(≥80 % domain+storage)/build/budget, exit 0.
 7. **GitHub Pages deploy pipeline** — green-main-only `deploy` job, base path `/browser-todo-app/`
-   wired through `BASE_PATH`; live site verified byte-identical to release builds (currently
-   serving the pre-fix build — see §5 item 1).
+   wired through `BASE_PATH`; live site re-checked by this gate — serves `index-BA2njR4y.js`
+   (post-`64c0ee4` build) from the green deploy of run `40219201521` (the `4ee55bb` F1 fix deploys
+   on the next green-main run after the manifest regen, §5 row 1).
 8. **Scope floor:** no manifest/install surface (**S13 must add it — first V1 item**), no
    attachments, no accounts/backend/telemetry, CSP meta per §7.2.
 9. **NOT in place (do not assume):** (a) the PO's 30-day usage sign-off (PO-deferred ~2026-11-24);
-   (b) the SC 4.1.3 fix **deployed to production** (committed at `0a8702a`, deploy pending the
-   precache-freshness fix); (c) cross-browser (webkit/firefox) full-suite green — nightly matrix
-   currently red there; (d) mobile LCP under the §9.1 *recommended* 1.5 s (WARN-tracked).
+   (b) the `4ee55bb` F1 fix **deployed to production** (commit local, `deploy` runs with the next
+   green-main push — §5 row 1; the SC 4.1.3 fix itself **is** deployed, §4.7); (c) cross-browser
+   (webkit/firefox) full-suite green — nightly matrix currently red there; (d) mobile LCP under
+   the §9.1 *recommended* 1.5 s (WARN-tracked).
 
 ## 5. Open items and follow-ups
 
 | # | Item | Severity | Routing |
 |---|---|---|---|
-| 1 | `precache-freshness` red at `0a8702a` (committed manifest stale after `64c0ee4`) → `deploy` skipped → live Pages still pre-fix; F-3 re-check pending | Release hygiene — **blocks shipping the a11y fix**, not a Q15 criterion | Fix card **`t_27c2b0e8`** (h_junior_coder): regenerate + commit `src/sw/precache-manifest.ts` per ADR-005 D2, verify green-main run incl. deploy, confirm live asset hash ≠ `index-CA0Rb68-.js` |
+| 1 | `precache-freshness` red at `0a8702a` (stale manifest after `64c0ee4`) → `deploy` skipped → live Pages served the pre-fix build; **RESOLVED at `1fce11a`** — run `40219201521` all 13 jobs green incl. `precache-freshness` + `deploy`, live re-checked by this gate (`index-BA2njR4y.js` ≠ `index-CA0Rb68-.js`, F-3 closed). **RECURRED with `4ee55bb`** (F1 fix changed `src/` without a regen; 4th ADR-005 D2 recurrence) — next push reddens `precache-freshness` and skips `deploy` until regenerated | Release hygiene — blocks shipping the F1 fix, not a Q15 criterion | Fix card **`t_31327c08`** (h_junior_coder, running): default-base `npm run build` (BASE_PATH unset — `ci.yml` pins `BASE_PATH: /` for this job; a Pages-BASE_PATH build yields different hashes), commit **only** `src/sw/precache-manifest.ts` as `chore(sw): regenerate… after 4ee55bb (ADR-005 Decision 2)`, push, verify all 13 jobs green incl. `deploy` + confirm the live entry hash changes (post-F1-fix). Duplicate card `t_619b87b9` closed without work |
 | 2 | Nightly `e2e-full` red on webkit + firefox at `0a8702a` (webkit: CSP checks; firefox: keyboard `tabTo` + `persist()` probe; update-toast pair flaky on both); chromium + th-TH green | Cross-browser signal (Q10 floor) | Triage card **`t_e20c2adb`** (h_junior_coder) |
 | 3 | F1 post-import UI staleness (no data loss) — **RESOLVED** at `4ee55bb` (probe step `post-import-ui-live-without-reload`, 11/11 PASS — §2 C3) | Moderate → **closed** | Fixed by card **`t_85e19c39`** (h_senior_coder); flipped by `t_5586c72b`. Row kept for the audit trail. |
 | 4 | F-1 route-change focus target deviates from design §5.2 | Non-blocking, decision needed | Design/PO ruling (amend impl or §5.2/F7.2) |
@@ -256,4 +285,7 @@ not a nit.
 - **30-day usage element:** PO has explicitly accepted deferring it to a separate sign-off
   (~2026-11-24; decision quoted in §2 C1b, recorded in PROJECT_ANALYSIS.md Q15).
 - **Sign-off request:** posted as a `kanban_comment` on the gate card `t_7f1e8f29` for the PO.
+- **Closure verification (gate run 4, first-hand):** full battery green at `4ee55bb` — `npm run ci`
+  exit 0 (940/940), `e2e:data-safety`/`e2e:sw`/`e2e:smoke`/`e2e:a11y` 16/16 + 16/16 + 8/8 + 2/2,
+  keyboard core-loop 2/2 (+ F1 ×5 ×3), scope greps 0 hits, live Pages re-checked (§1 final row).
 - **This gate does not claim the 30-day element; it is the only unsigned DoD element.**
