@@ -1,0 +1,48 @@
+=== clean clone of fed96f5 — four gates, measured 2026-10-26T04:00:43+07:00 ===
+HEAD: fed96f5 feat(sync): ADR-006 WebDAV sync engine, conflict copies & sync_state migration (t_00d7f17b)
+
+--- npm test ---
+exit=1
+ FAIL  tests/component/data-safety-import-refresh.test.tsx
+ FAIL  tests/unit/app/e2-qa-tabsync-probes.test.ts
+ FAIL  tests/unit/app/tabSync.test.ts
+ FAIL  tests/unit/portability/apply.test.ts
+ FAIL  tests/unit/portability/edges.test.ts
+ FAIL  tests/unit/portability/import.test.ts
+ FAIL  tests/unit/portability/snapshots-api.test.ts
+ FAIL  tests/unit/storage/boot.test.ts
+ FAIL  tests/unit/storage/drills-qa.test.ts
+ FAIL  tests/unit/storage/e2-qa-repos-probes.test.ts
+ FAIL  tests/unit/storage/migrations.test.ts
+ FAIL  tests/unit/storage/quarantine.test.ts
+ FAIL  tests/unit/storage/repos.test.ts
+ FAIL  tests/unit/storage/validate.test.ts
+ Test Files  14 failed | 87 passed (101)
+      Tests  68 failed | 1048 passed (1116)
+
+--- npm run lint (eslint . --max-warnings 0) ---
+exit=0
+error_lines=0
+
+--- npm run typecheck (tsc -b) ---
+exit=2
+tsc_errors=70
+src/features/tasks/Composer.tsx(
+src/features/tasks/fields.tsx(
+src/features/tasks/TaskRow.tsx(
+tests/component/core-ui-composer.test.tsx(
+tests/component/data-safety-ux-qa.test.tsx(
+tests/component/fixtures.ts(
+tests/e2e/data-safety/harness.ts(
+tests/e2e/data-safety-ux/harness.tsx(
+tests/unit/app/e2-qa-tabsync-probes.test.ts(
+tests/unit/app/tabSync.test.ts(
+tests/unit/domain/coverage-topups.test.ts(
+tests/unit/domain/e2-qa-probes.test.ts(
+
+--- prettier --check . ---
+exit=1
+[warn] src/domain/model.ts
+[warn] src/storage/migrations.ts
+[warn] vite.config.ts
+[warn] Code style issues found in 3 files. Run Prettier with --write to fix.

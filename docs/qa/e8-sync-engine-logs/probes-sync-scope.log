@@ -1,0 +1,9 @@
+
+ RUN  v5.0.5 /home/ubuntu/workspace/browser-todo-app
+
+
+ Test Files  10 passed (10)
+      Tests  99 passed | 2 expected fail (101)
+   Start at  03:59:05
+   Duration  1.84s (environment 72%, tests 12%, setup 10%, import 3%, transform 2%, worker 1%)
+
