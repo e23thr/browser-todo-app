@@ -34,6 +34,15 @@ test.beforeAll(async () => {
   appUrl = `${server.origin}${BASE_PATH}`;
 });
 
+// Root cause of the nightly :88/:152 first-attempt flakes: `deployBAndWaitForToast` leaves the
+// SHARED per-worker fixture server pointed at build B, so the next test in the same worker boots
+// build B (proven: `data-build-id=vB` at boot), its own "deploy" is then byte-identical and no
+// update event ever fires → the toast times out. Reset the root before every test so each one
+// boots A→B exactly as specified, whatever the worker scheduling.
+test.beforeEach(() => {
+  server.setRoot(FIXTURES.vA);
+});
+
 test.afterAll(async () => {
   await server.close();
 });
@@ -42,6 +51,10 @@ test.afterAll(async () => {
 async function bootBuildA(page: Page): Promise<void> {
   await page.goto(appUrl);
   await waitForControlled(page);
+  // Precondition of every test here: the fixture root must serve A (see the beforeEach above).
+  // Asserting it turns any future root pollution into an immediate, named failure instead of a
+  // silent no-op "deploy" that only shows up as a 20 s toast timeout.
+  await expect(page.locator('html')).toHaveAttribute('data-build-id', 'vA');
 }
 
 /** Deploy build B at the server and drive the update check to the waiting state. */
