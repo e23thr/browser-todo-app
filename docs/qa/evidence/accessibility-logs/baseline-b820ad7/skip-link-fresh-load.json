@@ -1,0 +1,61 @@
+{
+  "results": [
+    {
+      "scheme": "light",
+      "pre": {
+        "active": "body",
+        "onboarding": false,
+        "dialogs": 0
+      },
+      "first": {
+        "tag": "A",
+        "cls": "skip-link",
+        "name": "Skip to main content",
+        "rect": {
+          "x": 8,
+          "y": 8,
+          "w": 181,
+          "h": 44
+        },
+        "visible": true,
+        "outline": "solid 3px rgb(46, 79, 196)"
+      },
+      "isFirstSkipLink": true,
+      "afterEnter": {
+        "id": "main",
+        "tag": "MAIN",
+        "cls": "app-main"
+      },
+      "mainFocused": true
+    },
+    {
+      "scheme": "dark",
+      "pre": {
+        "active": "body",
+        "onboarding": false,
+        "dialogs": 0
+      },
+      "first": {
+        "tag": "A",
+        "cls": "skip-link",
+        "name": "Skip to main content",
+        "rect": {
+          "x": 8,
+          "y": 8,
+          "w": 181,
+          "h": 44
+        },
+        "visible": true,
+        "outline": "solid 3px rgb(142, 168, 255)"
+      },
+      "isFirstSkipLink": true,
+      "afterEnter": {
+        "id": "main",
+        "tag": "MAIN",
+        "cls": "app-main"
+      },
+      "mainFocused": true
+    }
+  ],
+  "verdict": "PASS"
+}

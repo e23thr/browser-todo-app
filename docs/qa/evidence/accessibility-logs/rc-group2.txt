@@ -1,0 +1,163 @@
+== probe-keyboard-sr-manual
+  P1.0 fresh load: FIRST Tab = skip link, visible in viewport: focus=<a> "Skip to main content" ring✓ 
+  [shot] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/screenshots/02-skip-link-focused.png
+  P1.0b Enter on skip link → focus lands in #main: focus=<main#main> "Today0 tasksCreate a list first — tasks live" ring✗ 
+  [shot] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/screenshots/03-main-after-skip.png
+  P1.0c onboarding CTA reachable by Tab (first-run handshake, keyboard-only): focus=<button> "Get started" ring✓ 
+  [shot] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/screenshots/01-onboarding-cta-focused.png
+  P1.0d Enter dismisses onboarding → shell ready: focus=<body> "" body 
+  P1.4 tab stop 01: focus=<a> "Search" ring✓ 
+  P1.4 tab stop 02: focus=<a> "Today" ring✓ 
+  P1.4 tab stop 03: focus=<a> "Next 7 days" ring✓ 
+  P1.4 tab stop 04: focus=<a> "All open" ring✓ 
+  P1.4 tab stop 05: focus=<a> "Completed" ring✓ 
+  P1.4 tab stop 06: focus=<a> "Home" ring✓ 
+  P1.4 tab stop 07: focus=<a> "Manage lists" ring✓ 
+  P1.4 tab stop 08: focus=<a> "Settings" ring✓ 
+  P1.4 tab stop 09: focus=<button> "Ask again" ring✓ 
+  P1.4 tab stop 10: focus=<button> "Back up now" ring✓ 
+  P1.4 tab stop 11: focus=<button> "Hide for 7 days" ring✓ 
+  P1.4 tab stop 12: focus=<input#P0-3-title> "Title" ring✓ 
+  P1.4 tab stop 13: focus=<button> "Details" ring✓ 
+  P1.4 tab stop 14: focus=<li> "Ship audit reportHomeHome" ring✓ 
+  P1.4 tab stop 15: focus=<input> "Mark "Ship audit report" as complete" ring✓ 
+  P1.4 tab stop 16: focus=<button> "Ship audit report" ring✓ 
+  P1.4 tab stop 17: focus=<button> "Actions for "Ship audit report"" ring✓ 
+  P1.4 tab stop 18: focus=<body> "" body 
+  [shot] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/screenshots/04-nav-focus-ring.png
+  P1.5 nav link focusable (View navigation F7): focus=<a> "Completed" ring✓ 
+  P1.6 route change → focus target (design §5.2: view h1): focus=<input#P0-4-title> "Title" ring✓ 
+  [shot] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/screenshots/05-route-change-h1-focus.png
+  P1.7 task row title reachable by Tab: focus=<button> "Ship audit report" ring✓ 
+  [shot] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/screenshots/06-task-title-focus.png
+  P1.8 edit dialog: 12 Tabs stay inside the dialog (focus trap): focus=<textarea#P0-6-notes> "Notes" ring✓ in-dialog
+  [shot] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/screenshots/07-edit-dialog-focus-trap.png
+  P1.9 Esc closes dialog → focus returns to the row title: focus=<button> "Ship audit report" ring✓ 
+  [shot] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/screenshots/08-focus-back-on-row-after-esc.png
+  P1.10 row menu button reachable by Tab: focus=<button> "Actions for "Ship audit report"" ring✓ 
+  P1.11 menu opens with focus on first menuitem: focus=<button> "Edit" ring✓ 
+  [shot] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/screenshots/09-row-menu-open-focus.png
+  P1.12 ArrowDown reaches Delete menuitem: focus=<button> "Delete" ring✓ 
+  P1.13 Delete → confirm dialog opens with focus inside: focus=<button> "Cancel" ring✓ in-dialog
+  [shot] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/screenshots/10-confirm-dialog-focus.png
+  P1.14 confirm dialog: 8 Tabs stay inside (trap): focus=<button> "Cancel" ring✓ in-dialog
+  P1.15 Esc releases menu/dialog focus back to the menu button: focus=<li> "Ship audit reportHomeHome" ring✓ 
+  [shot] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/screenshots/11-focus-after-menu-esc.png
+  P2.0 mobile fresh load: first Tab = skip link: focus=<a> "Skip to main content" ring✓ 
+  [shot] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/screenshots/20-mobile-skip-link-focused.png
+  P2.0b mobile: Enter on skip link → #main: focus=<main#main> "Today0 tasksNothing due todayEnjoy the clear" ring✗ 
+  P2.2 mobile: FAB reachable by Tab: focus=<button> "Add task" ring✓ 
+  [shot] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/screenshots/21-mobile-fab-focus.png
+  P2.3 mobile: composer sheet — 8 Tabs stay inside (trap): focus=<input#P0-3-title> "Title" ring✓ in-dialog
+  [shot] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/screenshots/22-mobile-sheet-focus-trap.png
+  P2.4 mobile: Esc closes sheet, focus recorded after close: focus=<button> "Add task" ring✓ 
+  [shot] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/screenshots/23-mobile-focus-after-sheet-esc.png
+  axe mobile #/week [light]: 0 violation(s)
+  axe mobile #/week [dark]: 0 violation(s)
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/axe-mobile-week.json
+  SR capture item: HIT — polite=["Task added: SR capture flow"]
+  SR plan item (due date set + save): HIT — polite=["Task saved"]
+  SR complete item: HIT — polite=["Task completed"]
+  SR export (backup download): HIT — polite=["Backup saved to your downloads. Keep it somewhere safe."]
+  SR language toggle en→th→en: HIT — polite=["เปลี่ยนภาษาเป็น ไทย แล้ว"]
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/keyboard-manual.json
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/sr-spotcheck.json
+
+──── summary ────
+keyboard steps: 38, focus violations: 1, stage errors: 0
+  VIOLATION: {"kind":"route-focus-design-deviation","design":"§5.2 route change → view h1","actual":"input \"Title\" cls=input","focus":{"tag":"input","role":null,"name":"Title","cls":"input","outline":"solid 3px rgb(46, 79, 196)","outlineStyle":"solid"
+SR flows: 5/5 hit
+probe-keyboard-sr-manual exit=0
+== probe-state-contrast
+  light/default/nav link text: 6.07:1 (≥4.5) PASS 
+  light/default/view title: 16.1:1 (≥3) PASS 
+  light/default/task title: 16.51:1 (≥4.5) PASS 
+  light/default/primary button: 6.93:1 (≥4.5) PASS 
+  light/default/input text: 16.51:1 (≥4.5) PASS 
+  light/hover/nav link hover: 14.04:1 (≥4.5) PASS [bg-or-color-changed]
+  light/hover/primary button hover: 8.83:1 (≥4.5) PASS [bg-or-color-changed]
+  light/hover/task row / menu btn hover: 14.04:1 (≥4.5) PASS [bg-or-color-changed]
+  light/focus/nav link focus ring: 6.93:1 (≥3) PASS [solid 3px]
+  light/focus/task title focus ring: 6.93:1 (≥3) PASS [solid 3px]
+  light/focus/checkbox focus ring: 6.93:1 (≥3) PASS [solid 3px]
+  light/disabled/menu-item: no aria-disabled item present
+  light/disabled/chip-clear: 14.98:1 (≥4.5) PASS
+  dark/default/nav link text: 8.07:1 (≥4.5) PASS 
+  dark/default/view title: 15.87:1 (≥3) PASS 
+  dark/default/task title: 14.6:1 (≥4.5) PASS 
+  dark/default/primary button: 5.1:1 (≥4.5) PASS 
+  dark/default/input text: 14.6:1 (≥4.5) PASS 
+  dark/hover/nav link hover: 11.26:1 (≥4.5) PASS [bg-or-color-changed]
+  dark/hover/primary button hover: 6.07:1 (≥4.5) PASS [bg-or-color-changed]
+  dark/hover/task row / menu btn hover: 11.26:1 (≥4.5) PASS [bg-or-color-changed]
+  dark/focus/nav link focus ring: 7.57:1 (≥3) PASS [solid 3px]
+  dark/focus/task title focus ring: 7.57:1 (≥3) PASS [solid 3px]
+  dark/focus/checkbox focus ring: 7.57:1 (≥3) PASS [solid 3px]
+  dark/disabled/menu-item: no aria-disabled item present
+  dark/disabled/chip-clear: 12.88:1 (≥4.5) PASS
+  light/disabled/composer: helper=6.07:1 input=5.37:1
+  dark/disabled/composer: helper=8.07:1 input=6.31:1
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/state-contrast.json
+
+state-contrast: 28 measured, 0 below threshold (non-exempt), 0 disabled-exempt below, 2 missing
+  MISSING: disabled row-menu aria-disabled item no disabled item on this view
+  MISSING: disabled row-menu aria-disabled item no disabled item on this view
+probe-state-contrast exit=0
+== probe-skip-link-fresh
+[light] pre={"active":"body","onboarding":false,"dialogs":0}
+  first Tab → <A class="skip-link"> "Skip to main content" visible=true outline=solid 3px rgb(46, 79, 196)
+  IS skip link: true | Enter → MAIN#main "app-main" → main focused: true
+[dark] pre={"active":"body","onboarding":false,"dialogs":0}
+  first Tab → <A class="skip-link"> "Skip to main content" visible=true outline=solid 3px rgb(142, 168, 255)
+  IS skip link: true | Enter → MAIN#main "app-main" → main focused: true
+
+F7.1 verdict: PASS — 2/2 themes green
+[evidence] docs/qa/evidence/accessibility-logs/skip-link-fresh-load.json
+probe-skip-link-fresh exit=0
+== probe-aria-disabled-menu
+[light] aria-disabled menu item "Move up": 5.37:1 (≥4.5) PASS
+[dark] aria-disabled menu item "Move up": 6.31:1 (≥4.5) PASS
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/state-contrast-aria-disabled.json
+aria-disabled addendum: 2 measured, 0 below 4.5
+probe-aria-disabled-menu exit=0
+== probe-visual
+contrast /[light/en]: 36 sampled, 0 below threshold
+contrast #/all[light/en]: 44 sampled, 0 below threshold
+contrast #/lists[light/en]: 37 sampled, 0 below threshold
+contrast #/settings[light/en]: 72 sampled, 0 below threshold
+lang [en]: html lang="en", thai-content nodes sampled 1
+contrast /[light/th]: 36 sampled, 0 below threshold
+contrast #/all[light/th]: 44 sampled, 0 below threshold
+contrast #/lists[light/th]: 37 sampled, 0 below threshold
+contrast #/settings[light/th]: 72 sampled, 0 below threshold
+lang [th]: html lang="th", thai-content nodes sampled 6
+contrast /[dark/en]: 36 sampled, 0 below threshold
+contrast #/all[dark/en]: 44 sampled, 0 below threshold
+contrast #/lists[dark/en]: 37 sampled, 0 below threshold
+contrast #/settings[dark/en]: 72 sampled, 0 below threshold
+lang [en]: html lang="en", thai-content nodes sampled 1
+contrast /[dark/th]: 36 sampled, 0 below threshold
+contrast #/all[dark/th]: 44 sampled, 0 below threshold
+contrast #/lists[dark/th]: 37 sampled, 0 below threshold
+contrast #/settings[dark/th]: 72 sampled, 0 below threshold
+lang [th]: html lang="th", thai-content nodes sampled 6
+touch /[360px/en]: 13 targets, 1 <44px, 0 <24px (WCAG 2.5.8)
+touch #/all[360px/en]: 15 targets, 2 <44px, 0 <24px (WCAG 2.5.8)
+touch #/lists[360px/en]: 15 targets, 1 <44px, 0 <24px (WCAG 2.5.8)
+touch #/settings[360px/en]: 25 targets, 8 <44px, 7 <24px (WCAG 2.5.8)
+touch drawer[en]: 6 targets, 0 <44px, 0 <24px (WCAG 2.5.8)
+touch /[360px/th]: 13 targets, 1 <44px, 0 <24px (WCAG 2.5.8)
+touch #/all[360px/th]: 15 targets, 2 <44px, 0 <24px (WCAG 2.5.8)
+touch #/lists[360px/th]: 15 targets, 1 <44px, 0 <24px (WCAG 2.5.8)
+touch #/settings[360px/th]: 25 targets, 8 <44px, 7 <24px (WCAG 2.5.8)
+touch drawer[th]: 6 targets, 0 <44px, 0 <24px (WCAG 2.5.8)
+reduced-motion: 0 transition/animation duration(s) >20ms, 0 running animation(s)
+zoom 200% [en]: /:ok | #/all:ok+1 clipped | #/lists:ok+1 clipped | #/settings:ok+1 clipped
+zoom 200% [th]: /:ok | #/all:ok+1 clipped | #/lists:ok+1 clipped | #/settings:ok+1 clipped
+announcements [en]: task-added=MISS task-completed=MISS task-reopened=MISS route-change=MISS search-results=MISS list-created=MISS
+announcements [th]: task-added=MISS task-completed=MISS task-reopened=MISS route-change=MISS search-results=MISS list-created=MISS
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/visual-gate.json
+
+FINDINGS: 42 {"touch-target":24,"zoom-clip":6,"live-region":12}
+probe-visual exit=0
+GROUP2 DONE

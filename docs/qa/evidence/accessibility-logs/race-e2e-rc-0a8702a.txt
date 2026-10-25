@@ -1,0 +1,40 @@
+--- attempt 1
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › tests/e2e/core-ui-keyboard.spec.ts:290:1 › keyboard-only: F1 capture → F2 edit → F3 complete → F4 delete → F6 delete list (4.1s)
+
+  1 passed (15.1s)
+attempt 1 exit=0
+--- attempt 2
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › tests/e2e/core-ui-keyboard.spec.ts:290:1 › keyboard-only: F1 capture → F2 edit → F3 complete → F4 delete → F6 delete list (4.4s)
+
+  1 passed (15.2s)
+attempt 2 exit=0
+--- attempt 3
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › tests/e2e/core-ui-keyboard.spec.ts:290:1 › keyboard-only: F1 capture → F2 edit → F3 complete → F4 delete → F6 delete list (4.2s)
+
+  1 passed (15.0s)
+attempt 3 exit=0
+--- attempt 4
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › tests/e2e/core-ui-keyboard.spec.ts:290:1 › keyboard-only: F1 capture → F2 edit → F3 complete → F4 delete → F6 delete list (4.3s)
+
+  1 passed (15.1s)
+attempt 4 exit=0
+--- attempt 5
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › tests/e2e/core-ui-keyboard.spec.ts:290:1 › keyboard-only: F1 capture → F2 edit → F3 complete → F4 delete → F6 delete list (4.2s)
+
+  1 passed (15.0s)
+attempt 5 exit=0

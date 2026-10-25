@@ -1,0 +1,164 @@
+== probe-axe
+scan onboarding/light: 0 violation(s)
+scan onboarding/dark: 0 violation(s)
+scan route:/[light/en]: 0 violation(s)
+scan route:#/today[light/en]: 0 violation(s)
+scan route:#/week[light/en]: 0 violation(s)
+scan route:#/all[light/en]: 0 violation(s)
+scan route:#/completed[light/en]: 0 violation(s)
+scan route:#/search[light/en]: 0 violation(s)
+scan route:#/lists[light/en]: 0 violation(s)
+scan route:#/list/REPLACE[light/en]: 0 violation(s)
+scan route:#/settings[light/en]: 0 violation(s)
+scan light/en/row-menu-open: 0 violation(s)
+scan light/en/move-to-list-dialog: 0 violation(s)
+scan light/en/delete-confirm-dialog: 0 violation(s)
+scan light/en/composer-expanded: 0 violation(s)
+scan route:/[light/th]: 0 violation(s)
+scan route:#/today[light/th]: 0 violation(s)
+scan route:#/week[light/th]: 0 violation(s)
+scan route:#/all[light/th]: 0 violation(s)
+scan route:#/completed[light/th]: 0 violation(s)
+scan route:#/search[light/th]: 0 violation(s)
+scan route:#/lists[light/th]: 0 violation(s)
+scan route:#/list/REPLACE[light/th]: 0 violation(s)
+scan route:#/settings[light/th]: 0 violation(s)
+scan light/th/row-menu-open: 0 violation(s)
+scan light/th/move-to-list-dialog: 0 violation(s)
+scan light/th/delete-confirm-dialog: 0 violation(s)
+scan light/th/composer-expanded: 0 violation(s)
+scan route:/[dark/en]: 0 violation(s)
+scan route:#/today[dark/en]: 0 violation(s)
+scan route:#/week[dark/en]: 0 violation(s)
+scan route:#/all[dark/en]: 0 violation(s)
+scan route:#/completed[dark/en]: 0 violation(s)
+scan route:#/search[dark/en]: 0 violation(s)
+scan route:#/lists[dark/en]: 0 violation(s)
+scan route:#/list/REPLACE[dark/en]: 0 violation(s)
+scan route:#/settings[dark/en]: 0 violation(s)
+scan dark/en/row-menu-open: 0 violation(s)
+scan dark/en/move-to-list-dialog: 0 violation(s)
+scan dark/en/delete-confirm-dialog: 0 violation(s)
+scan dark/en/composer-expanded: 0 violation(s)
+scan route:/[dark/th]: 0 violation(s)
+scan route:#/today[dark/th]: 0 violation(s)
+scan route:#/week[dark/th]: 0 violation(s)
+scan route:#/all[dark/th]: 0 violation(s)
+scan route:#/completed[dark/th]: 0 violation(s)
+scan route:#/search[dark/th]: 0 violation(s)
+scan route:#/lists[dark/th]: 0 violation(s)
+scan route:#/list/REPLACE[dark/th]: 0 violation(s)
+scan route:#/settings[dark/th]: 0 violation(s)
+scan dark/th/row-menu-open: 0 violation(s)
+scan dark/th/move-to-list-dialog: 0 violation(s)
+scan dark/th/delete-confirm-dialog: 0 violation(s)
+scan dark/th/composer-expanded: 0 violation(s)
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/axe-gate.json
+
+BLOCKING (serious/critical): 0
+
+All distinct violations: none
+probe-axe exit=0
+== probe-announcements
+en task-added: HIT — polite=["View: All open","Task added: Announce add","This browser did not grant extra protection."]
+en task-completed: HIT — polite=["Task completed"]
+en task-reopened: HIT — polite=["View: Completed","Task reopened"]
+en route-change: HIT — polite=["View: Next 7 days"]
+en search-results: HIT — polite=["View: Search","1 results for \"a\""]
+en list-created: HIT — polite=["View: Manage lists","List created: Announce list"]
+th task-added: HIT — polite=["มุมมอง: ทั้งหมดที่ยังไม่เสร็จ","เพิ่มงานแล้ว: เพิ่มงานใหม่","เบราว์เซอร์นี้ไม่ได้ให้การปกป้องเพิ่มเติม"]
+th task-completed: HIT — polite=["เสร็จงานแล้ว"]
+th task-reopened: HIT — polite=["มุมมอง: เสร็จแล้ว","เปิดงานอีกครั้ง"]
+th route-change: HIT — polite=["มุมมอง: 7 วันข้างหน้า"]
+th search-results: HIT — polite=["มุมมอง: ค้นหา","0 ผลลัพธ์สำหรับ \"a\""]
+th list-created: HIT — polite=["มุมมอง: จัดการรายการ","สร้างรายการแล้ว: รายการทดสอบ"]
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/announcements-gate.json
+
+HITS: 12/12
+probe-announcements exit=0
+== probe-mobile-axe
+mobile /: clean
+mobile #/all: clean
+mobile #/completed: clean
+mobile #/lists: clean
+mobile #/settings: clean
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/axe-mobile-list.json
+task-list children: [
+ {
+  "tag": "li",
+  "role": null,
+  "cls": "group-row",
+  "ariaHidden": null,
+  "text": "Home (3)"
+ },
+ {
+  "tag": "li",
+  "role": null,
+  "cls": "task-row",
+  "ariaHidden": null,
+  "text": "Buy milkHomeHome"
+ },
+ {
+  "tag": "li",
+  "role": null,
+  "cls": "task-row",
+  "ariaHidden": null,
+  "text": "Pay electricity billHomeHome"
+ },
+ {
+  "tag": "li",
+  "role": null,
+  "cls": "task-row",
+  "ariaHidden": null,
+  "text": "Send monthly reportHomeHome"
+ }
+]
+probe-mobile-axe exit=0
+== probe-status-contrast
+badges light/en: 6 sampled, 0 below 4.5
+axe status-state light/en: clean
+badges light/th: 6 sampled, 0 below 4.5
+axe status-state light/th: clean
+badges dark/en: 6 sampled, 0 below 4.5
+axe status-state dark/en: clean
+badges dark/th: 6 sampled, 0 below 4.5
+axe status-state dark/th: clean
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/status-contrast.json
+
+status contrast: 24 sampled, 0 below 4.5:1
+probe-status-contrast exit=0
+== probe-zoom-status
+zoom200-en-/: hScroll=false rootFont=32px clipped=0 lowLineHeight=0
+zoom200-en-#/all: hScroll=false rootFont=32px clipped=3 lowLineHeight=0
+  clipped: [{"cls":"task-title-text","text":"Send the quarterly report with all supporting documents atta","scrollH":205,"clientH":102,"lineHeight":"51.2px","fontSize":"32px","overflow":"hidden","lineClamp":"2"},{"cls":"task-title-text","text":"Buy milk yogurt fruit and meat for cooking throughout the wh","scrollH":154,"clientH":102,"lineHeight":"51.2px","fontSize":"32px","overflow":"hidden","lineClamp":"2"},{"cls":"task-title-text","text":"Pay the electricity water internet and phone bills before th","scrollH":154,"clientH":102,"lineHeight":"51.2px","fontSize":"32px","overflow":"hidden","lineClamp":"2"}]
+reflow320-en-/: hScroll=false rootFont=16px clipped=5 lowLineHeight=1
+  clipped: [{"cls":"tab-label","text":"Today","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"Next 7 days","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"All open","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"Completed","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"}]
+  lowLH: [{"cls":"view-title","ratio":1.35,"fontSize":"24px","lineHeight":"32.4px"}]
+reflow320-en-#/all: hScroll=false rootFont=16px clipped=8 lowLineHeight=1
+  clipped: [{"cls":"task-title-text","text":"Send the quarterly report with all supporting documents atta","scrollH":230,"clientH":51,"lineHeight":"25.6px","fontSize":"16px","overflow":"hidden","lineClamp":"2"},{"cls":"task-title-text","text":"Buy milk yogurt fruit and meat for cooking throughout the wh","scrollH":179,"clientH":51,"lineHeight":"25.6px","fontSize":"16px","overflow":"hidden","lineClamp":"2"},{"cls":"task-title-text","text":"Pay the electricity water internet and phone bills before th","scrollH":179,"clientH":51,"lineHeight":"25.6px","fontSize":"16px","overflow":"hidden","lineClamp":"2"},{"cls":"tab-label","text":"Today","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"}]
+  lowLH: [{"cls":"view-title","ratio":1.35,"fontSize":"24px","lineHeight":"32.4px"}]
+reflow320-en-#/lists: hScroll=false rootFont=16px clipped=5 lowLineHeight=1
+  clipped: [{"cls":"tab-label","text":"Today","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"Next 7 days","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"All open","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"Completed","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"}]
+  lowLH: [{"cls":"view-title","ratio":1.35,"fontSize":"24px","lineHeight":"32.4px"}]
+reflow320-en-#/settings: hScroll=false rootFont=16px clipped=5 lowLineHeight=1
+  clipped: [{"cls":"tab-label","text":"Today","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"Next 7 days","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"All open","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"Completed","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"}]
+  lowLH: [{"cls":"view-title","ratio":1.35,"fontSize":"24px","lineHeight":"32.4px"}]
+zoom200-th-/: hScroll=false rootFont=32px clipped=0 lowLineHeight=0
+zoom200-th-#/all: hScroll=false rootFont=32px clipped=1 lowLineHeight=0
+  clipped: [{"cls":"task-title-text","text":"ส่งรายงานประจำเดือนให้ทันก่อนสิ้นไตรมาสพร้อมแนบเอกสารประกอบท","scrollH":154,"clientH":102,"lineHeight":"51.2px","fontSize":"32px","overflow":"hidden","lineClamp":"2"}]
+reflow320-th-/: hScroll=false rootFont=16px clipped=5 lowLineHeight=1
+  clipped: [{"cls":"tab-label","text":"วันนี้","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"7 วันข้างหน้า","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"ทั้งหมดที่ยังไม่เสร็จ","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"เสร็จแล้ว","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"}]
+  lowLH: [{"cls":"view-title","ratio":1.35,"fontSize":"24px","lineHeight":"32.4px"}]
+reflow320-th-#/all: hScroll=false rootFont=16px clipped=8 lowLineHeight=1
+  clipped: [{"cls":"task-title-text","text":"ส่งรายงานประจำเดือนให้ทันก่อนสิ้นไตรมาสพร้อมแนบเอกสารประกอบท","scrollH":179,"clientH":51,"lineHeight":"25.6px","fontSize":"16px","overflow":"hidden","lineClamp":"2"},{"cls":"task-title-text","text":"ซื้อนมสดโยเกิร์ตผลไม้และเนื้อสัตว์สำหรับทำอาหารทั้งสัปดาห์","scrollH":154,"clientH":51,"lineHeight":"25.6px","fontSize":"16px","overflow":"hidden","lineClamp":"2"},{"cls":"task-title-text","text":"ชำระค่าไฟฟ้าค่าน้ำค่าอินเทอร์เน็ตและค่าโทรศัพท์ก่อนวันครบกำห","scrollH":154,"clientH":51,"lineHeight":"25.6px","fontSize":"16px","overflow":"hidden","lineClamp":"2"},{"cls":"tab-label","text":"วันนี้","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"}]
+  lowLH: [{"cls":"view-title","ratio":1.35,"fontSize":"24px","lineHeight":"32.4px"}]
+reflow320-th-#/lists: hScroll=false rootFont=16px clipped=5 lowLineHeight=1
+  clipped: [{"cls":"tab-label","text":"วันนี้","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"7 วันข้างหน้า","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"ทั้งหมดที่ยังไม่เสร็จ","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"เสร็จแล้ว","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"}]
+  lowLH: [{"cls":"view-title","ratio":1.35,"fontSize":"24px","lineHeight":"32.4px"}]
+reflow320-th-#/settings: hScroll=false rootFont=16px clipped=5 lowLineHeight=1
+  clipped: [{"cls":"tab-label","text":"วันนี้","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"7 วันข้างหน้า","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"ทั้งหมดที่ยังไม่เสร็จ","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"},{"cls":"tab-label","text":"เสร็จแล้ว","scrollH":20,"clientH":1,"lineHeight":"19.5px","fontSize":"13px","overflow":"hidden","lineClamp":"none"}]
+  lowLH: [{"cls":"view-title","ratio":1.35,"fontSize":"24px","lineHeight":"32.4px"}]
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/zoom-status-lang.json
+evidence written
+probe-zoom-status exit=0
+GROUP1 DONE

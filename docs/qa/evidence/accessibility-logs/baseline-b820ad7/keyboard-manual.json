@@ -1,0 +1,962 @@
+{
+  "appUrl": "http://127.0.0.1:4199/browser-todo-app/",
+  "phases": [
+    {
+      "phase": "desktop-light",
+      "viewport": "1280x900",
+      "freshLoadSkipLink": true,
+      "onboardingKeyboardHandshake": true,
+      "errors": [],
+      "stops": 33
+    },
+    {
+      "phase": "mobile-dark-360",
+      "viewport": "360x740",
+      "sheetTrap": true,
+      "stops": 5
+    }
+  ],
+  "steps": [
+    {
+      "step": "P1.0 fresh load: FIRST Tab = skip link, visible in viewport",
+      "skipOk": true,
+      "focus": {
+        "tag": "a",
+        "role": null,
+        "name": "Skip to main content",
+        "cls": "skip-link",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 8,
+          "y": 8,
+          "w": 181,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "#main",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.0b Enter on skip link → focus lands in #main",
+      "targetReached": true,
+      "focus": {
+        "tag": "main",
+        "role": null,
+        "name": "Today0 tasksCreate a list first — tasks live in lists.New listTitleDet",
+        "cls": "app-main",
+        "outline": "none 3px rgb(27, 31, 39)",
+        "outlineStyle": "none",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 408,
+          "y": 0,
+          "w": 720,
+          "h": 630
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "main",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.0c onboarding CTA reachable by Tab (first-run handshake, keyboard-only)",
+      "focus": {
+        "tag": "button",
+        "role": null,
+        "name": "Get started",
+        "cls": "button button-primary",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 16,
+          "y": 506,
+          "w": 108,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.0d Enter dismisses onboarding → shell ready",
+      "shellFocused": true,
+      "focusTag": "body",
+      "focus": {
+        "tag": "body",
+        "name": "",
+        "role": null,
+        "outline": null,
+        "outlineWidth": 0,
+        "visible": true,
+        "inDialog": false,
+        "rect": null,
+        "id": "",
+        "href": ""
+      }
+    },
+    {
+      "step": "P1.4 tab stop 01",
+      "index": 1,
+      "focus": {
+        "tag": "a",
+        "role": null,
+        "name": "Search",
+        "cls": "",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 12,
+          "y": 62,
+          "w": 231,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "#/search",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 02",
+      "index": 2,
+      "focus": {
+        "tag": "a",
+        "role": null,
+        "name": "Today",
+        "cls": "",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 12,
+          "y": 108,
+          "w": 231,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "#/today",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 03",
+      "index": 3,
+      "focus": {
+        "tag": "a",
+        "role": null,
+        "name": "Next 7 days",
+        "cls": "",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 12,
+          "y": 154,
+          "w": 231,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "#/week",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 04",
+      "index": 4,
+      "focus": {
+        "tag": "a",
+        "role": null,
+        "name": "All open",
+        "cls": "",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 12,
+          "y": 200,
+          "w": 231,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "#/all",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 05",
+      "index": 5,
+      "focus": {
+        "tag": "a",
+        "role": null,
+        "name": "Completed",
+        "cls": "",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 12,
+          "y": 246,
+          "w": 231,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "#/completed",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 06",
+      "index": 6,
+      "focus": {
+        "tag": "a",
+        "role": null,
+        "name": "Home",
+        "cls": "",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 12,
+          "y": 334,
+          "w": 231,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "#/list/01M5T1DCFBJ3YEYXH85CFYR1YN",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 07",
+      "index": 7,
+      "focus": {
+        "tag": "a",
+        "role": null,
+        "name": "Manage lists",
+        "cls": "",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 12,
+          "y": 378,
+          "w": 231,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "#/lists",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 08",
+      "index": 8,
+      "focus": {
+        "tag": "a",
+        "role": null,
+        "name": "Settings",
+        "cls": "",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 12,
+          "y": 422,
+          "w": 231,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "#/settings",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 09",
+      "index": 9,
+      "focus": {
+        "tag": "button",
+        "role": null,
+        "name": "Ask again",
+        "cls": "button button-primary",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 451,
+          "y": 151,
+          "w": 97,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 10",
+      "index": 10,
+      "focus": {
+        "tag": "button",
+        "role": null,
+        "name": "Back up now",
+        "cls": "button button-primary",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 556,
+          "y": 151,
+          "w": 118,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 11",
+      "index": 11,
+      "focus": {
+        "tag": "button",
+        "role": null,
+        "name": "Hide for 7 days",
+        "cls": "icon-button nudge-close",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 1043,
+          "y": 66,
+          "w": 44,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 12",
+      "index": 12,
+      "focus": {
+        "tag": "input",
+        "role": null,
+        "name": "Title",
+        "cls": "input",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 445,
+          "y": 369,
+          "w": 320,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "P0-3-title",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 13",
+      "index": 13,
+      "focus": {
+        "tag": "button",
+        "role": null,
+        "name": "Details",
+        "cls": "button button-ghost composer-expander",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 944,
+          "y": 344,
+          "w": 79,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 14",
+      "index": 14,
+      "focus": {
+        "tag": "li",
+        "role": null,
+        "name": "Ship audit reportHomeHome",
+        "cls": "task-row",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 432,
+          "y": 494,
+          "w": 672,
+          "h": 54
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 15",
+      "index": 15,
+      "focus": {
+        "tag": "input",
+        "role": null,
+        "name": "Mark \"Ship audit report\" as complete",
+        "cls": "task-check",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 456,
+          "y": 509,
+          "w": 24,
+          "h": 24
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 16",
+      "index": 16,
+      "focus": {
+        "tag": "button",
+        "role": null,
+        "name": "Ship audit report",
+        "cls": "task-title",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 497,
+          "y": 499,
+          "w": 487,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 17",
+      "index": 17,
+      "focus": {
+        "tag": "button",
+        "role": null,
+        "name": "Actions for \"Ship audit report\"",
+        "cls": "icon-button row-menu-trigger",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 1051,
+          "y": 499,
+          "w": 44,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.4 tab stop 18",
+      "index": 18,
+      "focus": {
+        "tag": "body",
+        "name": "",
+        "role": null,
+        "outline": null,
+        "outlineWidth": 0,
+        "visible": true,
+        "inDialog": false,
+        "rect": null,
+        "id": "",
+        "href": ""
+      }
+    },
+    {
+      "step": "P1.5 nav link focusable (View navigation F7)",
+      "focus": {
+        "tag": "a",
+        "role": null,
+        "name": "Completed",
+        "cls": "",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 12,
+          "y": 246,
+          "w": 231,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "#/completed",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.6 route change → focus target (design §5.2: view h1)",
+      "reachedH1": false,
+      "actual": "input.input",
+      "focus": {
+        "tag": "input",
+        "role": null,
+        "name": "Title",
+        "cls": "input",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 445,
+          "y": 369,
+          "w": 320,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "P0-4-title",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.7 task row title reachable by Tab",
+      "focus": {
+        "tag": "button",
+        "role": null,
+        "name": "Ship audit report",
+        "cls": "task-title",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 497,
+          "y": 499,
+          "w": 487,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.8 edit dialog: 12 Tabs stay inside the dialog (focus trap)",
+      "editorOpen": true,
+      "trapOk": true,
+      "stops": [
+        "textarea:Notes",
+        "input:Due date",
+        "input:Due date",
+        "input:Due date",
+        "input:Due date",
+        "button:Today",
+        "button:Tomorrow",
+        "select:List",
+        "input:Low",
+        "button:Delete task",
+        "button:Cancel",
+        "button:Save"
+      ],
+      "focus": {
+        "tag": "textarea",
+        "role": null,
+        "name": "Notes",
+        "cls": "input textarea",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 381,
+          "y": 269,
+          "w": 320,
+          "h": 146
+        },
+        "visible": true,
+        "inDialog": true,
+        "id": "P0-6-notes",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.9 Esc closes dialog → focus returns to the row title",
+      "editorOpen": true,
+      "returnedToRow": true,
+      "focus": {
+        "tag": "button",
+        "role": null,
+        "name": "Ship audit report",
+        "cls": "task-title",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 497,
+          "y": 499,
+          "w": 487,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.10 row menu button reachable by Tab",
+      "focus": {
+        "tag": "button",
+        "role": null,
+        "name": "Actions for \"Ship audit report\"",
+        "cls": "icon-button row-menu-trigger",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 1051,
+          "y": 499,
+          "w": 44,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.11 menu opens with focus on first menuitem",
+      "role": "menuitem",
+      "focus": {
+        "tag": "button",
+        "role": "menuitem",
+        "name": "Edit",
+        "cls": "menu-item",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 900,
+          "y": 552,
+          "w": 190,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.12 ArrowDown reaches Delete menuitem",
+      "arrowStops": 2,
+      "isDelete": true,
+      "focus": {
+        "tag": "button",
+        "role": "menuitem",
+        "name": "Delete",
+        "cls": "menu-item menu-item-danger",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 900,
+          "y": 640,
+          "w": 190,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.13 Delete → confirm dialog opens with focus inside",
+      "confirmOpen": true,
+      "focusName": "Cancel",
+      "focus": {
+        "tag": "button",
+        "role": null,
+        "name": "Cancel",
+        "cls": "button button-secondary",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 737,
+          "y": 477,
+          "w": 78,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": true,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.14 confirm dialog: 8 Tabs stay inside (trap)",
+      "confirmTrap": true,
+      "focus": {
+        "tag": "button",
+        "role": null,
+        "name": "Cancel",
+        "cls": "button button-secondary",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 737,
+          "y": 477,
+          "w": 78,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": true,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P1.15 Esc releases menu/dialog focus back to the menu button",
+      "backToMenuButton": false,
+      "focus": {
+        "tag": "li",
+        "role": null,
+        "name": "Ship audit reportHomeHome",
+        "cls": "task-row",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 432,
+          "y": 494,
+          "w": 672,
+          "h": 54
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P2.0 mobile fresh load: first Tab = skip link",
+      "skipOk": true,
+      "focus": {
+        "tag": "a",
+        "role": null,
+        "name": "Skip to main content",
+        "cls": "skip-link",
+        "outline": "solid 3px rgb(142, 168, 255)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 8,
+          "y": 8,
+          "w": 181,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "#main",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P2.0b mobile: Enter on skip link → #main",
+      "targetReached": true,
+      "focus": {
+        "tag": "main",
+        "role": null,
+        "name": "Today0 tasksNothing due todayEnjoy the clear space, or add something.A",
+        "cls": "app-main",
+        "outline": "none 3px rgb(233, 236, 242)",
+        "outlineStyle": "none",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 0,
+          "y": 56,
+          "w": 360,
+          "h": 684
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "main",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P2.2 mobile: FAB reachable by Tab",
+      "fabReached": true,
+      "focus": {
+        "tag": "button",
+        "role": null,
+        "name": "Add task",
+        "cls": "fab",
+        "outline": "solid 3px rgb(142, 168, 255)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 288,
+          "y": 612,
+          "w": 56,
+          "h": 56
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P2.3 mobile: composer sheet — 8 Tabs stay inside (trap)",
+      "sheetOpen": true,
+      "trapOk": true,
+      "focus": {
+        "tag": "input",
+        "role": null,
+        "name": "Title",
+        "cls": "input",
+        "outline": "solid 3px rgb(142, 168, 255)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 21,
+          "y": 615,
+          "w": 318,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": true,
+        "id": "P0-3-title",
+        "href": "",
+        "disabled": false
+      }
+    },
+    {
+      "step": "P2.4 mobile: Esc closes sheet, focus recorded after close",
+      "sheetTrap": true,
+      "focus": {
+        "tag": "button",
+        "role": null,
+        "name": "Add task",
+        "cls": "fab",
+        "outline": "solid 3px rgb(142, 168, 255)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 288,
+          "y": 612,
+          "w": 56,
+          "h": 56
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "",
+        "href": "",
+        "disabled": false
+      }
+    }
+  ],
+  "violations": [
+    {
+      "kind": "route-focus-design-deviation",
+      "design": "§5.2 route change → view h1",
+      "actual": "input \"Title\" cls=input",
+      "focus": {
+        "tag": "input",
+        "role": null,
+        "name": "Title",
+        "cls": "input",
+        "outline": "solid 3px rgb(46, 79, 196)",
+        "outlineStyle": "solid",
+        "outlineWidth": 3,
+        "rect": {
+          "x": 445,
+          "y": 369,
+          "w": 320,
+          "h": 44
+        },
+        "visible": true,
+        "inDialog": false,
+        "id": "P0-4-title",
+        "href": "",
+        "disabled": false
+      }
+    }
+  ],
+  "stageErrors": []
+}

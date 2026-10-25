@@ -1,0 +1,17 @@
+{
+  "appUrl": "http://127.0.0.1:4199/browser-todo-app/",
+  "scans": [
+    {
+      "route": "#/week",
+      "viewport": "360px",
+      "scheme": "light",
+      "violations": []
+    },
+    {
+      "route": "#/week",
+      "viewport": "360px",
+      "scheme": "dark",
+      "violations": []
+    }
+  ]
+}

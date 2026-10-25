@@ -1,0 +1,34 @@
+  light/default/nav link text: 6.07:1 (≥4.5) PASS 
+  light/default/view title: 16.1:1 (≥3) PASS 
+  light/default/task title: 16.51:1 (≥4.5) PASS 
+  light/default/primary button: 6.93:1 (≥4.5) PASS 
+  light/default/input text: 16.51:1 (≥4.5) PASS 
+  light/hover/nav link hover: 14.04:1 (≥4.5) PASS [bg-or-color-changed]
+  light/hover/primary button hover: 8.83:1 (≥4.5) PASS [bg-or-color-changed]
+  light/hover/task row / menu btn hover: 14.04:1 (≥4.5) PASS [bg-or-color-changed]
+  light/focus/nav link focus ring: 6.93:1 (≥3) PASS [solid 3px]
+  light/focus/task title focus ring: 6.93:1 (≥3) PASS [solid 3px]
+  light/focus/checkbox focus ring: 6.93:1 (≥3) PASS [solid 3px]
+  light/disabled/menu-item: no aria-disabled item present
+  light/disabled/chip-clear: 14.98:1 (≥4.5) PASS
+  dark/default/nav link text: 8.07:1 (≥4.5) PASS 
+  dark/default/view title: 15.87:1 (≥3) PASS 
+  dark/default/task title: 14.6:1 (≥4.5) PASS 
+  dark/default/primary button: 5.1:1 (≥4.5) PASS 
+  dark/default/input text: 14.6:1 (≥4.5) PASS 
+  dark/hover/nav link hover: 11.26:1 (≥4.5) PASS [bg-or-color-changed]
+  dark/hover/primary button hover: 6.07:1 (≥4.5) PASS [bg-or-color-changed]
+  dark/hover/task row / menu btn hover: 11.26:1 (≥4.5) PASS [bg-or-color-changed]
+  dark/focus/nav link focus ring: 7.57:1 (≥3) PASS [solid 3px]
+  dark/focus/task title focus ring: 7.57:1 (≥3) PASS [solid 3px]
+  dark/focus/checkbox focus ring: 7.57:1 (≥3) PASS [solid 3px]
+  dark/disabled/menu-item: no aria-disabled item present
+  dark/disabled/chip-clear: 12.88:1 (≥4.5) PASS
+  light/disabled/composer: helper=6.07:1 input=5.37:1
+  dark/disabled/composer: helper=8.07:1 input=6.31:1
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/state-contrast.json
+
+state-contrast: 28 measured, 0 below threshold (non-exempt), 0 disabled-exempt below, 2 missing
+  MISSING: disabled row-menu aria-disabled item no disabled item on this view
+  MISSING: disabled row-menu aria-disabled item no disabled item on this view
+EXIT=0

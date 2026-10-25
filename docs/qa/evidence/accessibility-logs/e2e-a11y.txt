@@ -1,0 +1,12 @@
+
+> browser-todo-app@0.1.0 e2e:a11y
+> playwright test --project=chromium tests/e2e/a11y.spec.ts
+
+
+Running 2 tests using 2 workers
+
+  ✓  1 [chromium] › tests/e2e/a11y.spec.ts:24:3 › core views have no serious or critical axe violations (light theme) (3.3s)
+  ✓  2 [chromium] › tests/e2e/a11y.spec.ts:24:3 › core views have no serious or critical axe violations (dark theme) (3.3s)
+
+  2 passed (14.2s)
+EXIT=0

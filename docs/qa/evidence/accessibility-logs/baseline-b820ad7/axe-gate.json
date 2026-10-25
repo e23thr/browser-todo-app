@@ -1,0 +1,344 @@
+{
+  "appUrl": "http://127.0.0.1:4199/browser-todo-app/",
+  "tags": [
+    "wcag2a",
+    "wcag2aa",
+    "wcag21a",
+    "wcag21aa",
+    "wcag22aa"
+  ],
+  "scans": [
+    {
+      "label": "onboarding/light",
+      "violations": [],
+      "passes": 11,
+      "incomplete": 0
+    },
+    {
+      "label": "onboarding/dark",
+      "violations": [],
+      "passes": 11,
+      "incomplete": 0
+    },
+    {
+      "label": "route:/[light/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/today[light/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/week[light/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/all[light/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/completed[light/en]",
+      "violations": [],
+      "passes": 27,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/search[light/en]",
+      "violations": [],
+      "passes": 25,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/lists[light/en]",
+      "violations": [],
+      "passes": 23,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/list/REPLACE[light/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/settings[light/en]",
+      "violations": [],
+      "passes": 28,
+      "incomplete": 0
+    },
+    {
+      "label": "light/en/row-menu-open",
+      "violations": [],
+      "passes": 28,
+      "incomplete": 1
+    },
+    {
+      "label": "light/en/move-to-list-dialog",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "light/en/delete-confirm-dialog",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "light/en/composer-expanded",
+      "violations": [],
+      "passes": 27,
+      "incomplete": 0
+    },
+    {
+      "label": "route:/[light/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/today[light/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/week[light/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/all[light/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/completed[light/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/search[light/th]",
+      "violations": [],
+      "passes": 25,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/lists[light/th]",
+      "violations": [],
+      "passes": 23,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/list/REPLACE[light/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/settings[light/th]",
+      "violations": [],
+      "passes": 28,
+      "incomplete": 0
+    },
+    {
+      "label": "light/th/row-menu-open",
+      "violations": [],
+      "passes": 28,
+      "incomplete": 1
+    },
+    {
+      "label": "light/th/move-to-list-dialog",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "light/th/delete-confirm-dialog",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "light/th/composer-expanded",
+      "violations": [],
+      "passes": 27,
+      "incomplete": 0
+    },
+    {
+      "label": "route:/[dark/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/today[dark/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/week[dark/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/all[dark/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/completed[dark/en]",
+      "violations": [],
+      "passes": 27,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/search[dark/en]",
+      "violations": [],
+      "passes": 25,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/lists[dark/en]",
+      "violations": [],
+      "passes": 23,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/list/REPLACE[dark/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/settings[dark/en]",
+      "violations": [],
+      "passes": 28,
+      "incomplete": 0
+    },
+    {
+      "label": "dark/en/row-menu-open",
+      "violations": [],
+      "passes": 28,
+      "incomplete": 1
+    },
+    {
+      "label": "dark/en/move-to-list-dialog",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "dark/en/delete-confirm-dialog",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "dark/en/composer-expanded",
+      "violations": [],
+      "passes": 27,
+      "incomplete": 0
+    },
+    {
+      "label": "route:/[dark/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/today[dark/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/week[dark/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/all[dark/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/completed[dark/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/search[dark/th]",
+      "violations": [],
+      "passes": 25,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/lists[dark/th]",
+      "violations": [],
+      "passes": 23,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/list/REPLACE[dark/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/settings[dark/th]",
+      "violations": [],
+      "passes": 28,
+      "incomplete": 0
+    },
+    {
+      "label": "dark/th/row-menu-open",
+      "violations": [],
+      "passes": 28,
+      "incomplete": 1
+    },
+    {
+      "label": "dark/th/move-to-list-dialog",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "dark/th/delete-confirm-dialog",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "dark/th/composer-expanded",
+      "violations": [],
+      "passes": 27,
+      "incomplete": 0
+    }
+  ],
+  "blocking": [],
+  "notes": [],
+  "summary": {
+    "totalScans": 54,
+    "scansWithViolations": 0,
+    "blockingCount": 0,
+    "allViolationIds": []
+  }
+}

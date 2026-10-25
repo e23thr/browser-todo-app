@@ -1,0 +1,14 @@
+== j) unit race repro on POST-FIX rc (expect PASS)
+unit-race exit=1
+== k) CI axe gate on rc (E2E_PORT=4196)
+e2e:a11y exit=0
+== l) F1 keyboard race e2e x5 isolated, trace on (expect 5/5)
+  1 passed (15.1s)
+  1 passed (15.2s)
+  1 passed (15.0s)
+  1 passed (15.1s)
+  1 passed (15.0s)
+== n) npm run ci on rc
+j) CORRECTION: first j invocation exited 1 with 'No test files found' (audit test file not yet copied into RC snapshot); re-run after copy → PASS, see race-repro-unit-rc-0a8702a.txt (Tests 1 passed, exit 0)
+ci exit=0
+GROUP3 DONE

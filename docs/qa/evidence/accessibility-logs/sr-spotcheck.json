@@ -1,0 +1,83 @@
+{
+  "appUrl": "http://127.0.0.1:4200/browser-todo-app/",
+  "flows": [
+    {
+      "name": "capture item",
+      "expect": "Task added: SR capture flow",
+      "polite": [
+        "Task added: SR capture flow"
+      ],
+      "assertive": [],
+      "hit": true,
+      "notes": {
+        "focusAfterAdd": "input:Title",
+        "focusStaysInComposer": true
+      }
+    },
+    {
+      "name": "plan item (due date set + save)",
+      "expect": "Task saved",
+      "polite": [
+        "Task saved"
+      ],
+      "assertive": [],
+      "hit": true,
+      "notes": {
+        "focusOnOpen": "input:input",
+        "dueBadgeAfterSave": "Due today",
+        "focusAfterSave": "task-title"
+      }
+    },
+    {
+      "name": "complete item",
+      "expect": "Task completed",
+      "polite": [
+        "Task completed"
+      ],
+      "assertive": [],
+      "hit": true,
+      "notes": {
+        "checkboxToggled": true,
+        "focusAfterComplete": "input:task-check",
+        "focusLeftBody": false
+      }
+    },
+    {
+      "name": "export (backup download)",
+      "expect": "Backup saved to your downloads. Keep it somewhere safe.",
+      "polite": [
+        "Backup saved to your downloads. Keep it somewhere safe."
+      ],
+      "assertive": [],
+      "hit": true,
+      "notes": {
+        "buttonFocused": "Back up now",
+        "downloadStarted": true,
+        "downloadFile": "local-first-todo-backup-2026-10-25T172653Z.json",
+        "acceptedAlternative": null
+      }
+    },
+    {
+      "name": "language toggle en→th→en",
+      "expect": null,
+      "polite": [
+        "เปลี่ยนภาษาเป็น ไทย แล้ว"
+      ],
+      "assertive": [],
+      "hit": true,
+      "notes": {
+        "reachedThaiRadioByName": true,
+        "htmlLangAfterSwitch": "th",
+        "announcedInNewLocale": [
+          "เปลี่ยนภาษาเป็น ไทย แล้ว"
+        ],
+        "htmlLangBack": "en",
+        "announcedBack": [
+          "Language changed to English"
+        ],
+        "focusAfterLanguageSwitch": "input"
+      }
+    }
+  ],
+  "stageErrors": []
+}

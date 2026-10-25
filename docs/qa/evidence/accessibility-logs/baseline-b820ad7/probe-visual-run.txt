@@ -1,0 +1,39 @@
+contrast /[light/en]: 36 sampled, 0 below threshold
+contrast #/all[light/en]: 44 sampled, 0 below threshold
+contrast #/lists[light/en]: 37 sampled, 0 below threshold
+contrast #/settings[light/en]: 72 sampled, 0 below threshold
+lang [en]: html lang="en", thai-content nodes sampled 1
+contrast /[light/th]: 36 sampled, 0 below threshold
+contrast #/all[light/th]: 44 sampled, 0 below threshold
+contrast #/lists[light/th]: 37 sampled, 0 below threshold
+contrast #/settings[light/th]: 72 sampled, 0 below threshold
+lang [th]: html lang="th", thai-content nodes sampled 6
+contrast /[dark/en]: 36 sampled, 0 below threshold
+contrast #/all[dark/en]: 44 sampled, 0 below threshold
+contrast #/lists[dark/en]: 37 sampled, 0 below threshold
+contrast #/settings[dark/en]: 72 sampled, 0 below threshold
+lang [en]: html lang="en", thai-content nodes sampled 1
+contrast /[dark/th]: 36 sampled, 0 below threshold
+contrast #/all[dark/th]: 44 sampled, 0 below threshold
+contrast #/lists[dark/th]: 37 sampled, 0 below threshold
+contrast #/settings[dark/th]: 72 sampled, 0 below threshold
+lang [th]: html lang="th", thai-content nodes sampled 6
+touch /[360px/en]: 13 targets, 1 <44px, 0 <24px (WCAG 2.5.8)
+touch #/all[360px/en]: 15 targets, 2 <44px, 0 <24px (WCAG 2.5.8)
+touch #/lists[360px/en]: 15 targets, 1 <44px, 0 <24px (WCAG 2.5.8)
+touch #/settings[360px/en]: 25 targets, 8 <44px, 7 <24px (WCAG 2.5.8)
+touch drawer[en]: 6 targets, 0 <44px, 0 <24px (WCAG 2.5.8)
+touch /[360px/th]: 13 targets, 1 <44px, 0 <24px (WCAG 2.5.8)
+touch #/all[360px/th]: 15 targets, 2 <44px, 0 <24px (WCAG 2.5.8)
+touch #/lists[360px/th]: 15 targets, 1 <44px, 0 <24px (WCAG 2.5.8)
+touch #/settings[360px/th]: 25 targets, 8 <44px, 7 <24px (WCAG 2.5.8)
+touch drawer[th]: 6 targets, 0 <44px, 0 <24px (WCAG 2.5.8)
+reduced-motion: 0 transition/animation duration(s) >20ms, 0 running animation(s)
+zoom 200% [en]: /:ok | #/all:ok+1 clipped | #/lists:ok+1 clipped | #/settings:ok+1 clipped
+zoom 200% [th]: /:ok | #/all:ok+1 clipped | #/lists:ok+1 clipped | #/settings:ok+1 clipped
+announcements [en]: task-added=MISS task-completed=MISS task-reopened=MISS route-change=MISS search-results=MISS list-created=MISS
+announcements [th]: task-added=MISS task-completed=MISS task-reopened=MISS route-change=MISS search-results=MISS list-created=MISS
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/evidence/accessibility-logs/visual-gate.json
+
+FINDINGS: 42 {"touch-target":24,"zoom-clip":6,"live-region":12}
+EXIT=0

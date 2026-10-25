@@ -1,0 +1,36 @@
+{
+  "appUrl": "http://127.0.0.1:4200/browser-todo-app/",
+  "samples": [
+    {
+      "theme": "light",
+      "state": "disabled",
+      "component": "row-menu item aria-disabled",
+      "expectedLabel": "Move up",
+      "label": "Move up",
+      "fg": "rgb(98, 107, 123)",
+      "bg": "rgb(255,255,255)",
+      "ratio": 5.37,
+      "fontSize": 14,
+      "opacity": "1",
+      "threshold": 4.5,
+      "exemptNote": "inactive component (SC 1.4.3 exempt) but measured",
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "state": "disabled",
+      "component": "row-menu item aria-disabled",
+      "expectedLabel": "Move up",
+      "label": "Move up",
+      "fg": "rgb(148, 157, 171)",
+      "bg": "rgb(23,27,33)",
+      "ratio": 6.31,
+      "fontSize": 14,
+      "opacity": "1",
+      "threshold": 4.5,
+      "exemptNote": "inactive component (SC 1.4.3 exempt) but measured",
+      "pass": true
+    }
+  ],
+  "errors": []
+}

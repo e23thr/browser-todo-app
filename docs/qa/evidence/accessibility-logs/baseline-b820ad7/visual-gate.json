@@ -1,0 +1,1124 @@
+{
+  "appUrl": "http://127.0.0.1:4199/browser-todo-app/",
+  "checks": {
+    "contrast": [
+      {
+        "label": "/[light/en]",
+        "sampled": 36,
+        "failures": []
+      },
+      {
+        "label": "#/all[light/en]",
+        "sampled": 44,
+        "failures": []
+      },
+      {
+        "label": "#/lists[light/en]",
+        "sampled": 37,
+        "failures": []
+      },
+      {
+        "label": "#/settings[light/en]",
+        "sampled": 72,
+        "failures": []
+      },
+      {
+        "label": "/[light/th]",
+        "sampled": 36,
+        "failures": []
+      },
+      {
+        "label": "#/all[light/th]",
+        "sampled": 44,
+        "failures": []
+      },
+      {
+        "label": "#/lists[light/th]",
+        "sampled": 37,
+        "failures": []
+      },
+      {
+        "label": "#/settings[light/th]",
+        "sampled": 72,
+        "failures": []
+      },
+      {
+        "label": "/[dark/en]",
+        "sampled": 36,
+        "failures": []
+      },
+      {
+        "label": "#/all[dark/en]",
+        "sampled": 44,
+        "failures": []
+      },
+      {
+        "label": "#/lists[dark/en]",
+        "sampled": 37,
+        "failures": []
+      },
+      {
+        "label": "#/settings[dark/en]",
+        "sampled": 72,
+        "failures": []
+      },
+      {
+        "label": "/[dark/th]",
+        "sampled": 36,
+        "failures": []
+      },
+      {
+        "label": "#/all[dark/th]",
+        "sampled": 44,
+        "failures": []
+      },
+      {
+        "label": "#/lists[dark/th]",
+        "sampled": 37,
+        "failures": []
+      },
+      {
+        "label": "#/settings[dark/th]",
+        "sampled": 72,
+        "failures": []
+      }
+    ],
+    "lang": {
+      "en": {
+        "htmlLang": "en",
+        "mixedContent": {
+          "thNodes": [
+            {
+              "cls": "segment-label",
+              "lang": null
+            }
+          ]
+        }
+      },
+      "th": {
+        "htmlLang": "th",
+        "mixedContent": {
+          "thNodes": [
+            {
+              "cls": "skip-link",
+              "lang": null
+            },
+            {
+              "cls": "nav-label",
+              "lang": null
+            },
+            {
+              "cls": "nav-label",
+              "lang": null
+            },
+            {
+              "cls": "nav-label",
+              "lang": null
+            },
+            {
+              "cls": "nav-label",
+              "lang": null
+            },
+            {
+              "cls": "nav-label",
+              "lang": null
+            }
+          ]
+        }
+      }
+    },
+    "touch": [
+      {
+        "label": "/[360px/en]",
+        "sampled": 13,
+        "under44": [
+          {
+            "tag": "a",
+            "cls": "skip-link",
+            "name": "Skip to main content",
+            "w": 180.91,
+            "h": 43.59
+          }
+        ],
+        "under24": []
+      },
+      {
+        "label": "#/all[360px/en]",
+        "sampled": 15,
+        "under44": [
+          {
+            "tag": "a",
+            "cls": "skip-link",
+            "name": "Skip to main content",
+            "w": 180.91,
+            "h": 43.59
+          },
+          {
+            "tag": "input",
+            "cls": "task-check",
+            "name": "Mark \"Buy milk\" as complete",
+            "w": 24,
+            "h": 24
+          }
+        ],
+        "under24": []
+      },
+      {
+        "label": "#/lists[360px/en]",
+        "sampled": 15,
+        "under44": [
+          {
+            "tag": "a",
+            "cls": "skip-link",
+            "name": "Skip to main content",
+            "w": 180.91,
+            "h": 43.59
+          }
+        ],
+        "under24": []
+      },
+      {
+        "label": "#/settings[360px/en]",
+        "sampled": 25,
+        "under44": [
+          {
+            "tag": "a",
+            "cls": "skip-link",
+            "name": "Skip to main content",
+            "w": 180.91,
+            "h": 43.59
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          }
+        ],
+        "under24": [
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          }
+        ]
+      },
+      {
+        "label": "drawer[en]",
+        "sampled": 6,
+        "under44": [],
+        "under24": []
+      },
+      {
+        "label": "/[360px/th]",
+        "sampled": 13,
+        "under44": [
+          {
+            "tag": "a",
+            "cls": "skip-link",
+            "name": "ข้ามไปยังเนื้อหาหลัก",
+            "w": 151.17,
+            "h": 43.59
+          }
+        ],
+        "under24": []
+      },
+      {
+        "label": "#/all[360px/th]",
+        "sampled": 15,
+        "under44": [
+          {
+            "tag": "a",
+            "cls": "skip-link",
+            "name": "ข้ามไปยังเนื้อหาหลัก",
+            "w": 151.17,
+            "h": 43.59
+          },
+          {
+            "tag": "input",
+            "cls": "task-check",
+            "name": "ทำเครื่องหมาย \"ซื้อนมสด\" ว่าเสร็จแล้ว",
+            "w": 24,
+            "h": 24
+          }
+        ],
+        "under24": []
+      },
+      {
+        "label": "#/lists[360px/th]",
+        "sampled": 15,
+        "under44": [
+          {
+            "tag": "a",
+            "cls": "skip-link",
+            "name": "ข้ามไปยังเนื้อหาหลัก",
+            "w": 151.17,
+            "h": 43.59
+          }
+        ],
+        "under24": []
+      },
+      {
+        "label": "#/settings[360px/th]",
+        "sampled": 25,
+        "under44": [
+          {
+            "tag": "a",
+            "cls": "skip-link",
+            "name": "ข้ามไปยังเนื้อหาหลัก",
+            "w": 151.17,
+            "h": 43.59
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          }
+        ],
+        "under24": [
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          },
+          {
+            "tag": "input",
+            "cls": "",
+            "name": "",
+            "w": 18,
+            "h": 18
+          }
+        ]
+      },
+      {
+        "label": "drawer[th]",
+        "sampled": 6,
+        "under44": [],
+        "under24": []
+      }
+    ],
+    "reducedMotion": {
+      "durationsOver20ms": [],
+      "runningAnimations": [],
+      "pass": true
+    },
+    "zoomReflow": {
+      "en": [
+        {
+          "route": "/",
+          "horizontalScroll": false,
+          "scrollWidth": 1280,
+          "clientWidth": 1280,
+          "clipped": [],
+          "nonVisibleOverflow": [],
+          "rootFont": "32px"
+        },
+        {
+          "route": "#/all",
+          "horizontalScroll": false,
+          "scrollWidth": 1280,
+          "clientWidth": 1280,
+          "clipped": [
+            {
+              "cls": "visually-hidden",
+              "text": "View: All open",
+              "scrollH": 51,
+              "clientH": 1
+            }
+          ],
+          "nonVisibleOverflow": [
+            {
+              "cls": "task-title-text",
+              "overflow": "hidden"
+            },
+            {
+              "cls": "task-title-text",
+              "overflow": "hidden"
+            },
+            {
+              "cls": "task-title-text",
+              "overflow": "hidden"
+            }
+          ],
+          "rootFont": "32px"
+        },
+        {
+          "route": "#/lists",
+          "horizontalScroll": false,
+          "scrollWidth": 1280,
+          "clientWidth": 1280,
+          "clipped": [
+            {
+              "cls": "visually-hidden",
+              "text": "View: Manage lists",
+              "scrollH": 51,
+              "clientH": 1
+            }
+          ],
+          "nonVisibleOverflow": [],
+          "rootFont": "32px"
+        },
+        {
+          "route": "#/settings",
+          "horizontalScroll": false,
+          "scrollWidth": 1280,
+          "clientWidth": 1280,
+          "clipped": [
+            {
+              "cls": "visually-hidden",
+              "text": "View: Settings",
+              "scrollH": 51,
+              "clientH": 1
+            }
+          ],
+          "nonVisibleOverflow": [],
+          "rootFont": "32px"
+        }
+      ],
+      "th": [
+        {
+          "route": "/",
+          "horizontalScroll": false,
+          "scrollWidth": 1280,
+          "clientWidth": 1280,
+          "clipped": [],
+          "nonVisibleOverflow": [],
+          "rootFont": "32px"
+        },
+        {
+          "route": "#/all",
+          "horizontalScroll": false,
+          "scrollWidth": 1280,
+          "clientWidth": 1280,
+          "clipped": [
+            {
+              "cls": "visually-hidden",
+              "text": "มุมมอง: ทั้งหมดที่ยังไม่เสร็จ",
+              "scrollH": 51,
+              "clientH": 1
+            }
+          ],
+          "nonVisibleOverflow": [
+            {
+              "cls": "task-title-text",
+              "overflow": "hidden"
+            },
+            {
+              "cls": "task-title-text",
+              "overflow": "hidden"
+            },
+            {
+              "cls": "task-title-text",
+              "overflow": "hidden"
+            }
+          ],
+          "rootFont": "32px"
+        },
+        {
+          "route": "#/lists",
+          "horizontalScroll": false,
+          "scrollWidth": 1280,
+          "clientWidth": 1280,
+          "clipped": [
+            {
+              "cls": "visually-hidden",
+              "text": "มุมมอง: จัดการรายการ",
+              "scrollH": 51,
+              "clientH": 1
+            }
+          ],
+          "nonVisibleOverflow": [],
+          "rootFont": "32px"
+        },
+        {
+          "route": "#/settings",
+          "horizontalScroll": false,
+          "scrollWidth": 1280,
+          "clientWidth": 1280,
+          "clipped": [
+            {
+              "cls": "visually-hidden",
+              "text": "มุมมอง: การตั้งค่า",
+              "scrollH": 51,
+              "clientH": 1
+            }
+          ],
+          "nonVisibleOverflow": [],
+          "rootFont": "32px"
+        }
+      ]
+    },
+    "announcements": {
+      "en": [
+        {
+          "scenario": "task-added",
+          "expect": "Task added: Announce add",
+          "polite": [],
+          "assertive": [],
+          "hit": false
+        },
+        {
+          "scenario": "task-completed",
+          "expect": "Task completed",
+          "polite": [],
+          "assertive": [],
+          "hit": false
+        },
+        {
+          "scenario": "task-reopened",
+          "expect": "Task reopened",
+          "polite": [],
+          "assertive": [],
+          "hit": false
+        },
+        {
+          "scenario": "route-change",
+          "expect": "View: {view}",
+          "polite": [],
+          "assertive": [],
+          "hit": false
+        },
+        {
+          "scenario": "search-results",
+          "expect": "{count} results for \"{query}\"",
+          "polite": [],
+          "assertive": [],
+          "hit": false
+        },
+        {
+          "scenario": "list-created",
+          "expect": "List created: {list}",
+          "polite": [],
+          "assertive": [],
+          "hit": false
+        }
+      ],
+      "th": [
+        {
+          "scenario": "task-added",
+          "expect": "เพิ่มงานแล้ว: เพิ่มงานใหม่",
+          "polite": [],
+          "assertive": [],
+          "hit": false
+        },
+        {
+          "scenario": "task-completed",
+          "expect": "เสร็จงานแล้ว",
+          "polite": [],
+          "assertive": [],
+          "hit": false
+        },
+        {
+          "scenario": "task-reopened",
+          "expect": "เปิดงานอีกครั้ง",
+          "polite": [],
+          "assertive": [],
+          "hit": false
+        },
+        {
+          "scenario": "route-change",
+          "expect": "มุมมอง: {view}",
+          "polite": [],
+          "assertive": [],
+          "hit": false
+        },
+        {
+          "scenario": "search-results",
+          "expect": "{count} ผลลัพธ์สำหรับ \"{query}\"",
+          "polite": [],
+          "assertive": [],
+          "hit": false
+        },
+        {
+          "scenario": "list-created",
+          "expect": "สร้างรายการแล้ว: {list}",
+          "polite": [],
+          "assertive": [],
+          "hit": false
+        }
+      ]
+    }
+  },
+  "findings": [
+    {
+      "check": "touch-target",
+      "label": "/[360px/en]",
+      "tag": "a",
+      "cls": "skip-link",
+      "name": "Skip to main content",
+      "w": 180.91,
+      "h": 43.59
+    },
+    {
+      "check": "touch-target",
+      "label": "#/all[360px/en]",
+      "tag": "a",
+      "cls": "skip-link",
+      "name": "Skip to main content",
+      "w": 180.91,
+      "h": 43.59
+    },
+    {
+      "check": "touch-target",
+      "label": "#/all[360px/en]",
+      "tag": "input",
+      "cls": "task-check",
+      "name": "Mark \"Buy milk\" as complete",
+      "w": 24,
+      "h": 24
+    },
+    {
+      "check": "touch-target",
+      "label": "#/lists[360px/en]",
+      "tag": "a",
+      "cls": "skip-link",
+      "name": "Skip to main content",
+      "w": 180.91,
+      "h": 43.59
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/en]",
+      "tag": "a",
+      "cls": "skip-link",
+      "name": "Skip to main content",
+      "w": 180.91,
+      "h": 43.59
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/en]",
+      "tag": "input",
+      "cls": "",
+      "name": "",
+      "w": 18,
+      "h": 18
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/en]",
+      "tag": "input",
+      "cls": "",
+      "name": "",
+      "w": 18,
+      "h": 18
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/en]",
+      "tag": "input",
+      "cls": "",
+      "name": "",
+      "w": 18,
+      "h": 18
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/en]",
+      "tag": "input",
+      "cls": "",
+      "name": "",
+      "w": 18,
+      "h": 18
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/en]",
+      "tag": "input",
+      "cls": "",
+      "name": "",
+      "w": 18,
+      "h": 18
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/en]",
+      "tag": "input",
+      "cls": "",
+      "name": "",
+      "w": 18,
+      "h": 18
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/en]",
+      "tag": "input",
+      "cls": "",
+      "name": "",
+      "w": 18,
+      "h": 18
+    },
+    {
+      "check": "touch-target",
+      "label": "/[360px/th]",
+      "tag": "a",
+      "cls": "skip-link",
+      "name": "ข้ามไปยังเนื้อหาหลัก",
+      "w": 151.17,
+      "h": 43.59
+    },
+    {
+      "check": "touch-target",
+      "label": "#/all[360px/th]",
+      "tag": "a",
+      "cls": "skip-link",
+      "name": "ข้ามไปยังเนื้อหาหลัก",
+      "w": 151.17,
+      "h": 43.59
+    },
+    {
+      "check": "touch-target",
+      "label": "#/all[360px/th]",
+      "tag": "input",
+      "cls": "task-check",
+      "name": "ทำเครื่องหมาย \"ซื้อนมสด\" ว่าเสร็จแล้ว",
+      "w": 24,
+      "h": 24
+    },
+    {
+      "check": "touch-target",
+      "label": "#/lists[360px/th]",
+      "tag": "a",
+      "cls": "skip-link",
+      "name": "ข้ามไปยังเนื้อหาหลัก",
+      "w": 151.17,
+      "h": 43.59
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/th]",
+      "tag": "a",
+      "cls": "skip-link",
+      "name": "ข้ามไปยังเนื้อหาหลัก",
+      "w": 151.17,
+      "h": 43.59
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/th]",
+      "tag": "input",
+      "cls": "",
+      "name": "",
+      "w": 18,
+      "h": 18
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/th]",
+      "tag": "input",
+      "cls": "",
+      "name": "",
+      "w": 18,
+      "h": 18
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/th]",
+      "tag": "input",
+      "cls": "",
+      "name": "",
+      "w": 18,
+      "h": 18
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/th]",
+      "tag": "input",
+      "cls": "",
+      "name": "",
+      "w": 18,
+      "h": 18
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/th]",
+      "tag": "input",
+      "cls": "",
+      "name": "",
+      "w": 18,
+      "h": 18
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/th]",
+      "tag": "input",
+      "cls": "",
+      "name": "",
+      "w": 18,
+      "h": 18
+    },
+    {
+      "check": "touch-target",
+      "label": "#/settings[360px/th]",
+      "tag": "input",
+      "cls": "",
+      "name": "",
+      "w": 18,
+      "h": 18
+    },
+    {
+      "check": "zoom-clip",
+      "locale": "en",
+      "route": "#/all",
+      "clipped": [
+        {
+          "cls": "visually-hidden",
+          "text": "View: All open",
+          "scrollH": 51,
+          "clientH": 1
+        }
+      ]
+    },
+    {
+      "check": "zoom-clip",
+      "locale": "en",
+      "route": "#/lists",
+      "clipped": [
+        {
+          "cls": "visually-hidden",
+          "text": "View: Manage lists",
+          "scrollH": 51,
+          "clientH": 1
+        }
+      ]
+    },
+    {
+      "check": "zoom-clip",
+      "locale": "en",
+      "route": "#/settings",
+      "clipped": [
+        {
+          "cls": "visually-hidden",
+          "text": "View: Settings",
+          "scrollH": 51,
+          "clientH": 1
+        }
+      ]
+    },
+    {
+      "check": "zoom-clip",
+      "locale": "th",
+      "route": "#/all",
+      "clipped": [
+        {
+          "cls": "visually-hidden",
+          "text": "มุมมอง: ทั้งหมดที่ยังไม่เสร็จ",
+          "scrollH": 51,
+          "clientH": 1
+        }
+      ]
+    },
+    {
+      "check": "zoom-clip",
+      "locale": "th",
+      "route": "#/lists",
+      "clipped": [
+        {
+          "cls": "visually-hidden",
+          "text": "มุมมอง: จัดการรายการ",
+          "scrollH": 51,
+          "clientH": 1
+        }
+      ]
+    },
+    {
+      "check": "zoom-clip",
+      "locale": "th",
+      "route": "#/settings",
+      "clipped": [
+        {
+          "cls": "visually-hidden",
+          "text": "มุมมอง: การตั้งค่า",
+          "scrollH": 51,
+          "clientH": 1
+        }
+      ]
+    },
+    {
+      "check": "live-region",
+      "locale": "en",
+      "scenario": "task-added",
+      "expect": "Task added: Announce add",
+      "polite": [],
+      "assertive": [],
+      "hit": false
+    },
+    {
+      "check": "live-region",
+      "locale": "en",
+      "scenario": "task-completed",
+      "expect": "Task completed",
+      "polite": [],
+      "assertive": [],
+      "hit": false
+    },
+    {
+      "check": "live-region",
+      "locale": "en",
+      "scenario": "task-reopened",
+      "expect": "Task reopened",
+      "polite": [],
+      "assertive": [],
+      "hit": false
+    },
+    {
+      "check": "live-region",
+      "locale": "en",
+      "scenario": "route-change",
+      "expect": "View: {view}",
+      "polite": [],
+      "assertive": [],
+      "hit": false
+    },
+    {
+      "check": "live-region",
+      "locale": "en",
+      "scenario": "search-results",
+      "expect": "{count} results for \"{query}\"",
+      "polite": [],
+      "assertive": [],
+      "hit": false
+    },
+    {
+      "check": "live-region",
+      "locale": "en",
+      "scenario": "list-created",
+      "expect": "List created: {list}",
+      "polite": [],
+      "assertive": [],
+      "hit": false
+    },
+    {
+      "check": "live-region",
+      "locale": "th",
+      "scenario": "task-added",
+      "expect": "เพิ่มงานแล้ว: เพิ่มงานใหม่",
+      "polite": [],
+      "assertive": [],
+      "hit": false
+    },
+    {
+      "check": "live-region",
+      "locale": "th",
+      "scenario": "task-completed",
+      "expect": "เสร็จงานแล้ว",
+      "polite": [],
+      "assertive": [],
+      "hit": false
+    },
+    {
+      "check": "live-region",
+      "locale": "th",
+      "scenario": "task-reopened",
+      "expect": "เปิดงานอีกครั้ง",
+      "polite": [],
+      "assertive": [],
+      "hit": false
+    },
+    {
+      "check": "live-region",
+      "locale": "th",
+      "scenario": "route-change",
+      "expect": "มุมมอง: {view}",
+      "polite": [],
+      "assertive": [],
+      "hit": false
+    },
+    {
+      "check": "live-region",
+      "locale": "th",
+      "scenario": "search-results",
+      "expect": "{count} ผลลัพธ์สำหรับ \"{query}\"",
+      "polite": [],
+      "assertive": [],
+      "hit": false
+    },
+    {
+      "check": "live-region",
+      "locale": "th",
+      "scenario": "list-created",
+      "expect": "สร้างรายการแล้ว: {list}",
+      "polite": [],
+      "assertive": [],
+      "hit": false
+    }
+  ],
+  "stageErrors": [],
+  "summary": {
+    "findings": 42,
+    "stageErrors": [],
+    "byCheck": {
+      "touch-target": 24,
+      "zoom-clip": 6,
+      "live-region": 12
+    }
+  }
+}
