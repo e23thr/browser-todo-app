@@ -12,6 +12,14 @@
  * brand-new empty profile is never nagged; a returning user sees it at their next task
  * creation. At most one offer per session.
  *
+ * CAPTURE TIMING (E6-D1 fix): the `beforeinstallprompt`/`appinstalled` listeners attach at
+ * MODULE EVALUATION (top-level side effect below), synchronously — before any async boot work
+ * can delay them. Chromium fires `beforeinstallprompt` as soon as manifest+icon validity is
+ * known (it does not wait for the service worker since ~Chrome 106): observed at 19–178 ms
+ * after navigation while a boot-order attach landed at 24–220 ms, so the event was lost on
+ * every load (7/7, docs/qa/e6-install-logs/browser-probes.md). Offer ELIGIBILITY is
+ * unchanged: capture early, offer only after the first task.
+ *
  * DISMISSAL ("never aggressive"): "No thanks" — or declining the native install dialog — is a
  * PERMANENT dismissal, remembered across sessions in the ADR-002 Decision 7 flags (one writer:
  * `features/data-safety/flags.ts`). There is no snooze, no re-prompt loop, and nothing steals
@@ -133,12 +141,30 @@ function onInstalled(): void {
 }
 
 /**
- * Wire the install flow at boot. Silent and inert where unsupported (§9.4): no listeners leak,
- * no UI ever renders, the app is complete without any of it. Returns a disposer for tests.
+ * Attach the capture listeners. Called at MODULE EVALUATION (the side effect below) so no
+ * async boot work can ever delay capture (E6-D1), and again from `bootInstallFlow()` —
+ * idempotent, because `addEventListener` ignores an identical registration.
  */
-export function bootInstallFlow(): () => void {
+function attachCaptureListeners(): void {
   globalThis.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
   globalThis.addEventListener('appinstalled', onInstalled);
+}
+
+// E6-D1: capture starts HERE, at module evaluation — strictly before any await in the entry
+// (src/app/main.tsx imports this module statically, so this runs before `start()` even
+// begins). The only window this cannot cover is an event delivered before this module
+// evaluates at all; closing that would need an inline capture script in index.html — a
+// second `beforeinstallprompt` site the shipped-JS guard deliberately forbids.
+attachCaptureListeners();
+
+/**
+ * Idempotent boot seam: re-attach (a no-op when the module-evaluation listeners are already
+ * in place), evaluate the current state, and return a disposer for tests. Silent and inert
+ * where unsupported (§9.4): no listeners leak, no UI ever renders, the app is complete
+ * without any of it.
+ */
+export function bootInstallFlow(): () => void {
+  attachCaptureListeners();
   evaluate();
   return () => {
     globalThis.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);

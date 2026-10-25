@@ -75,6 +75,13 @@ Verified mechanically (CI + local Chromium 156 via Playwright, `tests/e2e/instal
 
 - manifest validity and base-path `start_url`/`scope`/`id` agreement with the real SW scope
   (both bases), icon resolution under the base;
+- **capture timing** (E6-D1 fix): the `beforeinstallprompt`/`appinstalled` listeners attach at
+  module evaluation of `src/features/install/installPrompt.ts` — synchronously, before any boot
+  await can delay them — so the native event is captured even when Chromium delivers it before
+  boot finishes (observed at 19–178 ms after navigation). Regression-pinned by the pre-boot
+  synthetic-event test in `tests/e2e/install.spec.ts` (event dispatched at `DOMContentLoaded`,
+  asserted captured before the boot-order attach point) and by a unit regression on a fresh
+  module instance with no `bootInstallFlow()` call;
 - offer timing (nothing before the first task, offered after), permanent dismissal surviving a
   reload, Install button wiring (captured `prompt()` invoked exactly once);
 - post-install launch semantics under emulated `display-mode: standalone`: shell boots, offer
@@ -109,6 +116,8 @@ Manual checklist for whoever has the devices (the E6 test card t_3d254f0f owns t
 - Icons are committed artifacts; `npm run icons` regenerates them (deterministic bytes —
   a regeneration that changes bytes is a deliberate design change and must update the ADR).
 - The manifest is intentionally **not** in the SW precache (ADR-005 Decision 2 exclusion kept):
-  it is install-time metadata, not part of offline boot.
+  it is install-time metadata, not part of offline boot. It still serves offline: the SW's
+  generic asset rule (`src/sw/routing.ts`, write-through cache) caches it into the shell cache
+  on first fetch, version-pinned per deploy.
 - Strings: `install.*` in `src/i18n/en.json`/`th.json` (i18n parity is CI-enforced). The
   manifest's `name`/`description` are English-only (per-locale manifests are out of scope).

@@ -218,3 +218,29 @@ describe('post-install launch (installed home-screen app)', () => {
     expect(installSurface.value).toBe('none');
   });
 });
+
+describe('capture timing (E6-D1 regression: the event can fire before boot)', () => {
+  it('captures beforeinstallprompt at module evaluation — before bootInstallFlow() exists', async () => {
+    // The boot-time listeners come out; only listeners the MODULE attaches on its own can
+    // capture from here — exactly the production ordering where the browser delivers the
+    // event before boot's awaits resolve (19–178 ms after navigation, browser-probes.md).
+    dispose?.();
+    dispose = null;
+    vi.resetModules();
+    const fresh = await import('../../src/features/install/installPrompt');
+
+    const { event } = fakeBeforeInstallPrompt(Promise.resolve({ outcome: 'accepted' }));
+    globalThis.dispatchEvent(event);
+
+    // Captured at dispatch time (pre-boot): preventDefault ran and the deferred event is held
+    // even though `bootInstallFlow()` has NOT been called on this module instance.
+    expect(event.defaultPrevented).toBe(true);
+    fresh.noteTaskCreated();
+    expect(fresh.installSurface.value).toBe('prompt');
+    expect(fresh.installTier()).toBe('prompt');
+
+    // Tear down the fresh instance's module-evaluation listeners (they outlive the test
+    // otherwise); the re-attach is the idempotent no-op, the disposer removes them for good.
+    fresh.bootInstallFlow()();
+  });
+});

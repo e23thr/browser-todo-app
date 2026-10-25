@@ -12,10 +12,18 @@
  *   3. prompt discipline: nothing before the first task of the session (acceptance criterion),
  *      the offer after it, and a dismissal that survives a reload (never nagging);
  *   4. post-install launch semantics: with `display-mode: standalone` (what the home-screen
- *      entry runs in), the offer never appears and the app boots normally.
+ *      entry runs in), the offer never appears and the app boots normally;
+ *   5. capture timing (E6-D1 regression): a `beforeinstallprompt` delivered BEFORE boot's
+ *      awaits resolve is captured anyway (module-evaluation attach), and the offer still
+ *      appears after the first task.
  *
- * The browser event is SYNTHESIZED (`beforeinstallprompt` is Chromium-only and never fires
- * headless), so the DOM-level wiring under test is exactly the production listener path.
+ * The browser event is SYNTHESIZED: whether a headless build fires `beforeinstallprompt` is
+ * browser-BUILD-dependent (the old "never fires headless" premise was wrong) — the repo's
+ * bundled Playwright Chromium never fires it (n=0 over fresh profiles,
+ * docs/qa/e6-install-logs/playwright-native-bip.mjs) while harness Chromium 145 fires it once
+ * per load (7/7 loads at 19–178 ms after navigation, docs/qa/e6-install-logs/browser-probes.md).
+ * A synthetic event keeps the suite deterministic across builds, and the DOM-level wiring under
+ * test is exactly the production listener path.
  */
 
 import { expect, test, type Page } from '@playwright/test';
@@ -58,7 +66,7 @@ async function readManifest(page: Page, url: string): Promise<ManifestShape> {
   return (await response.json()) as ManifestShape;
 }
 
-/** Synthesize the Chromium install event (headless browsers never fire it themselves). */
+/** Synthesize the Chromium install event (never guaranteed to fire headless — see above). */
 async function dispatchInstallPrompt(page: Page): Promise<void> {
   await page.evaluate(() => {
     const target = window as unknown as { __installPromptCalls?: number };
@@ -203,4 +211,79 @@ test('post-install launch (display-mode standalone): the app boots and never off
   ).toBeVisible();
   await createTask(page, 'Standalone task');
   await expect(page.locator('[data-install-notice]')).toHaveCount(0);
+});
+
+/**
+ * E6-D1 regression: a `beforeinstallprompt` landing BEFORE boot reaches `bootInstallFlow()`
+ * must still be captured. Real Chromium delivers the event at 19–178 ms after navigation —
+ * before the boot awaits resolve (docs/qa/e6-install-logs/browser-probes.md) — and the old
+ * boot-order attach lost it on every load (7/7).
+ *
+ * Timing discipline: the synthetic event is INSTALLED via `context.addInitScript` (before any
+ * app script runs) and dispatched at `DOMContentLoaded` — spec-guaranteed to land AFTER the
+ * entry module evaluated (module scripts block DOMContentLoaded, so the module-evaluation
+ * capture listeners exist) and, as asserted below, BEFORE the boot-order attach point
+ * (`#install-notice-root` mount — main.tsx `bootInstallFlow()`/`mountInstallNotice()`). An
+ * event dispatched synchronously inside the init script would land before ANY page listener
+ * could exist, which no in-page fix could ever capture.
+ */
+test('E6-D1: a pre-boot beforeinstallprompt is captured — offer appears after the first task', async ({
+  page,
+  context,
+}) => {
+  await context.addInitScript(() => {
+    const probe: { dispatchedAt?: number; mountedAt?: number; captured: boolean } = {
+      captured: false,
+    };
+    (window as unknown as { __bipPreBoot: typeof probe }).__bipPreBoot = probe;
+
+    // The boot-order attach point (mountInstallNotice) mounts in the same synchronous block as
+    // the old listener attach — its mount time is the exact moment the old code attached.
+    new MutationObserver(() => {
+      if (
+        probe.mountedAt === undefined &&
+        document.getElementById('install-notice-root') !== null
+      ) {
+        probe.mountedAt = performance.now();
+      }
+    }).observe(document, { childList: true, subtree: true });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const event = new Event('beforeinstallprompt', { cancelable: true });
+      Object.assign(event, {
+        prompt: () => Promise.resolve(),
+        userChoice: Promise.resolve({ outcome: 'accepted' }),
+      });
+      probe.dispatchedAt = performance.now();
+      window.dispatchEvent(event);
+      probe.captured = event.defaultPrevented;
+    });
+  });
+
+  await page.goto(appUrl);
+  await completeFirstRunOnboarding(page);
+
+  // The event landed pre-boot: captured at dispatch time (the module-evaluation listener ran)
+  // and strictly before the boot-order attach point mounted.
+  const probe = await page.evaluate(
+    () =>
+      (
+        window as unknown as {
+          __bipPreBoot: { dispatchedAt?: number; mountedAt?: number; captured: boolean };
+        }
+      ).__bipPreBoot,
+  );
+  const { captured, dispatchedAt, mountedAt } = probe;
+  expect(captured).toBe(true);
+  expect(dispatchedAt).toBeDefined();
+  expect(mountedAt).toBeDefined();
+  if (dispatchedAt === undefined || mountedAt === undefined) {
+    throw new Error('pre-boot probe missing dispatch/mount timings');
+  }
+  expect(dispatchedAt).toBeLessThan(mountedAt);
+
+  // Acceptance: the captured pre-boot event still yields the offer after the first task.
+  await createTask(page, 'Pre-boot install task');
+  await expect(page.locator('[data-install-notice]')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Install', exact: true })).toBeVisible();
 });
