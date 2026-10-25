@@ -1,0 +1,20 @@
+--- run 2026-10-25T23:33:39.783Z ---
+{"phase":"A","note":"A1 zero NON-APP-origin requests after boot+render","externalReqs":[],"ok":true}
+{"phase":"A","note":"A2 zero WebDAV/probe requests before any setup submit","engine":0,"ok":true}
+{"phase":"A","note":"A3 keyboard Tab reaches the WebDAV address field","tabCount":19,"seq":["Skip to main contentTodoSearchTodayNext 7 daysAll openCompletedListsNo lists yet","Skip to main content","Search","Today","Next 7 days","All open","Completed","Manage lists","Settings","Command palette","Keyboard shortcuts","Request protection","Back up now","Import…","Delete all data"],"ok":true}
+{"phase":"A","note":"A4 insecure URL refused LOCALLY with HTTPS copy","text":"Sync cannot use this addressCheck the address and sign-in details — a valid HTTPS WebDAV URL (plain HTTP only for localhost).","ok":true}
+{"phase":"A","note":"A5 local-refusal live-region observation [E8-UI-D3: expected announced]","assertive":"","polite":""}
+{"phase":"A","note":"A6 local refusal made ZERO requests","engine":0,"ok":true}
+{"phase":"A","note":"A7a URL replaced cleanly by keyboard (read-back verified)","aVal":"https://sync.example/dav/","ok":true}
+{"phase":"A","note":"A7 Enter advances to step 2 (aria-current=step follows)","stepAnnounce":"","ok":true}
+{"phase":"A","note":"A8 keyboard Tab reaches the Back button","tabCount":3,"ok":true}
+{"phase":"A","note":"A9 Back returns focus to the URL field of step 1","ok":true}
+{"phase":"A","note":"A10 entire pre-submit wizard interaction = ZERO requests","engine":0,"external":0,"totalNet":10,"ok":true}
+{"phase":"B","note":"B0 URL replaced cleanly (read-back verified)","bVal":"http://localhost:4193/dav-dead/","ok":true}
+{"phase":"B","note":"B1 unreachable server -> graceful error copy (CORS/network-honest)","text":"The browser blocked the requestThe storage server must allow this app's origin (Nextcloud: Access-Control-Allow-Origin). The address may also be unreachable or mistyped.Details: fetch rejected (TypeError): usually the WebDAV server missing Access-Control-Allow-Origin for the app origin (OPTIONS preflight); also DNS/TLS failure","ok":true}
+{"phase":"B","note":"B2 setup NOT completed (still unconfigured)","ok":true}
+{"phase":"B","note":"B3 unreachable failure announced ASSERTIVELY","assertive":"Sync failed: The browser blocked the request","ok":true}
+{"phase":"B","note":"probe targets the ORIGIN ROOT, not the typed base path — defect E8-UI-D5","probes":7,"ok":true}
+{"phase":"B","note":"B5 configured base path never contacted","ok":true}
+{"phase":"C","note":"C0 URL replaced cleanly (read-back verified)","cVal":"http://localhost:4193/dav-bad/","ok":true}
+{"phase":"C","note":"C1 wizard form state kept across failed submits","user":"alice","ok":true}
