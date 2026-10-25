@@ -1,0 +1,13 @@
+
+ RUN  v5.0.5 /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e9qa-t_adbd2e36
+
+
+ Test Files  114 passed (114)
+      Tests  1252 passed | 4 expected fail (1256)
+   Start at  04:58:44
+   Duration  25.62s (environment 59%, tests 26%, setup 9%, transform 3%, import 2%, worker 1%)
+
+Environment  jsdom was created 114 times · 136.75s total, 59% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+

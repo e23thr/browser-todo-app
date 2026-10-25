@@ -1,0 +1,284 @@
+=== npm run format:check ===
+
+> browser-todo-app@0.1.0 format:check
+> prettier --check .
+
+Checking formatting...
+[warn] src/domain/model.ts
+[warn] vite.config.ts
+[warn] Code style issues found in 2 files. Run Prettier with --write to fix.
+exit=1 for npm run format:check
+=== npm run lint ===
+
+> browser-todo-app@0.1.0 lint
+> eslint . --max-warnings 0
+
+exit=0 for npm run lint
+=== npm run typecheck ===
+
+> browser-todo-app@0.1.0 typecheck
+> tsc -b
+
+exit=0 for npm run typecheck
+=== npm run i18n:check ===
+
+> browser-todo-app@0.1.0 i18n:check
+> node scripts/check-i18n.mjs
+
+i18n catalog check — src/i18n/en.json vs src/i18n/th.json
+  keys: 522 en / 522 th · 365 distinct keys used by 434 literal t() call site(s)
+  note: 24 t() call site(s) with a non-literal key (not statically verifiable):
+    app/Shell.tsx:182
+    app/Shell.tsx:289
+    components/ConfirmDialog.tsx:110
+    components/ConfirmDialog.tsx:119
+    components/ConfirmDialog.tsx:125
+    components/ConfirmDialog.tsx:127
+    features/commands/CommandPalette.tsx:87
+    features/commands/CommandPalette.tsx:166
+    features/commands/ShortcutsHelpDialog.tsx:39
+    features/commands/ShortcutsHelpDialog.tsx:41
+    features/commands/ShortcutsHelpDialog.tsx:50
+    features/commands/ShortcutsHelpDialog.tsx:51
+    features/data-safety/actions.ts:116
+    features/lists/ListDialog.tsx:113
+    features/lists/ListDialog.tsx:132
+    features/lists/ListsManageView.tsx:399
+    features/notifications/NotificationsSettings.tsx:64
+    features/tasks/Composer.tsx:244
+    features/tasks/TaskRow.tsx:280
+    features/tasks/TaskRow.tsx:281
+    features/tasks/ToastHost.tsx:33
+    features/tasks/ToastHost.tsx:42
+    features/tasks/fields.tsx:185
+    features/tasks/store.ts:343
+RESULT: PASS — en/th key sets, values and placeholders are consistent
+exit=0 for npm run i18n:check
+=== npm run test:coverage ===
+
+> browser-todo-app@0.1.0 test:coverage
+> vitest run --coverage
+
+
+ RUN  v5.0.5 /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e9qa-t_adbd2e36
+      Coverage enabled with v8
+
+
+ Test Files  111 passed (111)
+      Tests  1212 passed | 2 expected fail (1214)
+   Start at  04:38:41
+   Duration  41.16s (environment 50%, tests 32%, setup 10%, transform 3%, worker 3%, import 2%)
+
+Environment  jsdom was created 111 times · 151.62s total, 50% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   86.01 |    80.09 |    85.1 |   88.32 |                   
+ app               |   70.73 |    72.63 |   67.45 |    72.2 |                   
+  App.tsx          |   71.31 |    72.22 |   53.84 |   71.55 | ...85-287,307-360 
+  Shell.tsx        |   75.64 |    79.16 |   53.84 |   78.57 | ...10-246,327-414 
+  announce.ts      |   93.58 |    91.11 |     100 |   97.01 | 150-151           
+  dataReplace.ts   |      60 |      100 |      50 |      60 | 26,29             
+  main.tsx         |       0 |        0 |       0 |       0 | 20-72             
+  media.ts         |   95.23 |      100 |     100 |   94.44 | 21                
+  router.ts        |   93.75 |    89.74 |   92.85 |   94.54 | 91-94             
+  settings.ts      |   92.18 |     92.3 |   85.71 |   94.54 | 98,155-156        
+  ...ersistence.ts |      48 |    22.22 |   66.66 |   57.14 | 40,50-68          
+  sw-boot.tsx      |       0 |        0 |       0 |       0 | 22-86             
+  tabSync.ts       |   82.89 |       72 |   83.33 |   92.42 | 94-95,162,167,184 
+  theme.ts         |   92.85 |    96.42 |   91.66 |   94.11 | 80,115            
+  update.ts        |   46.82 |     60.6 |      50 |   46.75 | ...17-434,449-475 
+ components        |   76.13 |    79.71 |      76 |   78.75 |                   
+  ...irmDialog.tsx |      84 |     93.1 |   66.66 |    87.5 | 140-153,193       
+  Dialog.tsx       |   72.22 |    62.96 |   88.88 |      75 | 99-109,129        
+  UpdateNotice.tsx |   71.42 |    81.81 |      60 |   66.66 | 19,84             
+ domain            |   97.57 |    87.36 |    99.5 |   99.18 |                   
+  pipeline.ts      |   96.96 |       86 |   99.03 |    98.1 | ...21,372,563,658 
+  search.ts        |   97.31 |    87.01 |     100 |     100 | ...24-228,261-263 
+  state.ts         |   97.77 |    94.73 |     100 |     100 | 158-162           
+  sync.ts          |   98.14 |    90.24 |     100 |     100 | 72-73,92,103      
+  views.ts         |   97.61 |    81.98 |     100 |     100 | ...13,291-299,302 
+ features/commands |   87.83 |    85.45 |   81.48 |   86.33 |                   
+  ...ndPalette.tsx |   78.04 |    58.82 |   75.86 |   76.62 | ...29-235,294-302 
+  ...elpDialog.tsx |   66.66 |      100 |      75 |   66.66 | 63-64             
+  openers.ts       |   77.77 |      100 |      50 |   77.77 | 28-32             
+  paletteIndex.ts  |     100 |    94.73 |     100 |     100 | 65                
+  shortcutLayer.ts |      96 |       95 |     100 |     100 | 34                
+ ...es/data-safety |   77.06 |    75.44 |   77.92 |   78.87 |                   
+  BackupRow.tsx    |     100 |    86.95 |     100 |     100 | 52,55,65          
+  ...afetyHost.tsx |   61.44 |       66 |   54.54 |   60.97 | ...46,359,382-386 
+  ...stenceRow.tsx |     100 |    95.45 |     100 |     100 | 55                
+  QuotaMeter.tsx   |     100 |    95.23 |     100 |     100 | 87-91             
+  ...eryScreen.tsx |      80 |     92.3 |   66.66 |      80 | 76                
+  SafetyDialog.tsx |      95 |     86.3 |     100 |   98.64 | 97                
+  SnapshotList.tsx |   91.66 |     92.3 |     100 |   91.66 | 25                
+  StoragePanel.tsx |   95.45 |    91.66 |     100 |     100 | 90,121,205        
+  ...Container.tsx |   22.22 |       75 |    12.5 |   22.22 | 51-69             
+  UndoToast.tsx    |   90.47 |    94.73 |   85.71 |   88.88 | 98-99             
+  actions.ts       |    62.5 |    73.52 |     100 |   63.23 | ...01-103,149-174 
+  boot.ts          |   30.48 |    38.66 |   18.18 |   28.16 | 128-154,168-262   
+  constants.ts     |   93.33 |      100 |       0 |   93.33 | 74                
+  dbAccess.ts      |   72.22 |    46.15 |   88.88 |   78.12 | 44-53,66          
+  flags.ts         |   93.61 |    86.66 |     100 |    97.5 | 42,56             
+  format.ts        |      90 |    93.54 |     100 |   93.54 | 81,96             
+  importFlow.ts    |   77.23 |     49.2 |   84.21 |   79.48 | ...82,232,273-277 
+  notices.ts       |   96.55 |     87.5 |   95.45 |   98.07 | 77                
+  pendingWrites.ts |     100 |    94.11 |     100 |     100 | 60                
+  persistGate.ts   |   62.06 |    63.15 |      60 |      64 | 84,92-117         
+  picker.ts        |      50 |      100 |       0 |      50 | 15                
+  probe.ts         |      10 |        0 |       0 |   11.11 | 33-63             
+  snapshots.ts     |      68 |       50 |      75 |   77.27 | 23,56-57,61-62    
+  state.ts         |   77.77 |       50 |     100 |     100 | 65-66             
+  storageInfo.ts   |   93.42 |    82.97 |     100 |   95.83 | 60,119,160        
+ features/install  |   93.15 |    90.69 |   93.75 |   94.11 |                   
+  ...allNotice.tsx |   55.55 |      100 |   66.66 |      50 | 77-80             
+  installPrompt.ts |   98.43 |    87.87 |     100 |     100 | 85-86,88,156      
+ features/lists    |   89.33 |    85.08 |      84 |   92.48 |                   
+  ListDialog.tsx   |   87.09 |       92 |   81.81 |   89.28 | 87-88,128         
+  ListView.tsx     |     100 |       75 |     100 |     100 | 18                
+  ...anageView.tsx |   89.47 |    83.52 |   84.21 |      93 | ...41,273,292,394 
+ .../notifications |   87.43 |    78.94 |      85 |    89.8 |                   
+  ...sSettings.tsx |   94.73 |       70 |     100 |   94.11 | 26                
+  ...derDialog.tsx |      75 |    58.33 |     100 |   83.33 | 42-44             
+  ...nderField.tsx |      50 |    16.66 |      50 |      50 | 25-27,48-58       
+  api.ts           |   73.91 |    78.57 |   66.66 |      80 | 37,52,74,78       
+  reminders.ts     |      90 |    80.95 |    90.9 |   93.33 | 64-65,107         
+ features/search   |   83.92 |    75.47 |   79.48 |   89.36 |                   
+  SearchField.tsx  |    87.5 |       75 |      75 |   92.85 | 76                
+  SearchView.tsx   |   74.35 |    69.64 |   70.83 |      80 | ...10-212,236-252 
+  highlight.ts     |   93.33 |     87.5 |     100 |     100 | 42-53,78          
+  ...IndexCache.ts |    93.1 |    78.57 |     100 |     100 | 33-34,53          
+ features/settings |      95 |     87.5 |    90.9 |      95 |                   
+  SettingsView.tsx |      95 |     87.5 |    90.9 |      95 | 132               
+ features/tasks    |   82.61 |    73.87 |   81.05 |   86.21 |                   
+  ...rrorPanel.tsx |      50 |       50 |      50 |      50 | 25                
+  Composer.tsx     |   76.08 |    70.78 |      60 |   79.67 | ...92,320,349-369 
+  ...istDialog.tsx |   84.61 |       50 |   71.42 |      80 | 47,80             
+  ...derHandle.tsx |    8.33 |        0 |      50 |    9.09 | 50-61             
+  RowMenu.tsx      |   76.82 |       64 |   93.33 |   80.28 | 76-80,142-152     
+  ...ageDialog.tsx |      75 |       65 |   83.33 |   75.75 | 77-83,147         
+  TaskEditor.tsx   |   72.16 |    69.81 |   65.62 |   75.86 | ...66-368,422-446 
+  TaskList.tsx     |   89.02 |    75.29 |   97.82 |   93.98 | ...40-442,535-539 
+  TaskRow.tsx      |   80.55 |    89.69 |      80 |   79.41 | ...45,158,175,318 
+  TaskScreen.tsx   |   90.37 |    81.93 |   87.75 |   94.26 | ...13,421,477,495 
+  ToastHost.tsx    |   76.92 |       75 |    62.5 |      75 | 20,39-50          
+  fields.tsx       |      60 |    58.53 |   59.25 |   62.71 | ...41,263-267,275 
+  labels.ts        |   90.47 |     82.6 |     100 |     100 | 16,37-43,65       
+  reorderDrag.ts   |    96.7 |     85.1 |     100 |     100 | ...35,154-160,173 
+  store.ts         |   80.52 |    62.39 |   83.56 |   85.97 | ...84-586,612,615 
+  toasts.ts        |      80 |      100 |   66.66 |    87.5 | 45                
+ i18n              |   91.15 |     90.9 |   93.33 |   91.85 |                   
+  index.ts         |   92.22 |    87.17 |   90.47 |   93.97 | ...08,220,229-230 
+  ...ersistence.ts |   78.57 |    88.88 |     100 |   77.77 | 60-61,66-67,83-86 
+ portability       |   93.87 |    85.11 |     100 |    95.7 |                   
+  ...p-document.ts |   90.27 |    86.61 |     100 |   91.11 | ...64,383,385,395 
+  download.ts      |   93.75 |      100 |     100 |   93.75 | 35                
+  export.ts        |   93.84 |    84.21 |     100 |   96.29 | 45,126            
+  fsa.ts           |    87.8 |    72.41 |     100 |   89.47 | 103,136,164-165   
+  import.ts        |   88.46 |    80.95 |     100 |   93.93 | 56-62,123         
+  records.ts       |   98.97 |    92.64 |     100 |     100 | 42,76,113-115,140 
+  snapshots-api.ts |   97.05 |    83.33 |     100 |     100 | ...,79-99,222-224 
+  upgrade.ts       |   97.67 |    80.64 |     100 |     100 | ...29-133,143-144 
+ ...bility/foreign |    91.2 |    84.23 |   96.42 |   93.52 |                   
+  csv.ts           |    89.5 |     87.5 |     100 |      90 | ...70-371,379-380 
+  index.ts         |   89.65 |    75.43 |   85.71 |   93.47 | 65-73             
+  record.ts        |   89.18 |    77.27 |     100 |   93.93 | 121,128           
+  todotxt.ts       |   95.95 |    88.67 |     100 |     100 | ...06-117,129,144 
+ storage           |   95.11 |    91.36 |    98.8 |    96.6 |                   
+  boot.ts          |   97.46 |       94 |     100 |   97.29 | 163-164           
+  db.ts            |   93.22 |    93.63 |   95.34 |    94.7 | ...07,331,360,476 
+  errorLog.ts      |     100 |     90.9 |     100 |     100 | 62                
+  id.ts            |   90.56 |    84.61 |     100 |   92.85 | 40,66-67          
+  migrations.ts    |   97.56 |    88.28 |     100 |   98.51 | 165,227           
+  orderKey.ts      |   94.44 |       95 |     100 |   95.74 | 58,109            
+  purge.ts         |   95.83 |    94.44 |     100 |     100 | 63,74             
+  quarantine.ts    |   94.11 |    89.65 |     100 |   95.83 | 180-181           
+  snapshots.ts     |   96.03 |    92.06 |     100 |   98.86 | 125               
+  syncState.ts     |   86.66 |       75 |     100 |     100 | 46-60             
+  validate.ts      |   94.39 |    89.22 |     100 |   95.09 | ...03,609-610,617 
+ storage/repos     |   89.45 |    75.84 |   92.75 |   96.65 |                   
+  listRepo.ts      |   86.31 |     70.9 |   80.95 |   91.76 | ...87,124,215-216 
+  support.ts       |   91.83 |    66.66 |   91.66 |   95.23 | 46,73             
+  taskRepo.ts      |   89.74 |    81.35 |     100 |   99.37 | 310               
+ sw                |   48.61 |    56.41 |   36.84 |      50 |                   
+  ...e-manifest.ts |       0 |      100 |     100 |       0 | 13-33             
+  routing.ts       |     100 |    91.66 |     100 |     100 | 59,81             
+  sw.ts            |       0 |        0 |       0 |       0 | 30-118            
+ sync              |   86.97 |     77.5 |   88.33 |   90.04 |                   
+  batchCodec.ts    |    82.6 |    82.81 |    90.9 |   87.93 | ...20,165,180,209 
+  engine.ts        |   84.16 |    63.79 |     100 |   89.85 | ...59,477,480,496 
+  hash.ts          |   95.83 |       80 |     100 |     100 | 12,38             
+  merge.ts         |   98.41 |    95.34 |     100 |   98.24 | 96                
+  state.ts         |   84.23 |    72.46 |   70.58 |   85.34 | ...28-334,360,448 
+  webdav.ts        |   89.09 |    82.66 |   85.71 |   92.39 | ...37,155,191,212 
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 86.01% ( 7131/8290 )
+Branches     : 80.09% ( 4503/5622 )
+Functions    : 85.1% ( 1503/1766 )
+Lines        : 88.32% ( 6424/7273 )
+================================================================================
+exit=0 for npm run test:coverage
+=== npm run build ===
+
+> browser-todo-app@0.1.0 build
+> tsc -b && vite build && node scripts/generate-precache.mjs && node scripts/build-sw.mjs
+
+vite v8.3.5 building client environment for production...
+transforming...
+✓ 164 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/manifest.webmanifest                0.83 kB
+dist/.vite/manifest.json                 2.00 kB │ gzip:  0.45 kB
+dist/index.html                          4.06 kB │ gzip:  1.95 kB
+dist/assets/index-D2Ij-4b6.css          43.87 kB │ gzip:  7.61 kB
+dist/assets/boot-CHn8KQJw.js             2.43 kB │ gzip:  1.20 kB
+dist/assets/actions-CcGiXkWi.js          3.67 kB │ gzip:  1.44 kB
+dist/assets/SettingsView-if6n11F_.js    12.78 kB │ gzip:  3.78 kB
+dist/assets/snapshots-api-XQOHXUXb.js   24.73 kB │ gzip:  8.22 kB
+dist/assets/locale-en-csWIHdKa.js       31.32 kB │ gzip:  9.27 kB
+dist/assets/dbAccess-DI-eH9hA.js        58.58 kB │ gzip: 21.36 kB
+dist/assets/locale-th-CQ_GoZgb.js       60.18 kB │ gzip: 11.08 kB
+dist/assets/index-D0XgAVv7.js          173.43 kB │ gzip: 49.84 kB
+
+✓ built in 156ms
+precache: 16 entries (shellVersion 0f2c0ae8052e250e) -> /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e9qa-t_adbd2e36/src/sw/precache-manifest.ts
+build-sw: dist/sw.js written (classic worker, unhashed, minified)
+exit=0 for npm run build
+=== npm run budget ===
+
+> browser-todo-app@0.1.0 budget
+> node scripts/check-bundle-budget.mjs
+
+Bundle budget report — /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e9qa-t_adbd2e36/dist (gzip level 9)
+  gate              measured    limit       status
+  initial-js        76.6 KB     100.0 KB    PASS
+      3 entry-closure chunk(s)
+  css               7.4 KB      20.0 KB     PASS
+      1 file(s)
+  app-shell         97.0 KB     200.0 KB    PASS
+      8 file(s), 4 lazy chunk(s) excluded
+  locales           19.8 KB     20.0 KB     PASS
+      2 locale pack(s)
+  locales-lazy      0 hit(s)    0           PASS
+      no locale pack is inside the initial JS closure
+  no-external-refs  2 hit(s)    0           FAIL
+      assets/locale-en-csWIHdKa.js → https://cloud.example/dav.php/files/you/.; assets/locale-th-CQ_GoZgb.js → https://cloud.example/dav.php/files/you/
+  no-wasm           0 hit(s)    0           PASS
+      no .wasm asset in dist/ (MVP rule)
+RESULT: FAIL — build is over budget
+exit=1 for npm run budget
+=== npm run audit:gate ===
+
+> browser-todo-app@0.1.0 audit:gate
+> npm audit --omit=dev --audit-level=high
+
+found 0 vulnerabilities
+exit=0 for npm run audit:gate
+BATTERY_DONE

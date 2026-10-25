@@ -1,0 +1,295 @@
+HEAD=ad4acc3
+=== npm run format:check ===
+
+> browser-todo-app@0.1.0 format:check
+> prettier --check .
+
+Checking formatting...
+[warn] src/domain/model.ts
+[warn] vite.config.ts
+[warn] Code style issues found in 2 files. Run Prettier with --write to fix.
+exit=1 for npm run format:check
+=== npm run lint ===
+
+> browser-todo-app@0.1.0 lint
+> eslint . --max-warnings 0
+
+
+/home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e9qa-t_adbd2e36/tests/component/e9-qa-dashboard-probes.test.tsx
+  372:24  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+  398:54  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+
+✖ 2 problems (2 errors, 0 warnings)
+
+exit=1 for npm run lint
+=== npm run typecheck ===
+
+> browser-todo-app@0.1.0 typecheck
+> tsc -b
+
+exit=0 for npm run typecheck
+=== npm run i18n:check ===
+
+> browser-todo-app@0.1.0 i18n:check
+> node scripts/check-i18n.mjs
+
+i18n catalog check — src/i18n/en.json vs src/i18n/th.json
+  keys: 540 en / 540 th · 414 distinct keys used by 484 literal t() call site(s)
+  note: 28 t() call site(s) with a non-literal key (not statically verifiable):
+    app/Shell.tsx:182
+    app/Shell.tsx:289
+    components/ConfirmDialog.tsx:110
+    components/ConfirmDialog.tsx:119
+    components/ConfirmDialog.tsx:125
+    components/ConfirmDialog.tsx:127
+    features/commands/CommandPalette.tsx:87
+    features/commands/CommandPalette.tsx:166
+    features/commands/ShortcutsHelpDialog.tsx:39
+    features/commands/ShortcutsHelpDialog.tsx:41
+    features/commands/ShortcutsHelpDialog.tsx:50
+    features/commands/ShortcutsHelpDialog.tsx:51
+    features/data-safety/actions.ts:116
+    features/lists/ListDialog.tsx:113
+    features/lists/ListDialog.tsx:132
+    features/lists/ListsManageView.tsx:399
+    features/notifications/NotificationsSettings.tsx:64
+    features/sync/SyncPanel.tsx:54
+    features/sync/errorCopy.ts:39
+    features/sync/errorCopy.ts:41
+    features/sync/errorCopy.ts:49
+    features/tasks/Composer.tsx:244
+    features/tasks/TaskRow.tsx:280
+    features/tasks/TaskRow.tsx:281
+    features/tasks/ToastHost.tsx:33
+    features/tasks/ToastHost.tsx:42
+    features/tasks/fields.tsx:185
+    features/tasks/store.ts:343
+RESULT: PASS — en/th key sets, values and placeholders are consistent
+exit=0 for npm run i18n:check
+=== npm run test:coverage ===
+
+> browser-todo-app@0.1.0 test:coverage
+> vitest run --coverage
+
+
+ RUN  v5.0.5 /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e9qa-t_adbd2e36
+      Coverage enabled with v8
+
+ ❯ tests/component/core-ui-composer.test.tsx (14 tests | 1 failed) 2184ms
+   ❯ S4 task editor — F2 edit (6)
+     × deletes through the S7.1 confirm naming the task 52ms
+ ❯ tests/component/e2-core-ui-qa.test.tsx (25 tests | 1 failed) 3570ms
+   ❯ M1 delete task (F4 / S7.1) — confirm, Escape, announcement (2)
+     × Escape cancels without touching the task and returns focus to the row menu 75ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/component/core-ui-composer.test.tsx > S4 task editor — F2 edit > deletes through the S7.1 confirm naming the task
+TestingLibraryElementError: Unable to find an element with the text: "Buy milk" will be deleted. This can't be undone.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33maria-describedby[39m=[32m"P0-5"[39m
+  [33maria-labelledby[39m=[32m"dialog-title-04884278"[39m
+  [33maria-modal[39m=[32m"true"[39m
+  [33mclass[39m=[32m"dialog"[39m
+  [33mrole[39m=[32m"dialog"[39m
+  [33mtabindex[39m=[32m"-1"[39m
+[36m>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"dialog-head"[39m
+  [36m>[39m
+    [36m<h2[39m
+      [33mclass[39m=[32m"dialog-title"[39m
+      [33mid[39m=[32m"dialog-title-04884278"[39m
+    [36m>[39m
+      [0mDelete task?[0m
+    [36m</h2>[39m
+  [36m</div>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"dialog-body"[39m
+  [36m>[39m
+    [36m<p[39m
+      [33mclass[39m=[32m"dialog-text"[39m
+      [33mid[39m=[32m"P0-5"[39m
+    [36m>[39m
+      [0m"Buy milk" will be deleted. You can undo this for 10 seconds.[0m
+    [36m</p>[39m
+  [36m</div>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"dialog-foot"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33mclass[39m=[32m"button button-secondary"[39m
+      [33mdata-autofocus[39m=[32m""[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0mCancel[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mclass[39m=[32m"button button-danger"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0mDelete[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</div>[39m
+ ❯ Object.getElementError ../../../../../../workspace/browser-todo-app/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ ../../../../../../workspace/browser-todo-app/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ ../../../../../../workspace/browser-todo-app/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ ../../../../../../workspace/browser-todo-app/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/component/core-ui-composer.test.tsx:281:23
+    279|     const confirm = await screen.findByRole('dialog', { name: 'Delete …
+    280|     expect(
+    281|       within(confirm).getByText('"Buy milk" will be deleted. This can\…
+       |                       ^
+    282|         exact: true,
+    283|       }),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/component/e2-core-ui-qa.test.tsx > M1 delete task (F4 / S7.1) — confirm, Escape, announcement > Escape cancels without touching the task and returns focus to the row menu
+TestingLibraryElementError: Unable to find an element with the text: "Throw away" will be deleted. This can't be undone.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33maria-describedby[39m=[32m"P0-0"[39m
+  [33maria-labelledby[39m=[32m"dialog-title-90086163"[39m
+  [33maria-modal[39m=[32m"true"[39m
+  [33mclass[39m=[32m"dialog"[39m
+  [33mrole[39m=[32m"dialog"[39m
+  [33mtabindex[39m=[32m"-1"[39m
+[36m>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"dialog-head"[39m
+  [36m>[39m
+    [36m<h2[39m
+      [33mclass[39m=[32m"dialog-title"[39m
+      [33mid[39m=[32m"dialog-title-90086163"[39m
+    [36m>[39m
+      [0mDelete task?[0m
+    [36m</h2>[39m
+  [36m</div>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"dialog-body"[39m
+  [36m>[39m
+    [36m<p[39m
+      [33mclass[39m=[32m"dialog-text"[39m
+      [33mid[39m=[32m"P0-0"[39m
+    [36m>[39m
+      [0m"Throw away" will be deleted. You can undo this for 10 seconds.[0m
+    [36m</p>[39m
+  [36m</div>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"dialog-foot"[39m
+  [36m>[39m
+    [36m<button[39m
+      [33mclass[39m=[32m"button button-secondary"[39m
+      [33mdata-autofocus[39m=[32m""[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0mCancel[0m
+    [36m</button>[39m
+    [36m<button[39m
+      [33mclass[39m=[32m"button button-danger"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0mDelete[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</div>[39m
+ ❯ Object.getElementError ../../../../../../workspace/browser-todo-app/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ ../../../../../../workspace/browser-todo-app/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ ../../../../../../workspace/browser-todo-app/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ ../../../../../../workspace/browser-todo-app/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/component/e2-core-ui-qa.test.tsx:560:22
+    558|     const dialog = await openConfirm();
+    559|     expect(
+    560|       within(dialog).getByText('"Throw away" will be deleted. This can…
+       |                      ^
+    561|         exact: true,
+    562|       }),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 116 passed (118)
+      Tests  2 failed | 1277 passed | 4 expected fail (1283)
+   Start at  05:02:46
+   Duration  40.09s (environment 49%, tests 33%, setup 10%, worker 3%, transform 3%, import 3%)
+
+Environment  jsdom was created 118 times · 159.04s total, 49% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+exit=1 for npm run test:coverage
+=== npm run build ===
+
+> browser-todo-app@0.1.0 build
+> tsc -b && vite build && node scripts/generate-precache.mjs && node scripts/build-sw.mjs
+
+vite v8.3.5 building client environment for production...
+transforming...
+✓ 181 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/manifest.webmanifest                0.83 kB
+dist/.vite/manifest.json                 2.26 kB │ gzip:  0.48 kB
+dist/index.html                          4.06 kB │ gzip:  1.96 kB
+dist/assets/index-CovyXjiX.css          47.10 kB │ gzip:  7.98 kB
+dist/assets/boot-CGKPHo_7.js             2.43 kB │ gzip:  1.20 kB
+dist/assets/actions-DulkZIxZ.js          3.66 kB │ gzip:  1.44 kB
+dist/assets/SettingsView-CBupszow.js    22.83 kB │ gzip:  6.45 kB
+dist/assets/syncHost-mOZeA5np.js        23.94 kB │ gzip:  8.05 kB
+dist/assets/snapshots-api-XQOHXUXb.js   24.73 kB │ gzip:  8.22 kB
+dist/assets/locale-en-CB9kyz59.js       31.60 kB │ gzip:  9.33 kB
+dist/assets/portability-DRBr56bv.js     46.25 kB │ gzip: 17.06 kB
+dist/assets/locale-th-DPee0ftS.js       60.33 kB │ gzip: 11.18 kB
+dist/assets/index-DZHuwsx5.js          185.71 kB │ gzip: 54.03 kB
+
+✓ built in 228ms
+precache: 17 entries (shellVersion 0cbbd793529edef3) -> /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e9qa-t_adbd2e36/src/sw/precache-manifest.ts
+build-sw: dist/sw.js written (classic worker, unhashed, minified)
+exit=0 for npm run build
+=== npm run budget ===
+
+> browser-todo-app@0.1.0 budget
+> node scripts/check-bundle-budget.mjs
+
+Bundle budget report — /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e9qa-t_adbd2e36/dist (gzip level 9)
+  gate              measured    limit       status
+  initial-js        76.5 KB     100.0 KB    PASS
+      3 entry-closure chunk(s)
+  css               7.8 KB      20.0 KB     PASS
+      1 file(s)
+  app-shell         97.4 KB     200.0 KB    PASS
+      8 file(s), 5 lazy chunk(s) excluded
+  locales           20.0 KB     20.0 KB     PASS
+      2 locale pack(s)
+  locales-lazy      0 hit(s)    0           PASS
+      no locale pack is inside the initial JS closure
+  no-external-refs  0 hit(s)    0           PASS
+      scanned 13 shipped file(s)
+  no-wasm           0 hit(s)    0           PASS
+      no .wasm asset in dist/ (MVP rule)
+RESULT: PASS
+exit=0 for npm run budget
+=== npm run audit:gate ===
+
+> browser-todo-app@0.1.0 audit:gate
+> npm audit --omit=dev --audit-level=high
+
+found 0 vulnerabilities
+exit=0 for npm run audit:gate
+=== QA probes at tip ===
+
+ RUN  v5.0.5 /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e9qa-t_adbd2e36
+
+
+ Test Files  3 passed (3)
+      Tests  40 passed | 2 expected fail (42)
+   Start at  05:03:40
+   Duration  3.84s (environment 45%, tests 35%, transform 8%, setup 7%, import 4%)
+
+exit=0 for QA probes
+TIP_CHECK_DONE

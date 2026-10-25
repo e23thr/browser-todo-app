@@ -1,0 +1,9 @@
+
+ RUN  v5.0.5 /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e9qa-t_adbd2e36
+
+
+ Test Files  3 passed (3)
+      Tests  40 passed | 2 expected fail (42)
+   Start at  05:06:51
+   Duration  1.67s (environment 48%, tests 34%, setup 7%, transform 7%, import 4%, worker 1%)
+

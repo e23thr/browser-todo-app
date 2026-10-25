@@ -1,0 +1,20 @@
+
+/home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e9qa-t_adbd2e36/tests/component/e9-qa-dashboard-probes.test.tsx
+   84:12  error  D1 guard: getByText/getByTitle/getByLabel/… must pass { exact: true } — a string or regex matcher is a case-insensitive substring match by default in Playwright and Testing Library alike, so a broken label can pass silently (docs/qa/e1-scaffold-gates.md D1)  no-restricted-syntax
+   91:7   error  D1 guard: getByText/getByTitle/getByLabel/… must pass { exact: true } — a string or regex matcher is a case-insensitive substring match by default in Playwright and Testing Library alike, so a broken label can pass silently (docs/qa/e1-scaffold-gates.md D1)  no-restricted-syntax
+  102:12  error  D1 guard: getByText/getByTitle/getByLabel/… must pass { exact: true } — a string or regex matcher is a case-insensitive substring match by default in Playwright and Testing Library alike, so a broken label can pass silently (docs/qa/e1-scaffold-gates.md D1)  no-restricted-syntax
+  108:7   error  D1 guard: getByText/getByTitle/getByLabel/… must pass { exact: true } — a string or regex matcher is a case-insensitive substring match by default in Playwright and Testing Library alike, so a broken label can pass silently (docs/qa/e1-scaffold-gates.md D1)  no-restricted-syntax
+  117:12  error  D1 guard: getByText/getByTitle/getByLabel/… must pass { exact: true } — a string or regex matcher is a case-insensitive substring match by default in Playwright and Testing Library alike, so a broken label can pass silently (docs/qa/e1-scaffold-gates.md D1)  no-restricted-syntax
+  124:12  error  D1 guard: getByText/getByTitle/getByLabel/… must pass { exact: true } — a string or regex matcher is a case-insensitive substring match by default in Playwright and Testing Library alike, so a broken label can pass silently (docs/qa/e1-scaffold-gates.md D1)  no-restricted-syntax
+  130:12  error  D1 guard: getByText/getByTitle/getByLabel/… must pass { exact: true } — a string or regex matcher is a case-insensitive substring match by default in Playwright and Testing Library alike, so a broken label can pass silently (docs/qa/e1-scaffold-gates.md D1)  no-restricted-syntax
+  137:7   error  D1 guard: getByText/getByTitle/getByLabel/… must pass { exact: true } — a string or regex matcher is a case-insensitive substring match by default in Playwright and Testing Library alike, so a broken label can pass silently (docs/qa/e1-scaffold-gates.md D1)  no-restricted-syntax
+  156:7   error  D1 guard: getByText/getByTitle/getByLabel/… must pass { exact: true } — a string or regex matcher is a case-insensitive substring match by default in Playwright and Testing Library alike, so a broken label can pass silently (docs/qa/e1-scaffold-gates.md D1)  no-restricted-syntax
+  208:12  error  D1 guard: getByText/getByTitle/getByLabel/… must pass { exact: true } — a string or regex matcher is a case-insensitive substring match by default in Playwright and Testing Library alike, so a broken label can pass silently (docs/qa/e1-scaffold-gates.md D1)  no-restricted-syntax
+  214:7   error  D1 guard: getByText/getByTitle/getByLabel/… must pass { exact: true } — a string or regex matcher is a case-insensitive substring match by default in Playwright and Testing Library alike, so a broken label can pass silently (docs/qa/e1-scaffold-gates.md D1)  no-restricted-syntax
+
+/home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e9qa-t_adbd2e36/tests/unit/data-safety/e9-qa-export-probes.test.ts
+  50:9  error  void operator is useless here; it should only discard a call's return value  @typescript-eslint/no-meaningless-void-operator
+
+✖ 12 problems (12 errors, 0 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+

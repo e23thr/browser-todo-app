@@ -1,0 +1,4 @@
+Checking formatting...
+[warn] tests/unit/portability/e9-qa-probes.test.ts
+[warn] tests/component/e9-qa-dashboard-probes.test.tsx
+[warn] Code style issues found in 2 files. Run Prettier with --write to fix.

@@ -1,0 +1,173 @@
+
+ RUN  v5.0.5 /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e9qa-t_adbd2e36
+
+ ❯ tests/unit/portability/e9-qa-probes.test.ts (13 tests | 5 failed) 691ms
+   ❯ Q3 — prototype pollution (2)
+     × a JSON backup smuggling __proto__ into a task is rejected as malicious 8ms
+   ❯ Q4 — markup / formula payloads stay inert data (1)
+     × script/img/formula/URL payloads round-trip byte-exact and never execute 3ms
+   ❯ Q5 — control characters and encodings (2)
+     × rejects a UTF-16LE todo.txt source instead of importing mojibake (§10 E8) 2ms
+   ❯ Q6 — extension vs content (2)
+     × a JSON backup renamed .txt imports as a real backup, not as garbage todo.txt lines 3ms
+   ❯ Q7 — pre-import snapshot, undo round trip, settings (3)
+     × a confirmed foreign REPLACE apply takes the pre-import snapshot and undo restores the original rows 9ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/portability/e9-qa-probes.test.ts > Q3 — prototype pollution > a JSON backup smuggling __proto__ into a task is rejected as malicious
+AssertionError: expected '{\n  "format": "local-first-todo-back…' to contain '__proto__'
+
+- Expected
++ Received
+
+- __proto__
++ {
++   "format": "local-first-todo-backup",
++   "formatVersion": 1,
++   "schemaVersion": 1,
++   "kind": "export",
++   "exportedAt": 1700000000000,
++   "deviceId": "01ARZ3NDEKTSV4RRFFQ6000001",
++   "counts": {
++     "lists": 1,
++     "tasks": 1,
++     "snapshots": 0
++   },
++   "data": {
++     "settings": {
++       "id": "settings",
++       "theme": "system",
++       "locale": "en",
++       "weekStart": 1,
++       "defaultListId": null,
++       "notificationsEnabled": false,
++       "lastBackupAt": null
++     },
++     "lists": [
++       {
++         "id": "01M5TGE2BVFDVF6RG50WFZ9GSP",
++         "name": "Inbox",
++         "color": "#336699",
++         "sortOrder": "h",
++         "createdAt": 1700000000000,
++         "updatedAt": 1700000000000,
++         "deletedAt": null,
++         "deviceId": "01M5TGE2BVFDVF6RG50WFZ9GSQ"
++       }
++     ],
++     "tasks": [
++       {
++         "id": "01M5TGE2BVFDVF6RG50WFZ9GSR",
++         "listId": "01M5TGE2BVFDVF6RG50WFZ9GSS",
++         "title": "Write tests",
++         "notes": null,
++         "status": "open",
++         "priority": "P3",
++         "tags": [],
++         "sortOrder": "h",
++         "createdAt": 1700000000000,
++         "updatedAt": 1700000000000,
++         "deletedAt": null,
++         "deviceId": "01M5TGE2BVFDVF6RG50WFZ9GST"
++       }
++     ],
++     "snapshots": []
++   }
++ }
++
+
+ ❯ tests/unit/portability/e9-qa-probes.test.ts:136:18
+    134|     const doc = makeDocText({ settings: makeSettings(), lists: [makeLi…
+    135|     const text = doc.replace('"tasks":[{', '"tasks":[{"__proto__":{"po…
+    136|     expect(text).toContain('__proto__');
+       |                  ^
+    137|     const prepared = await prepareForeignImport(fakeFile('evil.json', …
+    138|     expect(prepared.ok).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/unit/portability/e9-qa-probes.test.ts > Q4 — markup / formula payloads stay inert data > script/img/formula/URL payloads round-trip byte-exact and never execute
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/unit/portability/e9-qa-probes.test.ts:165:25
+    163|       now: () => T0,
+    164|     });
+    165|     expect(prepared.ok).toBe(true);
+       |                         ^
+    166|     if (!prepared.ok) return;
+    167|     expect(prepared.value.accepted.tasks).toBe(hostile.length);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  tests/unit/portability/e9-qa-probes.test.ts > Q5 — control characters and encodings > rejects a UTF-16LE todo.txt source instead of importing mojibake (§10 E8)
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/unit/portability/e9-qa-probes.test.ts:200:25
+    198|     const prepared = await prepareForeignImport(fakeFile('notepad-utf1…
+    199|     // Expected per E8: a source we cannot decode cleanly is rejected,…
+    200|     expect(prepared.ok).toBe(false);
+       |                         ^
+    201|     await expectUntouched(db);
+    202|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  tests/unit/portability/e9-qa-probes.test.ts > Q6 — extension vs content > a JSON backup renamed .txt imports as a real backup, not as garbage todo.txt lines
+AssertionError: expected 53 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 53
+
+ ❯ tests/unit/portability/e9-qa-probes.test.ts:226:43
+    224|     expect(prepared.ok).toBe(true);
+    225|     if (!prepared.ok) return;
+    226|     expect(prepared.value.accepted.tasks).toBe(1);
+       |                                           ^
+    227|   });
+    228| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  tests/unit/portability/e9-qa-probes.test.ts > Q7 — pre-import snapshot, undo round trip, settings > a confirmed foreign REPLACE apply takes the pre-import snapshot and undo restores the original rows
+AssertionError: expected [] to deeply equal [ 'Write tests' ]
+
+- Expected
++ Received
+
+- [
+-   "Write tests",
+- ]
++ []
+
+ ❯ tests/unit/portability/e9-qa-probes.test.ts:266:55
+    264|     expect(restored.ok).toBe(true);
+    265|     const back = await db.getAll('tasks');
+    266|     expect(back.ok && back.value.map((t) => t.title)).toEqual([origina…
+       |                                                       ^
+    267|   });
+    268|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 8 passed (13)
+   Start at  04:45:56
+   Duration  1.39s (tests 56%, environment 34%, setup 5%, transform 3%, import 2%)
+

@@ -1,0 +1,87 @@
+
+ RUN  v5.0.5 /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e9qa-t_adbd2e36
+
+ ❯ tests/unit/portability/e9-qa-probes.test.ts (15 tests | 1 failed) 720ms
+   ❯ Q3 — prototype pollution (2)
+     × a JSON backup smuggling __proto__ into a task is rejected as malicious 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/portability/e9-qa-probes.test.ts > Q3 — prototype pollution > a JSON backup smuggling __proto__ into a task is rejected as malicious
+AssertionError: expected '{\n  "format": "local-first-todo-back…' to contain '__proto__'
+
+- Expected
++ Received
+
+- __proto__
++ {
++   "format": "local-first-todo-backup",
++   "formatVersion": 1,
++   "schemaVersion": 1,
++   "kind": "export",
++   "exportedAt": 1700000000000,
++   "deviceId": "01ARZ3NDEKTSV4RRFFQ6000001",
++   "counts": {
++     "lists": 1,
++     "tasks": 1,
++     "snapshots": 0
++   },
++   "data": {
++     "settings": {
++       "id": "settings",
++       "theme": "system",
++       "locale": "en",
++       "weekStart": 1,
++       "defaultListId": null,
++       "notificationsEnabled": false,
++       "lastBackupAt": null
++     },
++     "lists": [
++       {
++         "id": "01M5TGNZB2ASDHZRSMH0KQDGNM",
++         "name": "Inbox",
++         "color": "#336699",
++         "sortOrder": "h",
++         "createdAt": 1700000000000,
++         "updatedAt": 1700000000000,
++         "deletedAt": null,
++         "deviceId": "01M5TGNZB2ASDHZRSMH0KQDGNN"
++       }
++     ],
++     "tasks": [
++       {
++         "id": "01M5TGNZB2ASDHZRSMH0KQDGNP",
++         "listId": "01M5TGNZB2ASDHZRSMH0KQDGNQ",
++         "title": "Write tests",
++         "notes": null,
++         "status": "open",
++         "priority": "P3",
++         "tags": [],
++         "sortOrder": "h",
++         "createdAt": 1700000000000,
++         "updatedAt": 1700000000000,
++         "deletedAt": null,
++         "deviceId": "01M5TGNZB2ASDHZRSMH0KQDGNR"
++       }
++     ],
++     "snapshots": []
++   }
++ }
++
+
+ ❯ tests/unit/portability/e9-qa-probes.test.ts:150:18
+    148|       '"tasks": [\n    {\n      "__proto__": {"polluted": true},',
+    149|     );
+    150|     expect(text).toContain('__proto__');
+       |                  ^
+    151|     const prepared = await prepareForeignImport(fakeFile('evil.json', …
+    152|     expect(prepared.ok).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 passed | 2 expected fail (15)
+   Start at  04:50:15
+   Duration  1.44s (tests 56%, environment 33%, transform 5%, setup 4%, import 2%)
+
