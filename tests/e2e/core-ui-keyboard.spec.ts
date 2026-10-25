@@ -189,10 +189,33 @@ async function tabTo(page: Page, selector: string, max = 80): Promise<void> {
     page.evaluate((sel) => document.activeElement?.matches(sel) ?? false, selector);
   for (let step = 0; step < max; step += 1) {
     await page.keyboard.press('Tab');
-    if (!(await onTarget())) continue;
-    // A late route-change effect can steal focus right after Tab: confirm it stayed.
-    await page.waitForTimeout(50);
-    if (await onTarget()) return;
+    if (await onTarget()) {
+      // A late route-change effect can steal focus right after Tab: confirm it stayed.
+      await page.waitForTimeout(50);
+      if (await onTarget()) return;
+      continue;
+    }
+    // Firefox (headless): Tab past the document's LAST focusable leaves focus where it is —
+    // a real window would walk its chrome and re-enter the page at the first element, but the
+    // automation has no chrome to walk (nightly t_e20c2adb: 80 presses never reached
+    // `a[href="#/all"]`, while chromium/webkit wrap in-page and pass). Emulate that re-entry
+    // ONLY when focus provably sits on the last focusable: a focus stuck anywhere else (a
+    // genuine keyboard trap) still burns the budget below and fails loudly.
+    const wrapped = await page.evaluate(() => {
+      const current = document.activeElement;
+      if (!(current instanceof HTMLElement)) return false;
+      const focusables = [
+        ...document.querySelectorAll<HTMLElement>(
+          'a[href], button, input, select, textarea, [tabindex]',
+        ),
+      ].filter(
+        (el) => el.tabIndex >= 0 && !el.hasAttribute('disabled') && el.getClientRects().length > 0,
+      );
+      if (focusables.length === 0 || focusables[focusables.length - 1] !== current) return false;
+      focusables[0]?.focus();
+      return true;
+    });
+    if (wrapped && (await onTarget())) return;
   }
   throw new Error(`tabTo(${selector}): no focusable match within ${String(max)} presses`);
 }
