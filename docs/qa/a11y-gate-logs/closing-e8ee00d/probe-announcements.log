@@ -1,0 +1,15 @@
+en task-added: HIT — polite=["View: All open","Task added: Announce add","This browser did not grant extra protection."]
+en task-completed: HIT — polite=["Task completed"]
+en task-reopened: HIT — polite=["View: Completed","Task reopened"]
+en route-change: HIT — polite=["View: Next 7 days"]
+en search-results: HIT — polite=["View: Search","1 results for \"a\""]
+en list-created: HIT — polite=["View: Manage lists","List created: Announce list"]
+th task-added: HIT — polite=["มุมมอง: ทั้งหมดที่ยังไม่เสร็จ","เพิ่มงานแล้ว: เพิ่มงานใหม่","เบราว์เซอร์นี้ไม่ได้ให้การปกป้องเพิ่มเติม"]
+th task-completed: HIT — polite=["เสร็จงานแล้ว"]
+th task-reopened: HIT — polite=["มุมมอง: เสร็จแล้ว","เปิดงานอีกครั้ง"]
+th route-change: HIT — polite=["มุมมอง: 7 วันข้างหน้า"]
+th search-results: HIT — polite=["มุมมอง: ค้นหา","0 ผลลัพธ์สำหรับ \"a\""]
+th list-created: HIT — polite=["มุมมอง: จัดการรายการ","สร้างรายการแล้ว: รายการทดสอบ"]
+[evidence] /home/ubuntu/.hermes/profiles/h_pm/cache/scratch/e5-close-verify-29698/closing-evidence/announcements-gate.json
+
+HITS: 12/12

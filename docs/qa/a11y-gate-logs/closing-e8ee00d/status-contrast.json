@@ -1,0 +1,314 @@
+{
+  "badges": [
+    {
+      "theme": "light",
+      "locale": "en",
+      "name": "due-badge-overdue",
+      "text": "!Overdue · Jan 1",
+      "color": "rgb(166, 27, 20)",
+      "bg": "rgb(253,236,234)",
+      "fontSize": "13px",
+      "fontWeight": "650",
+      "ratio": 6.59,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "locale": "en",
+      "name": "priority-badge",
+      "text": "",
+      "color": "rgb(90, 99, 114)",
+      "bg": "rgb(255,255,255)",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "ratio": 6.07,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "locale": "en",
+      "name": "task-title",
+      "text": "Overdue bill",
+      "color": "rgb(27, 31, 39)",
+      "bg": "rgb(255,255,255)",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "ratio": 16.51,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "locale": "en",
+      "name": "row-meta",
+      "text": "Overdue · Jan 1 · Home",
+      "color": "rgb(90, 99, 114)",
+      "bg": "rgb(255,255,255)",
+      "fontSize": "13px",
+      "fontWeight": "400",
+      "ratio": 6.07,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "locale": "en",
+      "name": "group-title",
+      "text": "Home (2)",
+      "color": "rgb(90, 99, 114)",
+      "bg": "rgb(252,252,253)",
+      "fontSize": "14px",
+      "fontWeight": "650",
+      "ratio": 5.92,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "locale": "en",
+      "name": "list-badge",
+      "text": "Home",
+      "color": "rgb(90, 99, 114)",
+      "bg": "rgb(255,255,255)",
+      "fontSize": "13px",
+      "fontWeight": "400",
+      "ratio": 6.07,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "locale": "th",
+      "name": "due-badge-overdue",
+      "text": "!เลยกำหนด · 1 ม.ค.",
+      "color": "rgb(166, 27, 20)",
+      "bg": "rgb(253,236,234)",
+      "fontSize": "13px",
+      "fontWeight": "650",
+      "ratio": 6.59,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "locale": "th",
+      "name": "priority-badge",
+      "text": "",
+      "color": "rgb(90, 99, 114)",
+      "bg": "rgb(255,255,255)",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "ratio": 6.07,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "locale": "th",
+      "name": "task-title",
+      "text": "Overdue bill",
+      "color": "rgb(27, 31, 39)",
+      "bg": "rgb(255,255,255)",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "ratio": 16.51,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "locale": "th",
+      "name": "row-meta",
+      "text": "เลยกำหนด · 1 ม.ค. · Home",
+      "color": "rgb(90, 99, 114)",
+      "bg": "rgb(255,255,255)",
+      "fontSize": "13px",
+      "fontWeight": "400",
+      "ratio": 6.07,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "locale": "th",
+      "name": "group-title",
+      "text": "Home (2)",
+      "color": "rgb(90, 99, 114)",
+      "bg": "rgb(252,252,253)",
+      "fontSize": "14px",
+      "fontWeight": "650",
+      "ratio": 5.92,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "locale": "th",
+      "name": "list-badge",
+      "text": "Home",
+      "color": "rgb(90, 99, 114)",
+      "bg": "rgb(255,255,255)",
+      "fontSize": "13px",
+      "fontWeight": "400",
+      "ratio": 6.07,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "locale": "en",
+      "name": "due-badge-overdue",
+      "text": "!Overdue · Jan 1",
+      "color": "rgb(255, 138, 130)",
+      "bg": "rgb(44,26,24)",
+      "fontSize": "13px",
+      "fontWeight": "650",
+      "ratio": 7.26,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "locale": "en",
+      "name": "priority-badge",
+      "text": "",
+      "color": "rgb(169, 178, 191)",
+      "bg": "rgb(23,27,33)",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "ratio": 8.07,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "locale": "en",
+      "name": "task-title",
+      "text": "Overdue bill",
+      "color": "rgb(233, 236, 242)",
+      "bg": "rgb(23,27,33)",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "ratio": 14.6,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "locale": "en",
+      "name": "row-meta",
+      "text": "Overdue · Jan 1 · Home",
+      "color": "rgb(169, 178, 191)",
+      "bg": "rgb(23,27,33)",
+      "fontSize": "13px",
+      "fontWeight": "400",
+      "ratio": 8.07,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "locale": "en",
+      "name": "group-title",
+      "text": "Home (2)",
+      "color": "rgb(169, 178, 191)",
+      "bg": "rgb(15,18,22)",
+      "fontSize": "14px",
+      "fontWeight": "650",
+      "ratio": 8.77,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "locale": "en",
+      "name": "list-badge",
+      "text": "Home",
+      "color": "rgb(169, 178, 191)",
+      "bg": "rgb(23,27,33)",
+      "fontSize": "13px",
+      "fontWeight": "400",
+      "ratio": 8.07,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "locale": "th",
+      "name": "due-badge-overdue",
+      "text": "!เลยกำหนด · 1 ม.ค.",
+      "color": "rgb(255, 138, 130)",
+      "bg": "rgb(44,26,24)",
+      "fontSize": "13px",
+      "fontWeight": "650",
+      "ratio": 7.26,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "locale": "th",
+      "name": "priority-badge",
+      "text": "",
+      "color": "rgb(169, 178, 191)",
+      "bg": "rgb(23,27,33)",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "ratio": 8.07,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "locale": "th",
+      "name": "task-title",
+      "text": "Overdue bill",
+      "color": "rgb(233, 236, 242)",
+      "bg": "rgb(23,27,33)",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "ratio": 14.6,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "locale": "th",
+      "name": "row-meta",
+      "text": "เลยกำหนด · 1 ม.ค. · Home",
+      "color": "rgb(169, 178, 191)",
+      "bg": "rgb(23,27,33)",
+      "fontSize": "13px",
+      "fontWeight": "400",
+      "ratio": 8.07,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "locale": "th",
+      "name": "group-title",
+      "text": "Home (2)",
+      "color": "rgb(169, 178, 191)",
+      "bg": "rgb(15,18,22)",
+      "fontSize": "14px",
+      "fontWeight": "650",
+      "ratio": 8.77,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "locale": "th",
+      "name": "list-badge",
+      "text": "Home",
+      "color": "rgb(169, 178, 191)",
+      "bg": "rgb(23,27,33)",
+      "fontSize": "13px",
+      "fontWeight": "400",
+      "ratio": 8.07,
+      "pass": true
+    }
+  ],
+  "axe": [
+    {
+      "state": "all-status[light/en]",
+      "violations": []
+    },
+    {
+      "state": "all-status[light/th]",
+      "violations": []
+    },
+    {
+      "state": "all-status[dark/en]",
+      "violations": []
+    },
+    {
+      "state": "all-status[dark/th]",
+      "violations": []
+    }
+  ],
+  "summary": {
+    "sampled": 24,
+    "below45": 0
+  }
+}

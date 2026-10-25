@@ -1,0 +1,720 @@
+{
+  "zoom200-en-/": {
+    "horizontalScroll": false,
+    "scrollWidth": 1280,
+    "clientWidth": 1280,
+    "rootFont": "32px",
+    "clipped": [],
+    "typeRisk": []
+  },
+  "zoom200-en-#/all": {
+    "horizontalScroll": false,
+    "scrollWidth": 1280,
+    "clientWidth": 1280,
+    "rootFont": "32px",
+    "clipped": [
+      {
+        "cls": "task-title-text",
+        "text": "Send the quarterly report with all supporting documents atta",
+        "scrollH": 205,
+        "clientH": 102,
+        "lineHeight": "51.2px",
+        "fontSize": "32px",
+        "overflow": "hidden",
+        "lineClamp": "2"
+      },
+      {
+        "cls": "task-title-text",
+        "text": "Buy milk yogurt fruit and meat for cooking throughout the wh",
+        "scrollH": 154,
+        "clientH": 102,
+        "lineHeight": "51.2px",
+        "fontSize": "32px",
+        "overflow": "hidden",
+        "lineClamp": "2"
+      },
+      {
+        "cls": "task-title-text",
+        "text": "Pay the electricity water internet and phone bills before th",
+        "scrollH": 154,
+        "clientH": 102,
+        "lineHeight": "51.2px",
+        "fontSize": "32px",
+        "overflow": "hidden",
+        "lineClamp": "2"
+      }
+    ],
+    "typeRisk": []
+  },
+  "reflow320-en-/": {
+    "horizontalScroll": false,
+    "scrollWidth": 320,
+    "clientWidth": 320,
+    "rootFont": "16px",
+    "clipped": [
+      {
+        "cls": "tab-label",
+        "text": "Today",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "Next 7 days",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "All open",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "Completed",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "More",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      }
+    ],
+    "typeRisk": [
+      {
+        "cls": "view-title",
+        "ratio": 1.35,
+        "fontSize": "24px",
+        "lineHeight": "32.4px"
+      }
+    ]
+  },
+  "reflow320-en-#/all": {
+    "horizontalScroll": false,
+    "scrollWidth": 320,
+    "clientWidth": 320,
+    "rootFont": "16px",
+    "clipped": [
+      {
+        "cls": "task-title-text",
+        "text": "Send the quarterly report with all supporting documents atta",
+        "scrollH": 230,
+        "clientH": 51,
+        "lineHeight": "25.6px",
+        "fontSize": "16px",
+        "overflow": "hidden",
+        "lineClamp": "2"
+      },
+      {
+        "cls": "task-title-text",
+        "text": "Buy milk yogurt fruit and meat for cooking throughout the wh",
+        "scrollH": 179,
+        "clientH": 51,
+        "lineHeight": "25.6px",
+        "fontSize": "16px",
+        "overflow": "hidden",
+        "lineClamp": "2"
+      },
+      {
+        "cls": "task-title-text",
+        "text": "Pay the electricity water internet and phone bills before th",
+        "scrollH": 179,
+        "clientH": 51,
+        "lineHeight": "25.6px",
+        "fontSize": "16px",
+        "overflow": "hidden",
+        "lineClamp": "2"
+      },
+      {
+        "cls": "tab-label",
+        "text": "Today",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "Next 7 days",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "All open",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "Completed",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "More",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      }
+    ],
+    "typeRisk": [
+      {
+        "cls": "view-title",
+        "ratio": 1.35,
+        "fontSize": "24px",
+        "lineHeight": "32.4px"
+      }
+    ]
+  },
+  "reflow320-en-#/lists": {
+    "horizontalScroll": false,
+    "scrollWidth": 320,
+    "clientWidth": 320,
+    "rootFont": "16px",
+    "clipped": [
+      {
+        "cls": "tab-label",
+        "text": "Today",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "Next 7 days",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "All open",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "Completed",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "More",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      }
+    ],
+    "typeRisk": [
+      {
+        "cls": "view-title",
+        "ratio": 1.35,
+        "fontSize": "24px",
+        "lineHeight": "32.4px"
+      }
+    ]
+  },
+  "reflow320-en-#/settings": {
+    "horizontalScroll": false,
+    "scrollWidth": 320,
+    "clientWidth": 320,
+    "rootFont": "16px",
+    "clipped": [
+      {
+        "cls": "tab-label",
+        "text": "Today",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "Next 7 days",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "All open",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "Completed",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "More",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      }
+    ],
+    "typeRisk": [
+      {
+        "cls": "view-title",
+        "ratio": 1.35,
+        "fontSize": "24px",
+        "lineHeight": "32.4px"
+      }
+    ]
+  },
+  "zoom200-th-/": {
+    "horizontalScroll": false,
+    "scrollWidth": 1280,
+    "clientWidth": 1280,
+    "rootFont": "32px",
+    "clipped": [],
+    "typeRisk": []
+  },
+  "zoom200-th-#/all": {
+    "horizontalScroll": false,
+    "scrollWidth": 1280,
+    "clientWidth": 1280,
+    "rootFont": "32px",
+    "clipped": [
+      {
+        "cls": "task-title-text",
+        "text": "ส่งรายงานประจำเดือนให้ทันก่อนสิ้นไตรมาสพร้อมแนบเอกสารประกอบท",
+        "scrollH": 154,
+        "clientH": 102,
+        "lineHeight": "51.2px",
+        "fontSize": "32px",
+        "overflow": "hidden",
+        "lineClamp": "2"
+      }
+    ],
+    "typeRisk": []
+  },
+  "reflow320-th-/": {
+    "horizontalScroll": false,
+    "scrollWidth": 320,
+    "clientWidth": 320,
+    "rootFont": "16px",
+    "clipped": [
+      {
+        "cls": "tab-label",
+        "text": "วันนี้",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "7 วันข้างหน้า",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "ทั้งหมดที่ยังไม่เสร็จ",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "เสร็จแล้ว",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "เพิ่มเติม",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      }
+    ],
+    "typeRisk": [
+      {
+        "cls": "view-title",
+        "ratio": 1.35,
+        "fontSize": "24px",
+        "lineHeight": "32.4px"
+      }
+    ]
+  },
+  "reflow320-th-#/all": {
+    "horizontalScroll": false,
+    "scrollWidth": 320,
+    "clientWidth": 320,
+    "rootFont": "16px",
+    "clipped": [
+      {
+        "cls": "task-title-text",
+        "text": "ส่งรายงานประจำเดือนให้ทันก่อนสิ้นไตรมาสพร้อมแนบเอกสารประกอบท",
+        "scrollH": 179,
+        "clientH": 51,
+        "lineHeight": "25.6px",
+        "fontSize": "16px",
+        "overflow": "hidden",
+        "lineClamp": "2"
+      },
+      {
+        "cls": "task-title-text",
+        "text": "ซื้อนมสดโยเกิร์ตผลไม้และเนื้อสัตว์สำหรับทำอาหารทั้งสัปดาห์",
+        "scrollH": 154,
+        "clientH": 51,
+        "lineHeight": "25.6px",
+        "fontSize": "16px",
+        "overflow": "hidden",
+        "lineClamp": "2"
+      },
+      {
+        "cls": "task-title-text",
+        "text": "ชำระค่าไฟฟ้าค่าน้ำค่าอินเทอร์เน็ตและค่าโทรศัพท์ก่อนวันครบกำห",
+        "scrollH": 154,
+        "clientH": 51,
+        "lineHeight": "25.6px",
+        "fontSize": "16px",
+        "overflow": "hidden",
+        "lineClamp": "2"
+      },
+      {
+        "cls": "tab-label",
+        "text": "วันนี้",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "7 วันข้างหน้า",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "ทั้งหมดที่ยังไม่เสร็จ",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "เสร็จแล้ว",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "เพิ่มเติม",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      }
+    ],
+    "typeRisk": [
+      {
+        "cls": "view-title",
+        "ratio": 1.35,
+        "fontSize": "24px",
+        "lineHeight": "32.4px"
+      }
+    ]
+  },
+  "reflow320-th-#/lists": {
+    "horizontalScroll": false,
+    "scrollWidth": 320,
+    "clientWidth": 320,
+    "rootFont": "16px",
+    "clipped": [
+      {
+        "cls": "tab-label",
+        "text": "วันนี้",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "7 วันข้างหน้า",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "ทั้งหมดที่ยังไม่เสร็จ",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "เสร็จแล้ว",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "เพิ่มเติม",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      }
+    ],
+    "typeRisk": [
+      {
+        "cls": "view-title",
+        "ratio": 1.35,
+        "fontSize": "24px",
+        "lineHeight": "32.4px"
+      }
+    ]
+  },
+  "reflow320-th-#/settings": {
+    "horizontalScroll": false,
+    "scrollWidth": 320,
+    "clientWidth": 320,
+    "rootFont": "16px",
+    "clipped": [
+      {
+        "cls": "tab-label",
+        "text": "วันนี้",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "7 วันข้างหน้า",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "ทั้งหมดที่ยังไม่เสร็จ",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "เสร็จแล้ว",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      },
+      {
+        "cls": "tab-label",
+        "text": "เพิ่มเติม",
+        "scrollH": 20,
+        "clientH": 1,
+        "lineHeight": "19.5px",
+        "fontSize": "13px",
+        "overflow": "hidden",
+        "lineClamp": "none"
+      }
+    ],
+    "typeRisk": [
+      {
+        "cls": "view-title",
+        "ratio": 1.35,
+        "fontSize": "24px",
+        "lineHeight": "32.4px"
+      }
+    ]
+  },
+  "statusNotColour": [
+    {
+      "title": "Overdue subject",
+      "badges": [
+        {
+          "cls": "list-badge",
+          "text": "Home",
+          "ariaLabel": null,
+          "role": null,
+          "dataOverdue": null,
+          "marker": ""
+        }
+      ],
+      "checkboxChecked": true,
+      "checkboxAria": "ทำเครื่องหมาย \"Overdue subject\" ว่ายังไม่เสร็จ",
+      "rowText": "Overdue subjectHomeเสร็จเมื่อ 25 ต.ค.",
+      "lang": null
+    }
+  ],
+  "lang": {
+    "htmlLang": "th",
+    "thNodes": [
+      {
+        "cls": "skip-link",
+        "lang": null
+      },
+      {
+        "cls": "nav-label",
+        "lang": null
+      },
+      {
+        "cls": "nav-label",
+        "lang": null
+      },
+      {
+        "cls": "nav-label",
+        "lang": null
+      },
+      {
+        "cls": "nav-label",
+        "lang": null
+      },
+      {
+        "cls": "nav-label",
+        "lang": null
+      },
+      {
+        "cls": "nav-heading",
+        "lang": null
+      },
+      {
+        "cls": "nav-label",
+        "lang": null
+      }
+    ]
+  }
+}

@@ -2,10 +2,14 @@
 
 **Card:** t_b788bacf (Epic E5) · **Gate run:** 2026-10-25 · **Reviewer:** h_reviewer
 **Re-run:** t_6bc6eda5 (after B1/B2) · **Re-run HEAD:** `5b1fdbb` · same date, same reviewer
-**Verdict after re-run:** **FAIL — with-outstanding-O1 only.** B1 and B2 are **FIXED and
-verified green** in the re-run (agent-side gate reads PASS-with-O1-pending); the release gate
-stays FAIL until the human NVDA/VoiceOver pass (§5.2) is recorded or the PO records a waiver.
-Details in §2.
+**Final verdict (after O1, `t_2ce8fc1f`):** **FULL PASS with explicit PO waivers.** B1 and B2
+are **FIXED and verified green** in the re-run; the human AT pass (§5.2) was executed
+2026-10-25 (Orca / Firefox / Ubuntu: **10/10 flows PASS**, PO as tester) with an **explicit
+PO-accepted waiver** for NVDA (Windows) and VoiceOver (macOS/iOS) — no such hardware available
+to the tester. Verdict trail (all in §5.2): original run `t_b788bacf` **FAIL** (B1+B2 blocking,
+O1 outstanding) → re-run `t_6bc6eda5` **FAIL-with-outstanding-O1** → O1 recorded
+(`t_2ce8fc1f`) → **FULL PASS with explicit PO waivers**, M13 O1 cleared. Closing-HEAD spot
+re-check of the gate probes: §5.3.
 
 | | |
 |---|---|
@@ -275,3 +279,23 @@ this section's sign-off condition: **the release gate for M13 O1 reads PASS (wit
 the M13 accessibility epic criterion may be cleared on that basis. Re-run note: if a future tester
 gains NVDA (Windows) or VoiceOver (macOS/iOS) hardware, replace the corresponding WAIVED cells with
 executed results and drop the waiver for that platform.
+
+### 5.3 Closing-HEAD spot re-check (h_pm, Epic E5 closing run `t_db6845bc`, 2026-10-25)
+
+The M13 matrix and re-run gated `5b1fdbb`; the product tree then gained the E2 fixes
+(`924c17f` F-3 taskGone, `cec79ba` QA-D1 tree rows, `c652340` V1 windowing, `0ef2d8e` announce
+per-region) before the shipped HEAD. So that the PASS record points at the **shipped tree**, the
+gate probes were spot re-run first-hand at closing HEAD **`e8ee00d`** (clean clone; production
+build under the Pages base path `/browser-todo-app/`, real Chromium, same probe scripts):
+
+| Probe | Result at `e8ee00d` | vs gate record |
+|---|---|---|
+| `probe-axe.mjs` → `closing-e8ee00d/axe-gate.json` | **54 scans, 0 blocking, 0 violations of any impact** | matches (`5b1fdbb` re-run: 54/54 clean) |
+| `probe-announcements.mjs` → `closing-e8ee00d/announcements-gate.json` | **12/12 HIT (6/6 en + 6/6 th)** — incl. first task-add both locales | matches (12/12 after B1) |
+| `probe-zoom-status.mjs` → `closing-e8ee00d/zoom-status-lang.json` | 200% + 320 px reflow en+th: **no horizontal scroll anywhere**; clipped = by-design `tab-label` <360 px + sr-only; `view-title` line-height 1.35 (= floor) | matches |
+| `probe-status-contrast.mjs` → `closing-e8ee00d/status-contrast.json` | **24 samples, 0 below 4.5:1**; status-state axe clean both themes × both locales | matches |
+| `npm run e2e:a11y` (the CI gate, B2 guard live) | **2/2 passed** (`closing-e8ee00d/e2e-a11y-closing.txt`) | matches |
+
+**No a11y regression at the shipped tree.** The FULL PASS verdict stands on the shipped HEAD;
+raw evidence in `docs/qa/a11y-gate-logs/closing-e8ee00d/` (re-run logs + JSONs, produced from a
+clean clone of `e8ee00d`, never overwriting the original `5b1fdbb`/`9689037` evidence).
