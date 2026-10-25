@@ -23,6 +23,7 @@ import { SearchView } from '../../src/features/search/SearchView';
 import { TaskScreen } from '../../src/features/tasks/TaskScreen';
 import { resetTaskStore, state } from '../../src/features/tasks/store';
 import { clearToasts } from '../../src/features/tasks/toasts';
+import { writeEvidence } from '../evidence';
 import { makeList, makeTask, regions, seed, setUpCoreUi, tearDownCoreUi } from './core-ui-harness';
 
 type FlowResult = { flow: string; steps: string[]; result: 'PASS' | 'FAIL' };
@@ -55,8 +56,7 @@ afterEach(() => {
   clearToasts();
 });
 
-afterAll(async () => {
-  const fs = await import('node:fs');
+afterAll(() => {
   const lines: string[] = [
     '# E2 core UI — keyboard-only pass (evidence)',
     '',
@@ -75,10 +75,9 @@ afterAll(async () => {
     }
     lines.push('');
   }
-  fs.writeFileSync(
-    '/home/ubuntu/.hermes/profiles/h_junior_coder/cache/scratch/e2-core-ui-keyboard.md',
-    lines.join('\n'),
-  );
+  // Portable, repo-local evidence output (tests/evidence.ts) — the machine-local scratch path
+  // this used to write to does not exist on the CI runner (CI run 40194624821, ENOENT).
+  writeEvidence('e2-core-ui-keyboard.md', lines.join('\n'));
 });
 
 describe('keyboard-only: F1 capture', () => {

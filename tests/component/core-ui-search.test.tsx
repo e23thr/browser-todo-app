@@ -19,6 +19,7 @@ import { SearchView } from '../../src/features/search/SearchView';
 import { searchIndexFor } from '../../src/features/search/searchIndexCache';
 import { selectView } from '../../src/domain/views';
 import { state } from '../../src/features/tasks/store';
+import { writeEvidence } from '../evidence';
 import {
   makeList,
   makeTask,
@@ -39,13 +40,11 @@ afterEach(() => {
   tearDownCoreUi();
 });
 
-afterAll(async () => {
+afterAll(() => {
   if (evidence.length === 0) return;
-  const fs = await import('node:fs');
-  fs.writeFileSync(
-    '/home/ubuntu/.hermes/profiles/h_junior_coder/cache/scratch/e2-m5-search-latency.md',
-    evidence.join('\n') + '\n',
-  );
+  // Portable, repo-local evidence output (tests/evidence.ts): the machine-local scratch path
+  // this used to write to does not exist on the CI runner (CI run 40194624821, ENOENT).
+  writeEvidence('e2-m5-search-latency.md', evidence.join('\n') + '\n');
 });
 
 const LISTS = [makeList({ id: 'L1', name: 'Personal' }), makeList({ id: 'L2', name: 'Work' })];

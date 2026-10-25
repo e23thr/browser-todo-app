@@ -14,17 +14,20 @@
  *     readwrite `success` listener) so the paint can be compared against the real persistence
  *     round-trip.
  *
- * Evidence is written to E2E_EVIDENCE (default: h_reviewer scratch) after the run.
+ * Evidence is written to E2E_EVIDENCE, or to <repo>/test-results/evidence/ when that override is
+ * unset (tests/evidence.ts), after the run.
  */
 
 import { expect, test, type Page } from '@playwright/test';
 import fs from 'node:fs';
 
+import { evidencePath } from '../evidence';
 import { APP_URL } from './helpers';
 
-const EVIDENCE_PATH =
-  process.env['E2E_EVIDENCE'] ??
-  '/home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e2-core-ui-keyboard-e2e.md';
+// Evidence target: E2E_EVIDENCE (existing override, e.g. a QA reviewer's scratch dir) or the
+// portable repo-local default — the machine-local fallback this used to ship does not exist on
+// the CI runner (t_61309e52).
+const EVIDENCE_PATH = process.env['E2E_EVIDENCE'] ?? evidencePath('e2-core-ui-keyboard-e2e.md');
 
 /** The shell's two persistent live regions (design §5.5). */
 const POLITE = '.live-regions [role="status"]';

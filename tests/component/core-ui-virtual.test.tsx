@@ -22,6 +22,7 @@ import { VIRTUALIZE_ROWS } from '../../src/features/tasks/TaskList';
 import { computeWindow } from '../../src/domain/windowing';
 import { makeList, makeTask, seed, setUpCoreUi, tearDownCoreUi } from './core-ui-harness';
 import { resetTaskStore } from '../../src/features/tasks/store';
+import { writeEvidence } from '../evidence';
 
 const evidence: string[] = [];
 
@@ -68,13 +69,11 @@ afterEach(() => {
   Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 });
 });
 
-afterAll(async () => {
+afterAll(() => {
   if (evidence.length === 0) return;
-  const fs = await import('node:fs');
-  fs.writeFileSync(
-    '/home/ubuntu/.hermes/profiles/h_junior_coder/cache/scratch/e2-virtualization.md',
-    evidence.join('\n') + '\n',
-  );
+  // Portable, repo-local evidence output (tests/evidence.ts): the machine-local scratch path
+  // this used to write to does not exist on the CI runner (CI run 40194624821, ENOENT).
+  writeEvidence('e2-virtualization.md', evidence.join('\n') + '\n');
 });
 
 describe('§5.7 virtualized rendering', () => {
