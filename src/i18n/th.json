@@ -198,7 +198,7 @@
   "list.color.gray": "เทา",
   "list.color.teal": "เขียวอมน้ำเงิน",
   "confirm.deleteTask.title": "ลบงานนี้หรือไม่?",
-  "confirm.deleteTask.body": "\"{title}\" จะถูกลบ คุณสามารถเลิกทำการนี้ได้ภายใน 10 วินาที",
+  "confirm.deleteTask.body": "\"{title}\" จะถูกลบ การกระทำนี้ไม่สามารถย้อนกลับได้",
   "confirm.deleteTask.confirm": "ลบ",
   "confirm.deleteTask.subtaskBody": "\"{title}\" มี {count} งานย่อย เลือกว่าจะจัดการอย่างไร",
   "confirm.deleteTask.promoteSubtasks": "ย้าย {count} งานย่อยไปยังรายการ",

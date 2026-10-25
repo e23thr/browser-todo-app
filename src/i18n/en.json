@@ -197,7 +197,7 @@
   "list.color.gray": "Gray",
   "list.color.teal": "Teal",
   "confirm.deleteTask.title": "Delete task?",
-  "confirm.deleteTask.body": "\"{title}\" will be deleted. You can undo this for 10 seconds.",
+  "confirm.deleteTask.body": "\"{title}\" will be deleted. This can't be undone.",
   "confirm.deleteTask.confirm": "Delete",
   "confirm.deleteTask.subtaskBody": "\"{title}\" has {count} subtasks. Choose what happens to them.",
   "confirm.deleteTask.promoteSubtasks": "Move {count} subtasks to the list",

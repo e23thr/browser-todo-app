@@ -201,6 +201,46 @@ describe('sync setup wizard (S9)', () => {
     const error = await screen.findByTestId('setup-error');
     expect(error.textContent).toContain('HTTPS');
     expect(rig.fake.state.requests).toHaveLength(0);
+
+    // SC 4.1.3: the refusal is silent in the DOM (the box carries no
+    // role="alert" by design), so it has to reach the global ASSERTIVE region.
+    const title = screen.getByTestId('setup-error-title').textContent;
+    await waitFor(() => {
+      expect(regions.assertive?.textContent).toBe(`Sync failed: ${title}`);
+    });
+  });
+
+  it('an empty password is refused locally — the error is rendered AND announced assertively', async () => {
+    const rig = await makeEngine();
+    bindUnconfigured(rig);
+    render(<SyncPanel />);
+
+    fireEvent.input(screen.getByLabelText('WebDAV address', { exact: true }), {
+      target: { value: 'https://dav.test/base/' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.input(screen.getByLabelText('User name', { exact: true }), {
+      target: { value: 'alice' },
+    });
+
+    // Submit step 2 with the password left empty.
+    fireEvent.submit(
+      screen.getByLabelText('Password', { exact: true }).closest('form') as HTMLFormElement,
+    );
+
+    const error = await screen.findByTestId('setup-error');
+    expect(error.textContent).toContain('Enter the password for this storage.');
+    expect(document.activeElement).toBe(screen.getByLabelText('Password', { exact: true }));
+
+    // Local refusal only — the opt-in boundary holds, setup stays unconfigured.
+    expect(rig.fake.state.requests).toHaveLength(0);
+    expect(rig.engine.state().value.status).toBe('idle');
+
+    // SC 4.1.3: the password error also reaches the global assertive region.
+    const title = screen.getByTestId('setup-error-title').textContent;
+    await waitFor(() => {
+      expect(regions.assertive?.textContent).toBe(`Sync failed: ${title}`);
+    });
   });
 
   it('keyboard flow: Enter submits each step, focus follows the current step, progress marks aria-current', async () => {

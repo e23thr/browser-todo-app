@@ -89,7 +89,11 @@ export function SetupWizard({ engine, initial, onStart, onEnd }: SetupWizardProp
     const invalid = assertSecureRemote(remoteUrl.trim());
     if (invalid !== null) {
       // Local refusal — zero network (the opt-in boundary holds even for errors).
-      setFailure(syncErrorCopy(invalid));
+      const copy = syncErrorCopy(invalid);
+      setFailure(copy);
+      // SyncErrorBox renders no role="alert" (it would double-speak), so the
+      // message has to reach assistive tech through the global live region.
+      announce(t('a11y.sync.failed', { message: copy.title }), 'assertive');
       return;
     }
     setFailure(null);
@@ -100,7 +104,9 @@ export function SetupWizard({ engine, initial, onStart, onEnd }: SetupWizardProp
     event.preventDefault();
     if (busy) return;
     if (password === '') {
-      setFailure({ title: t('sync.password.required') });
+      const copy = { title: t('sync.password.required') };
+      setFailure(copy);
+      announce(t('a11y.sync.failed', { message: copy.title }), 'assertive');
       passwordRef.current?.focus();
       return;
     }
