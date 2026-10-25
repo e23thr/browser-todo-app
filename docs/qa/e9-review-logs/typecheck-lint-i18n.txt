@@ -1,0 +1,50 @@
+== npm run typecheck (exit 0) ==
+
+> browser-todo-app@0.1.0 typecheck
+> tsc -b
+
+
+== npm run lint (exit 0) ==
+
+> browser-todo-app@0.1.0 lint
+> eslint . --max-warnings 0
+
+
+== npm run i18n:check (PASS) ==
+
+> browser-todo-app@0.1.0 i18n:check
+> node scripts/check-i18n.mjs
+
+i18n catalog check — src/i18n/en.json vs src/i18n/th.json
+  keys: 522 en / 522 th · 365 distinct keys used by 434 literal t() call site(s)
+  note: 24 t() call site(s) with a non-literal key (not statically verifiable):
+    app/Shell.tsx:182
+    app/Shell.tsx:289
+    components/ConfirmDialog.tsx:110
+    components/ConfirmDialog.tsx:119
+    components/ConfirmDialog.tsx:125
+    components/ConfirmDialog.tsx:127
+    features/commands/CommandPalette.tsx:87
+    features/commands/CommandPalette.tsx:166
+    features/commands/ShortcutsHelpDialog.tsx:39
+    features/commands/ShortcutsHelpDialog.tsx:41
+    features/commands/ShortcutsHelpDialog.tsx:50
+    features/commands/ShortcutsHelpDialog.tsx:51
+    features/data-safety/actions.ts:116
+    features/lists/ListDialog.tsx:113
+    features/lists/ListDialog.tsx:132
+    features/lists/ListsManageView.tsx:399
+    features/notifications/NotificationsSettings.tsx:64
+    features/tasks/Composer.tsx:244
+    features/tasks/TaskRow.tsx:280
+    features/tasks/TaskRow.tsx:281
+    features/tasks/ToastHost.tsx:33
+    features/tasks/ToastHost.tsx:42
+    features/tasks/fields.tsx:185
+    features/tasks/store.ts:343
+RESULT: PASS — en/th key sets, values and placeholders are consistent
+
+== re-run after the reviewer probe file was added (untracked evidence) ==
+npx eslint tests/unit/portability/e9-review-probe.test.ts --max-warnings 0 -> exit 0
+npm run typecheck (tsc -b, includes the probe)                            -> exit 0
+npx vitest run tests/unit/portability/e9-review-probe.test.ts             -> 1 passed | 2 expected fail

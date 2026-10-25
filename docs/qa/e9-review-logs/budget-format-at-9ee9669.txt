@@ -1,0 +1,33 @@
+== npm run format:check at 9ee9669 (pre-existing X2: model.ts + vite.config.ts; third warn is the untracked reviewer probe) ==
+
+> browser-todo-app@0.1.0 format:check
+> prettier --check .
+
+Checking formatting...
+[warn] src/domain/model.ts
+[warn] tests/unit/portability/e9-review-probe.test.ts
+[warn] vite.config.ts
+[warn] Code style issues found in 3 files. Run Prettier with --write to fix.
+
+== npm run budget at 9ee9669 (no-external-refs = pre-existing sibling X3, fixed at ad4acc3) ==
+
+> browser-todo-app@0.1.0 budget
+> node scripts/check-bundle-budget.mjs
+
+Bundle budget report — /home/ubuntu/workspace/e9-verify-5166e154/dist (gzip level 9)
+  gate              measured    limit       status
+  initial-js        76.6 KB     100.0 KB    PASS
+      3 entry-closure chunk(s)
+  css               7.4 KB      20.0 KB     PASS
+      1 file(s)
+  app-shell         97.0 KB     200.0 KB    PASS
+      8 file(s), 4 lazy chunk(s) excluded
+  locales           19.8 KB     20.0 KB     PASS
+      2 locale pack(s)
+  locales-lazy      0 hit(s)    0           PASS
+      no locale pack is inside the initial JS closure
+  no-external-refs  2 hit(s)    0           FAIL
+      assets/locale-en-csWIHdKa.js → https://cloud.example/dav.php/files/you/.; assets/locale-th-CQ_GoZgb.js → https://cloud.example/dav.php/files/you/
+  no-wasm           0 hit(s)    0           PASS
+      no .wasm asset in dist/ (MVP rule)
+RESULT: FAIL — build is over budget

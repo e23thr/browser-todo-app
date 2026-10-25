@@ -1,0 +1,12 @@
+
+ RUN  v5.0.5 /home/ubuntu/workspace/e9-verify-5166e154
+
+ ✓ tests/unit/portability/e9-review-probe.test.ts > E9 review: format routing (E9-Q2) > a valid JSON backup renamed .txt takes the JSON path (today: todo.txt converter) 27ms
+ ✓ tests/unit/portability/e9-review-probe.test.ts > E9 review: format routing (E9-Q2) > control: extension-less JSON content is sniffed as json 3ms
+ ✓ tests/unit/portability/e9-review-probe.test.ts > E9 review: encoding (E9-Q1) > a UTF-16LE todo.txt is rejected as an unreadable source (today: accepted as mojibake) 3ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 2 expected fail (3)
+   Start at  05:31:32
+   Duration  724ms (environment 73%, setup 10%, transform 6%, tests 6%, import 4%, worker 1%)
+

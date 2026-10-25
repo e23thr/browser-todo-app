@@ -1,0 +1,12 @@
+
+Running 6 tests using 6 workers
+
+  -  3 [chromium] › tests/e2e/e9-utilities.spec.ts:152:1 › S10 non-Chromium: no FSA globals exist and the download path delivers the backup
+  ✓  2 [chromium] › tests/e2e/e9-utilities.spec.ts:133:1 › S10 fallback: a failing picker falls back to the universal download (763ms)
+  ✓  4 [chromium] › tests/e2e/e9-utilities.spec.ts:183:1 › S10 chromium: open goes through the File System Access picker into the import preview (805ms)
+  ✓  6 [chromium] › tests/e2e/e9-utilities.spec.ts:206:1 › S10/S12 upload fallback: a real CSV file imports through picker → confirm → rows (895ms)
+  ✓  5 [chromium] › tests/e2e/e9-utilities.spec.ts:244:1 › S12 malformed CSV: rejected with the inline notice and ZERO side effects (1.0s)
+  ✓  1 [chromium] › tests/e2e/e9-utilities.spec.ts:103:1 › S10 chromium: save goes through the File System Access picker, no download (4.6s)
+
+  1 skipped
+  5 passed (18.5s)
