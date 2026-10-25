@@ -10,11 +10,24 @@
 import type { StoreName } from './types.ts';
 
 export const DB_NAME = 'local-first-todo';
-export const IDB_VERSION = 1;
-/** Current logical data version (ADR-002 Decision 2). */
-export const APP_SCHEMA_VERSION = 1;
+/**
+ * idbVersion 2 = the additive `sync_state` store (ADR-006 Decision 3,
+ * `onupgradeneeded` is purely additive). idbVersion 1 stores: meta, lists,
+ * tasks, settings, snapshots, snapshot_payloads. `tags` is reserved
+ * (ADR-002 §3.7) — no code may use it until a migration adds it.
+ */
+export const IDB_VERSION = 2;
+/**
+ * Current logical data version (ADR-002 Decision 2). Chain map: v1 = ADR-002
+ * baseline; v2 = the `sync_state` store (ADR-006 Decision 3, t_00d7f17b); v3 =
+ * E7 organization schema (`P1..P4` priority model, reserved recurrence format)
+ * in `src/storage/migrations.ts`.
+ */
+export const APP_SCHEMA_VERSION = 3;
 export const META_KEY = 'meta';
 export const SETTINGS_KEY = 'settings';
+/** Singleton key of the `sync_state` store (ADR-006 Decision 3). */
+export const SYNC_KEY = 'sync';
 
 export type IndexDef = {
   name: string;
@@ -49,4 +62,7 @@ export const STORE_DEFS: readonly StoreDef[] = [
   { name: 'settings', keyPath: 'id', indexes: [] },
   { name: 'snapshots', keyPath: 'id', indexes: [{ name: 'by_takenAt', keyPath: 'takenAt' }] },
   { name: 'snapshot_payloads', keyPath: 'id', indexes: [] },
+  // ADR-006 Decision 3: singleton under key 'sync', local-only (never exported,
+  // snapshotted or synced). No indexes: it is read/written as one row.
+  { name: 'sync_state', keyPath: 'id', indexes: [] },
 ];

@@ -64,6 +64,7 @@ export const fallbackRawCodec: SnapshotCodec = {
           settings: stores.settings ?? [],
           snapshots: stores.snapshots ?? [],
           snapshot_payloads: stores.snapshot_payloads ?? [],
+          sync_state: [],
         },
       });
     } catch (e) {
@@ -88,6 +89,9 @@ export async function readSnapshotSource(
   if (!snapshotRows.ok) return err(snapshotRows.error);
   stores.snapshots = snapshotRows.value;
   stores.snapshot_payloads = [];
+  // ADR-006 Decision 3: `sync_state` is local-only — NEVER captured here, so it
+  // cannot leak into snapshots, exports or the remote. The key stays empty.
+  stores.sync_state = [];
   const meta = await db.get('meta', 'meta');
   if (!meta.ok) return err(meta.error);
   return ok({ schemaVersion: meta.value?.schemaVersion ?? 1, stores });

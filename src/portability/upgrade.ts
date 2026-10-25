@@ -96,6 +96,10 @@ export async function upgradeRawBackup(
     settings: settingsPart.keyed as Settings[],
     snapshots: snapshotsPart.keyed as Snapshot[],
     snapshot_payloads: [],
+    // ADR-006 Decision 3: sync_state is local-only — always empty in document
+    // rows; the migration step may seed it in-memory and the projection below
+    // deliberately ignores it.
+    sync_state: [],
   };
 
   const migrated = await migrateRows(registry, rows, raw.schemaVersion, target);

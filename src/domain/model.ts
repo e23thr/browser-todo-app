@@ -7,14 +7,36 @@
  */
 
 export type TaskStatus = 'open' | 'done' | 'archived';
-export type Priority = 0 | 1 | 2;
 
-/** RRULE-lite subset (S4 owns semantics). */
+/**
+ * S3 priority model (V1, schemaVersion 2): four levels `P1..P4`, `P1` the most
+ * urgent and `P4` = "no priority" (the default for new tasks). This REPLACED
+ * the MVP `0 | 1 | 2` union where `2` was High, `1` Medium, `0` Low and the
+ * field was required — the schemaVersion 2 migration maps the legacy values
+ * onto the levels preserving user-visible meaning (see `migrations.ts`).
+ */
+export type Priority = 'P1' | 'P2' | 'P3' | 'P4';
+
+/** Every level, most urgent first (UI pickers, sort helpers). */
+export const PRIORITY_LEVELS = ['P1', 'P2', 'P3', 'P4'] as const;
+
+const PRIORITY_RANK: Readonly<Record<Priority, number>> = { P1: 0, P2: 1, P3: 2, P4: 3 };
+
+/** Sort comparator: `P1` first … `P4` (no priority) last ("sorting per level"). */
+export function compareByPriority(a: Priority, b: Priority): number {
+  return PRIORITY_RANK[a] - PRIORITY_RANK[b];
+}
+
+/**
+ * RRULE-lite subset (S4 owns semantics). BINDING reserved format (V1, E7):
+ * `{ freq, interval >= 1, until?: 'YYYY-MM-DD' }` — no exceptions and NO
+ * end-count (PROJECT_ANALYSIS R4 line). The schemaVersion 2 migration strips a
+ * legacy `count` field so the recurrence card implements semantics only.
+ */
 export type Recurrence = {
   freq: 'daily' | 'weekly' | 'monthly' | 'weekdays';
   interval: number;
   until?: string;
-  count?: number;
 };
 
 export type List = {
@@ -61,9 +83,17 @@ export type Settings = {
 
 /**
  * Store names (ADR-002 Decision 3). `tags` is deliberately reserved and must
- * not appear here until a migration creates it (ADR-002 §3.7).
+ * not appear here until a migration creates it (ADR-002 §3.7). `sync_state`
+ * arrived with the ADR-006 Decision 3 migration step (schemaVersion 2).
  */
-export type StoreName = 'meta' | 'lists' | 'tasks' | 'settings' | 'snapshots' | 'snapshot_payloads';
+export type StoreName =
+  | 'meta'
+  | 'lists'
+  | 'tasks'
+  | 'settings'
+  | 'snapshots'
+  | 'snapshot_payloads'
+  | 'sync_state';
 
 /** Field-scoped create input — repos stamp ids/timestamps (ADR-002 Decision 5). */
 export type TaskDraft = {

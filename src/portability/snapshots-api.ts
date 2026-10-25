@@ -137,6 +137,8 @@ export function makeAdr004Codec(opts: Adr004CodecOptions = {}): SnapshotCodec {
           tasks: toRows('tasks', raw.tasks),
           snapshots: toRows('snapshots', raw.snapshots),
           snapshot_payloads: [],
+          // ADR-006 Decision 3: sync_state is local-only — never in documents.
+          sync_state: [],
         },
       });
     },

@@ -245,7 +245,7 @@ function checkRecurrence(issues: ShapeIssue[], fields: Record<string, unknown>):
     push(issues, 'recurrence', false, 'type', 'object');
     return;
   }
-  const allowed = ['freq', 'interval', 'until', 'count'];
+  const allowed = ['freq', 'interval', 'until'];
   for (const key of Object.keys(rec)) {
     if ((FORBIDDEN_KEYS as readonly string[]).includes(key)) {
       issues.push({
@@ -276,14 +276,6 @@ function checkRecurrence(issues: ShapeIssue[], fields: Record<string, unknown>):
   );
   if (rec['until'] !== undefined)
     push(issues, 'recurrence.until', isLocalDateString(rec['until']), 'format', 'YYYY-MM-DD');
-  if (rec['count'] !== undefined)
-    push(
-      issues,
-      'recurrence.count',
-      typeof rec['count'] === 'number' && Number.isInteger(rec['count']) && rec['count'] >= 1,
-      'range',
-      'integer >= 1',
-    );
 }
 
 function checkTags(issues: ShapeIssue[], fields: Record<string, unknown>): void {
@@ -318,9 +310,12 @@ export function validateTask(value: unknown): ValidationResult {
   push(
     issues,
     'priority',
-    fields['priority'] === 0 || fields['priority'] === 1 || fields['priority'] === 2,
+    fields['priority'] === 'P1' ||
+      fields['priority'] === 'P2' ||
+      fields['priority'] === 'P3' ||
+      fields['priority'] === 'P4',
     'format',
-    '0|1|2',
+    'P1|P2|P3|P4',
   );
   if (fields['dueDate'] !== undefined)
     push(
@@ -474,6 +469,186 @@ export function validateSnapshotPayload(value: unknown): ValidationResult {
   return resultOf(issues);
 }
 
+const SYNC_STATE_FIELDS = [
+  'id',
+  'enabled',
+  'remoteUrl',
+  'remoteUser',
+  'remotePassword',
+  'autoSync',
+  'deviceId',
+  'cursor',
+  'shadow',
+  'lastSyncAt',
+  'lastError',
+] as const;
+const SYNC_CURSOR_FIELDS = [
+  'pull',
+  'snapshotKey',
+  'pushedUpTo',
+  'pushedSeq',
+  'remoteCoveredUpTo',
+] as const;
+const SYNC_SHADOW_FIELDS = ['updatedAt', 'deviceId', 'contentHash'] as const;
+// The ADR-006 Decision 6 code table, closed (a persisted code outside this set
+// is corruption, quarantined like any other invalid row).
+const SYNC_ERROR_CODES = [
+  'CONFIG',
+  'AUTH',
+  'CORS',
+  'NETWORK',
+  'REMOTE_MISSING',
+  'CONFLICT_WRITE',
+  'CORRUPT_REMOTE',
+  'SYNC_FORMAT_UNKNOWN',
+  'SYNC_FORMAT_NEWER',
+  'REMOTE_FULL',
+  'LOCAL_STORAGE',
+  'LOCKED',
+  'ABORTED',
+] as const;
+
+function checkNullableTimestamp(
+  issues: ShapeIssue[],
+  fields: Record<string, unknown>,
+  path: string,
+): void {
+  const v = fields[path];
+  push(issues, path, v === null || isEpochMs(v), 'format', 'null or epoch ms UTC');
+}
+
+/** Singleton `sync_state` row (ADR-006 Decision 3) — strict like every validator. */
+export function validateSyncState(value: unknown): ValidationResult {
+  const { fields, issues } = checkShape(value, SYNC_STATE_FIELDS);
+  push(issues, 'id', fields['id'] === 'sync', 'format', "singleton key 'sync'");
+  push(issues, 'enabled', typeof fields['enabled'] === 'boolean', 'type', 'boolean');
+  push(issues, 'autoSync', typeof fields['autoSync'] === 'boolean', 'type', 'boolean');
+  push(issues, 'remoteUrl', typeof fields['remoteUrl'] === 'string', 'type', 'string');
+  push(issues, 'remoteUser', typeof fields['remoteUser'] === 'string', 'type', 'string');
+  push(issues, 'remotePassword', typeof fields['remotePassword'] === 'string', 'type', 'string');
+  push(
+    issues,
+    'deviceId',
+    typeof fields['deviceId'] === 'string' &&
+      (fields['deviceId'] === '' || isUlid(fields['deviceId'])),
+    'format',
+    'ULID or empty',
+  );
+
+  const cursor = fields['cursor'];
+  if (!isRecord(cursor)) {
+    push(issues, 'cursor', false, 'type', 'object');
+  } else {
+    for (const key of Object.keys(cursor)) {
+      if ((FORBIDDEN_KEYS as readonly string[]).includes(key)) {
+        issues.push({
+          path: `cursor.${key}`,
+          kind: 'forbidden',
+          detail: 'prototype-pollution key',
+        });
+      } else if (!(SYNC_CURSOR_FIELDS as readonly string[]).includes(key)) {
+        issues.push({ path: `cursor.${key}`, kind: 'unknown', detail: 'unexpected field' });
+      }
+    }
+    const pull = cursor['pull'];
+    if (!isRecord(pull)) {
+      push(issues, 'cursor.pull', false, 'type', 'object');
+    } else {
+      for (const [device, seq] of Object.entries(pull)) {
+        push(
+          issues,
+          `cursor.pull.${device}`,
+          isUlid(device) && typeof seq === 'number' && Number.isSafeInteger(seq) && seq >= 0,
+          'format',
+          'ULID -> non-negative integer seq',
+        );
+      }
+    }
+    const snapshotKey = cursor['snapshotKey'];
+    push(
+      issues,
+      'cursor.snapshotKey',
+      snapshotKey === null || typeof snapshotKey === 'string',
+      'type',
+      'string or null',
+    );
+    push(
+      issues,
+      'cursor.pushedUpTo',
+      isEpochMs(cursor['pushedUpTo']),
+      'format',
+      'epoch ms UTC safe integer',
+    );
+    push(
+      issues,
+      'cursor.pushedSeq',
+      typeof cursor['pushedSeq'] === 'number' &&
+        Number.isSafeInteger(cursor['pushedSeq']) &&
+        cursor['pushedSeq'] >= 0,
+      'range',
+      'safe integer >= 0',
+    );
+    const covered = cursor['remoteCoveredUpTo'];
+    push(
+      issues,
+      'cursor.remoteCoveredUpTo',
+      covered === null || isEpochMs(covered),
+      'format',
+      'null or epoch ms UTC',
+    );
+  }
+
+  const shadow = fields['shadow'];
+  if (!isRecord(shadow)) {
+    push(issues, 'shadow', false, 'type', 'object');
+  } else {
+    for (const [id, entry] of Object.entries(shadow)) {
+      const path = `shadow.${id}`;
+      push(issues, path, isUlid(id), 'format', 'ULID key');
+      if (!isRecord(entry)) {
+        push(issues, path, false, 'type', 'object entry');
+        continue;
+      }
+      for (const key of Object.keys(entry)) {
+        if (
+          (FORBIDDEN_KEYS as readonly string[]).includes(key) ||
+          !(SYNC_SHADOW_FIELDS as readonly string[]).includes(key)
+        ) {
+          issues.push({ path: `${path}.${key}`, kind: 'unknown', detail: 'unexpected field' });
+        }
+      }
+      push(
+        issues,
+        `${path}.updatedAt`,
+        isEpochMs(entry['updatedAt']),
+        'format',
+        'epoch ms UTC safe integer',
+      );
+      push(issues, `${path}.deviceId`, isUlid(entry['deviceId']), 'format', 'ULID');
+      push(
+        issues,
+        `${path}.contentHash`,
+        typeof entry['contentHash'] === 'string' && /^[0-9a-f]{64}$/u.test(entry['contentHash']),
+        'format',
+        'sha256 hex',
+      );
+    }
+  }
+
+  checkNullableTimestamp(issues, fields, 'lastSyncAt');
+  const lastError = fields['lastError'];
+  push(
+    issues,
+    'lastError',
+    lastError === null ||
+      (typeof lastError === 'string' &&
+        (SYNC_ERROR_CODES as readonly string[]).includes(lastError)),
+    'format',
+    'null or ADR-006 Decision 6 code',
+  );
+  return resultOf(issues);
+}
+
 /** Validate one row for its store (boot validation + import share this). */
 export function validateRow(store: StoreName, value: unknown): ValidationResult {
   switch (store) {
@@ -489,5 +664,7 @@ export function validateRow(store: StoreName, value: unknown): ValidationResult 
       return validateSnapshot(value);
     case 'snapshot_payloads':
       return validateSnapshotPayload(value);
+    case 'sync_state':
+      return validateSyncState(value);
   }
 }

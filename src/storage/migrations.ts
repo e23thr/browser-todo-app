@@ -15,9 +15,11 @@
 import { err, migrationFailed, ok, unknownError, newerSchema } from './errors';
 import type { Result, StorageError } from './errors';
 import type { QuerySpec, Tx, AppDBImpl } from './db';
-import { APP_SCHEMA_VERSION, META_KEY } from './schema';
+import type { Priority, Recurrence, Task } from '../domain/model';
+import { APP_SCHEMA_VERSION, META_KEY, SYNC_KEY } from './schema';
 import { fallbackRawCodec, restoreSnapshot, takeSnapshot } from './snapshots';
 import type { SnapshotCodec } from './snapshots';
+import { defaultSyncStateRow } from './syncState';
 import { type Row, type StoreName, type StoreRows } from './types';
 
 export type MigrationStep = {
@@ -30,8 +32,118 @@ export type MigrationStep = {
 
 export type MigrationRegistry = readonly MigrationStep[];
 
-/** Production chain: empty at schemaVersion 1 (ADR-002 baseline). Future steps append. */
-export const productionMigrations: MigrationRegistry = [];
+/* ---------------------- schemaVersion 3 (E7 organization) ---------------------- */
+
+/**
+ * Legacy MVP `priority: 0 | 1 | 2` -> the S3 `P1..P4` levels, preserving
+ * USER-VISIBLE meaning.
+ *
+ * The MVP encoding is `2` = High, `1` = Medium, `0` = Low (evidence:
+ * `src/features/tasks/fields.tsx` `PRIORITIES`, `TaskRow.tsx` `PRIORITY_ICON`)
+ * and the field was required, so an "unset" case only exists in the type sense.
+ * The decomposition mapping row ("0->P1, 1->P2, 2->P3, unset->P4") was written
+ * against the assumption that `0` is the TOP level; applying it literally would
+ * invert every stored priority (a user's "High" task would land one level above
+ * "no priority"). What is implemented here is that row's INTENT — "the three
+ * legacy levels map to P1..P3 in priority order, the unset case maps to
+ * P4 = no priority" — i.e. High -> P1 (most urgent) … Low -> P3, anything else
+ * -> P4. **Deviation from the literal table row, flagged for review card
+ * t_d45b8cf7**; reverting to the literal table is exactly this switch.
+ */
+export function legacyPriorityToLevel(value: unknown): Priority {
+  if (value === 'P1' || value === 'P2' || value === 'P3' || value === 'P4') return value;
+  switch (value) {
+    case 2:
+      return 'P1';
+    case 1:
+      return 'P2';
+    case 0:
+      return 'P3';
+    default:
+      return 'P4'; // unset / unknown -> P4 = no priority (record kept, never dropped)
+  }
+}
+
+/**
+ * One task row v1 -> v3. Pure + idempotent (re-running yields the same row).
+ *
+ * - `priority` remapped per `legacyPriorityToLevel`.
+ * - `tags` normalized to a `string[]` (empty when absent — the denormalized
+ *   model, ADR-002 §3.5).
+ * - `recurrence` reduced to the RESERVED V1 format `{freq, interval, until?}`
+ *   (no end-count — R4): a legacy `count` is stripped. A shape that is not a
+ *   well-formed recurrence is left untouched so boot validation quarantines it
+ *   to the recovery file instead of the migration silently deleting user data.
+ */
+export function migrateTaskRowToV3(row: Record<string, unknown>): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...row };
+  next['priority'] = legacyPriorityToLevel(row['priority']);
+  const tags: unknown = row['tags'];
+  next['tags'] = Array.isArray(tags) ? [...(tags as unknown[])] : [];
+  const rec = row['recurrence'];
+  if (typeof rec === 'object' && rec !== null && !Array.isArray(rec)) {
+    const source = rec as { freq?: unknown; interval?: unknown; until?: unknown };
+    if (source.freq !== undefined && source.interval !== undefined) {
+      const reserved: Recurrence = {
+        freq: source.freq as Recurrence['freq'],
+        interval: source.interval as number,
+      };
+      if (typeof source.until === 'string') reserved.until = source.until;
+      next['recurrence'] = reserved;
+    }
+  }
+  return next;
+}
+
+/** The E7 schemaVersion 3 step: one atomic `readwrite` transaction over `tasks`. */
+export const toSchemaVersion3: MigrationStep = {
+  to: 3,
+  stores: ['tasks'],
+  run: async (t) => {
+    const rows = await t.getAll('tasks');
+    // Batched puts inside the one transaction (10k-row databases migrate without
+    // a per-row round trip) — same atomicity, no serial await.
+    const puts: Promise<unknown>[] = [];
+    for (const row of rows) {
+      puts.push(t.put('tasks', migrateTaskRowToV3(row as unknown as Record<string, unknown>) as Task));
+    }
+    await Promise.all(puts);
+    return ok(undefined);
+  },
+};
+
+/* ---------------------- schemaVersion 2 (sync_state, ADR-006) ---------------------- */
+
+/**
+ * Step 2 registers the additive `sync_state` store (ADR-006 Decision 3, owned
+ * by t_00d7f17b; numbering pinned by ADR-007 "after sync_state step 2; never
+ * renumbered"). The STRUCTURAL store creation runs in `onupgradeneeded`
+ * (idbVersion 2, schema.ts); this step seeds the singleton default row so old
+ * databases arrive at the same state fresh installs get. Idempotent: an
+ * existing row is never touched. The engine additionally has a lazy
+ * `ensureSyncState` fallback, so a rolled-back step cannot leave sync broken.
+ */
+export const toSchemaVersion2: MigrationStep = {
+  to: 2,
+  stores: ['sync_state'],
+  run: async (t) => {
+    const existing = await t.get('sync_state', SYNC_KEY);
+    if (existing === undefined) {
+      const meta = await t.get('meta', META_KEY);
+      await t.put('sync_state', defaultSyncStateRow(meta?.deviceId ?? ''));
+    }
+    return ok(undefined);
+  },
+};
+
+/**
+ * Production chain: v1 baseline (ADR-002), v2 = the `sync_state` store
+ * (ADR-006 Decision 3 — owned by t_00d7f17b; numbering pinned there and echoed
+ * on t_b5078638), v3 = E7 organization schema. ADR-002 requires exactly one
+ * step per version — any further migration appends at `to: 4`+ (two steps at
+ * one version make `runMigrations` refuse to boot).
+ */
+export const productionMigrations: MigrationRegistry = [toSchemaVersion2, toSchemaVersion3];
 
 export function targetVersionOf(registry: MigrationRegistry): number {
   return registry.reduce((max, s) => Math.max(max, s.to), APP_SCHEMA_VERSION);
@@ -176,6 +288,7 @@ export class MemoryTx implements Tx {
       'settings',
       'snapshots',
       'snapshot_payloads',
+      'sync_state',
     ] as const) {
       if (!this.#stores.has(name)) this.#stores.set(name, new Map<string, unknown>());
     }

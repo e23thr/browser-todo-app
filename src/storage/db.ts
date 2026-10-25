@@ -27,6 +27,7 @@ import {
   META_KEY,
   SETTINGS_KEY,
   STORE_DEFS,
+  SYNC_KEY,
   DB_NAME,
 } from './schema';
 import type { QuarantineApi, QuarantineEntry } from './quarantine';
@@ -153,6 +154,9 @@ function primaryKeyOk(store: StoreName, row: unknown): boolean {
   if (store === 'meta') return typeof row === 'object' && row !== null;
   if (store === 'settings') {
     return typeof row === 'object' && row !== null && (row as { id?: unknown }).id === SETTINGS_KEY;
+  }
+  if (store === 'sync_state') {
+    return typeof row === 'object' && row !== null && (row as { id?: unknown }).id === SYNC_KEY;
   }
   return isUlid((row as { id?: unknown } | null)?.id);
 }
