@@ -1,0 +1,31 @@
+
+> browser-todo-app@0.1.0 test:coverage
+> vitest run --coverage
+
+
+ RUN  v5.0.5 /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e1-gates/run-1792756788/work
+      Coverage enabled with v8
+
+
+ Test Files  3 passed (3)
+      Tests  35 passed (35)
+   Start at  19:00:15
+   Duration  1.09s (environment 65%, tests 10%, transform 10%, setup 10%, worker 4%, import 1%)
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   88.18 |    81.96 |    92.3 |   88.88 |                   
+ app               |   87.96 |    81.96 |   91.66 |   88.65 |                   
+  App.tsx          |   87.17 |       75 |   88.88 |   89.18 | 61-62,76,100      
+  main.tsx         |       0 |        0 |     100 |       0 | 6-11              
+  router.ts        |   93.75 |    89.74 |   92.85 |   94.54 | 91-94             
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 88.18% ( 97/110 )
+Branches     : 81.96% ( 50/61 )
+Functions    : 92.3% ( 24/26 )
+Lines        : 88.88% ( 88/99 )
+================================================================================

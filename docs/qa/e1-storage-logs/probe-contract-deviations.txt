@@ -1,0 +1,107 @@
+
+ RUN  v5.0.5 /home/ubuntu/workspace/browser-todo-app
+
+ × tests/unit/storage/zz-probes.test.ts > P1: Tx.get applies the quarantine denylist (docs/dev/storage-api.md) > quarantined rows are invisible to Tx.get just like AppDB.get 31ms
+   → expected { …(12) } to be undefined
+ × tests/unit/storage/zz-probes.test.ts > P2: quarantine.purge() never touches the meta singleton (ADR-002 Decision 3.1) > deviceId survives purge + reboot even when the meta row was quarantined 12ms
+   → expected '01M5MCS1J3NY0PGQ8BAKJJ22C8' to be 'not-a-ulid' // Object.is equality
+ × tests/unit/storage/zz-probes.test.ts > P3: boot meta write failures classify QuotaExceededError as QUOTA_EXCEEDED > fresh-boot meta seeding under quota exhaustion returns QUOTA_EXCEEDED 4ms
+   → expected 'UNKNOWN' to be 'QUOTA_EXCEEDED' // Object.is equality
+ × tests/unit/storage/zz-probes.test.ts > P4 (info): corrupt meta.schemaVersion boots without a bogus migration report > a non-integer schemaVersion yields migrated: null and no spurious snapshot 4ms
+   → expected { from: 0.5, to: 1 } to be null
+ ✓ tests/unit/storage/zz-probes.test.ts > sanity: fixture reuse across probes > openFixtureDb still works after probe DBs 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/storage/zz-probes.test.ts > P1: Tx.get applies the quarantine denylist (docs/dev/storage-api.md) > quarantined rows are invisible to Tx.get just like AppDB.get
+AssertionError: expected { …(12) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "createdAt": 1700000000000,
+  "deletedAt": null,
+  "deviceId": "01HF7YAT00VVV8TKP84BM2HBVE",
+  "id": "01HF7YAT00VVV8TKP84BM2HBVC",
+  "listId": "01HF7YAT00VVV8TKP84BM2HBVD",
+  "notes": null,
+  "priority": 0,
+  "sortOrder": "h",
+  "status": "open",
+  "tags": [],
+  "title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "updatedAt": 1700000000000,
+}
+
+ ❯ tests/unit/storage/zz-probes.test.ts:38:37
+     36|       return { ok: true as const, value: row };
+     37|     });
+     38|     expect(viaTx.ok && viaTx.value).toBeUndefined(); // Tx.get must fi…
+       |                                     ^
+     39|   });
+     40| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/unit/storage/zz-probes.test.ts > P2: quarantine.purge() never touches the meta singleton (ADR-002 Decision 3.1) > deviceId survives purge + reboot even when the meta row was quarantined
+AssertionError: expected '01M5MCS1J3NY0PGQ8BAKJJ22C8' to be 'not-a-ulid' // Object.is equality
+
+Expected: "not-a-ulid"
+Received: "01M5MCS1J3NY0PGQ8BAKJJ22C8"
+
+ ❯ tests/unit/storage/zz-probes.test.ts:65:35
+     63|     if (!second.ok) return;
+     64|     booted.push(second.value as AppDBImpl);
+     65|     expect(second.value.deviceId).toBe(badMeta.deviceId); // identity …
+       |                                   ^
+     66|   });
+     67| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/unit/storage/zz-probes.test.ts > P3: boot meta write failures classify QuotaExceededError as QUOTA_EXCEEDED > fresh-boot meta seeding under quota exhaustion returns QUOTA_EXCEEDED
+AssertionError: expected 'UNKNOWN' to be 'QUOTA_EXCEEDED' // Object.is equality
+
+Expected: "QUOTA_EXCEEDED"
+Received: "UNKNOWN"
+
+ ❯ tests/unit/storage/zz-probes.test.ts:81:31
+     79|     expect(result.ok).toBe(false);
+     80|     if (result.ok) return;
+     81|     expect(result.error.code).toBe('QUOTA_EXCEEDED'); // contract: nev…
+       |                               ^
+     82|   });
+     83| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/unit/storage/zz-probes.test.ts > P4 (info): corrupt meta.schemaVersion boots without a bogus migration report > a non-integer schemaVersion yields migrated: null and no spurious snapshot
+AssertionError: expected { from: 0.5, to: 1 } to be null
+
+- Expected:
+null
+
++ Received:
+{
+  "from": 0.5,
+  "to": 1,
+}
+
+ ❯ tests/unit/storage/zz-probes.test.ts:94:36
+     92|     const db = result.value as AppDBImpl;
+     93|     booted.push(db);
+     94|     expect(db.bootReport.migrated).toBeNull(); // no real chain ran
+       |                                    ^
+     95|     const snaps = await db.getAll('snapshots');
+     96|     expect(snaps.ok && snaps.value).toHaveLength(0); // no spurious pr…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 1 passed (5)
+   Start at  19:46:35
+   Duration  1.35s (environment 78%, transform 8%, setup 6%, tests 5%, import 2%, worker 1%)
+

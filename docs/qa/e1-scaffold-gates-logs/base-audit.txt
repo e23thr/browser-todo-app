@@ -1,0 +1,5 @@
+
+> browser-todo-app@0.1.0 audit:gate
+> npm audit --omit=dev --audit-level=high
+
+found 0 vulnerabilities

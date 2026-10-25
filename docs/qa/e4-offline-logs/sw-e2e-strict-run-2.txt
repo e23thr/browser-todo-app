@@ -1,0 +1,22 @@
+
+Running 16 tests using 6 workers
+
+  ✓   3 [chromium] › tests/e2e/offline-robustness.spec.ts:206:1 › MVP install scope (PO Q12): no web manifest and no install prompt anywhere (562ms)
+  -   5 [chromium] › tests/e2e/offline-data-journey.spec.ts:70:1 › offline task journey: add -> complete -> reload -> data present (E2 core UI)
+  ✓   2 [chromium] › tests/e2e/offline-data-journey.spec.ts:50:1 › offline data journey: an offline write survives an offline reload (756ms)
+  ✓   6 [chromium] › tests/e2e/offline-robustness.spec.ts:96:1 › degraded network (2 s per response): local writes stay optimistic and durable (§6.1) (782ms)
+  ✓   8 [chromium] › tests/e2e/offline.spec.ts:96:1 › warm and offline start-to-interactive stay inside the boot budget (§9.1) (379ms)
+  ✓   7 [chromium] › tests/e2e/offline.spec.ts:61:1 › cold load online, then offline boot keeps the whole app working (M9) (455ms)
+  ✓  10 [chromium] › tests/e2e/offline.spec.ts:151:1 › scope and cache naming are correct under a root base path (Decision 8) (285ms)
+  ✓  11 [chromium] › tests/e2e/offline.spec.ts:177:1 › the non-root base path yields the scoped registration and cache namespace (181ms)
+  ✓  12 [chromium] › tests/e2e/offline.spec.ts:199:1 › no CSP violations fire across offline boot and lazy navigation (Decision 9, test 9) (247ms)
+  ✘   1 [chromium] › tests/e2e/offline-robustness.spec.ts:164:1 › cache lifecycle: activate purges old VERSIONS of this app only (Decision 3) (1.8s)
+  ✓   4 [chromium] › tests/e2e/offline-robustness.spec.ts:135:1 › degraded network (every response 500): writes persist and the update check is silent (Decision 6) (2.1s)
+  ✓   9 [chromium] › tests/e2e/offline.spec.ts:127:1 › a failing update check is completely silent (Decision 6) (1.8s)
+  ✓  13 [chromium] › tests/e2e/update.spec.ts:55:1 › update flow: detect -> toast -> apply on user action -> exactly one reload (2.3s)
+  ✓  14 [chromium] › tests/e2e/update.spec.ts:87:1 › E9: a mid-edit session is never force-reloaded (2.4s)
+  ✓  15 [chromium] › tests/e2e/update.spec.ts:126:1 › E9 multi-tab: applying in one tab never reloads another (2.5s)
+  ✓  16 [chromium] › tests/e2e/update.spec.ts:152:1 › stale-tab guard: a vanished lazy chunk is explained, never auto-fixed (Decision 3) (2.4s)
+
+  1 skipped
+  15 passed (8.6s)

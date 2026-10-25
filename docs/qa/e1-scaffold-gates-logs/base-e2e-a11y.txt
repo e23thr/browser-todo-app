@@ -1,0 +1,10 @@
+
+> browser-todo-app@0.1.0 e2e:a11y
+> playwright test --project=chromium tests/e2e/a11y.spec.ts
+
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › tests/e2e/a11y.spec.ts:11:1 › core views have no serious or critical axe violations (728ms)
+
+  1 passed (4.5s)

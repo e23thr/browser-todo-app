@@ -1,0 +1,6 @@
+
+> browser-todo-app@0.1.0 typecheck
+> tsc -b
+
+src/app/router.ts(158,14): error TS2322: Type 'string' is not assignable to type 'number'.
+src/app/router.ts(158,14): error TS2322: Type 'string' is not assignable to type 'number'.

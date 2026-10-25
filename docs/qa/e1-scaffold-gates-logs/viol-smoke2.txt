@@ -1,0 +1,128 @@
+
+Running 7 tests using 6 workers
+
+  ✓  6 [chromium] › tests/e2e/smoke.spec.ts:47:1 › an unknown hash renders the not-found view instead of a broken page (251ms)
+  ✓  2 [chromium] › tests/e2e/smoke.spec.ts:54:1 › the skip link is the first focusable element (302ms)
+  ✓  5 [chromium] › tests/e2e/smoke.spec.ts:86:1 › makes zero third-party requests at runtime (319ms)
+  ✓  7 [chromium] › tests/e2e/smoke.spec.ts:97:1 › the document ships the section 7.2 CSP meta tag without frame-ancestors (114ms)
+  ✘  3 [chromium] › tests/e2e/smoke.spec.ts:23:1 › boots under a non-root base path with no failed asset requests (5.3s)
+  ✘  4 [chromium] › tests/e2e/smoke.spec.ts:35:1 › hash deep links resolve without a server rewrite (5.3s)
+  ✘  1 [chromium] › tests/e2e/smoke.spec.ts:65:1 › no CSP violation fires while the app boots and navigates (5.4s)
+
+
+  1) [chromium] › tests/e2e/smoke.spec.ts:23:1 › boots under a non-root base path with no failed asset requests 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Today', level: 2 })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: 'Today', level: 2 }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Today', level: 2 })
+
+
+      29 |   await page.goto(APP_URL);
+      30 |
+    > 31 |   await expect(page.getByRole('heading', { name: 'Today', level: 2 })).toBeVisible();
+         |                                                                        ^
+      32 |   expect(failed).toEqual([]);
+      33 | });
+      34 |
+        at /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e1-gates/run-1792756788/work/tests/e2e/smoke.spec.ts:31:72
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-boots-under-a-non-ro-aa672-th-no-failed-asset-requests-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-boots-under-a-non-ro-aa672-th-no-failed-asset-requests-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-boots-under-a-non-ro-aa672-th-no-failed-asset-requests-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-boots-under-a-non-ro-aa672-th-no-failed-asset-requests-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/e2e/smoke.spec.ts:35:1 › hash deep links resolve without a server rewrite ──
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Today', level: 2 })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: 'Today', level: 2 }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Today', level: 2 })
+
+
+      41 |   // The settings route is a lazy chunk: navigating it must not require a full page reload.
+      42 |   await page.getByRole('link', { name: 'Today' }).click();
+    > 43 |   await expect(page.getByRole('heading', { name: 'Today', level: 2 })).toBeVisible();
+         |                                                                        ^
+      44 |   await expect(page).toHaveURL(`${APP_URL}#/today`);
+      45 | });
+      46 |
+        at /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e1-gates/run-1792756788/work/tests/e2e/smoke.spec.ts:43:72
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-hash-deep-links-resolve-without-a-server-rewrite-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-hash-deep-links-resolve-without-a-server-rewrite-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-hash-deep-links-resolve-without-a-server-rewrite-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-hash-deep-links-resolve-without-a-server-rewrite-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/e2e/smoke.spec.ts:65:1 › no CSP violation fires while the app boots and navigates 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Today', level: 2 })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: 'Today', level: 2 }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Today', level: 2 })
+
+
+      76 |   await expect(page.getByRole('heading', { name: 'Settings', level: 2 })).toBeVisible();
+      77 |   await page.getByRole('link', { name: 'Today' }).click();
+    > 78 |   await expect(page.getByRole('heading', { name: 'Today', level: 2 })).toBeVisible();
+         |                                                                        ^
+      79 |
+      80 |   const violations = await page.evaluate(
+      81 |     () => (window as WindowWithDiagnostics).__cspViolations ?? [],
+        at /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e1-gates/run-1792756788/work/tests/e2e/smoke.spec.ts:78:72
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-no-CSP-violation-fir-972fc-the-app-boots-and-navigates-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-no-CSP-violation-fir-972fc-the-app-boots-and-navigates-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-no-CSP-violation-fir-972fc-the-app-boots-and-navigates-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-no-CSP-violation-fir-972fc-the-app-boots-and-navigates-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3 failed
+    [chromium] › tests/e2e/smoke.spec.ts:23:1 › boots under a non-root base path with no failed asset requests 
+    [chromium] › tests/e2e/smoke.spec.ts:35:1 › hash deep links resolve without a server rewrite ───
+    [chromium] › tests/e2e/smoke.spec.ts:65:1 › no CSP violation fires while the app boots and navigates 
+  4 passed (9.2s)

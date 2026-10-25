@@ -1,0 +1,21 @@
+
+> browser-todo-app@0.1.0 budget
+> node scripts/check-bundle-budget.mjs
+
+Bundle budget report — /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e1-gates/run-1792756788/work/dist (gzip level 9)
+  gate              measured    limit       status
+  initial-js        7.5 KB      100.0 KB    PASS
+      1 entry-closure chunk(s)
+  css               1.0 KB      20.0 KB     PASS
+      1 file(s)
+  app-shell         23.6 KB     200.0 KB    PASS
+      5 file(s), 2 lazy chunk(s) excluded
+  locales           27.9 KB     20.0 KB     FAIL
+      2 locale pack(s)
+  locales-lazy      0 hit(s)    0           PASS
+      no locale pack is inside the initial JS closure
+  no-external-refs  0 hit(s)    0           PASS
+      scanned 7 shipped file(s)
+  no-wasm           0 hit(s)    0           PASS
+      no .wasm asset in dist/ (MVP rule)
+RESULT: FAIL — build is over budget

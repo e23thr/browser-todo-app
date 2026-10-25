@@ -1,0 +1,18 @@
+
+Running 12 tests using 6 workers
+
+  -   3 [chromium] › tests/e2e/offline-data-journey.spec.ts:56:1 › offline task journey: add -> complete -> reload -> data present (E2 core UI)
+  ✓   4 [chromium] › tests/e2e/offline.spec.ts:151:1 › scope and cache naming are correct under a root base path (Decision 8) (524ms)
+  ✓   6 [chromium] › tests/e2e/offline.spec.ts:96:1 › warm and offline start-to-interactive stay inside the boot budget (§9.1) (575ms)
+  ✓   1 [chromium] › tests/e2e/offline-data-journey.spec.ts:36:1 › offline data journey: an offline write survives an offline reload (820ms)
+  ✓   5 [chromium] › tests/e2e/offline.spec.ts:61:1 › cold load online, then offline boot keeps the whole app working (M9) (790ms)
+  ✓   7 [chromium] › tests/e2e/offline.spec.ts:177:1 › the non-root base path yields the scoped registration and cache namespace (324ms)
+  ✓   8 [chromium] › tests/e2e/offline.spec.ts:199:1 › no CSP violations fire across offline boot and lazy navigation (Decision 9, test 9) (412ms)
+  ✓   2 [chromium] › tests/e2e/offline.spec.ts:127:1 › a failing update check is completely silent (Decision 6) (2.0s)
+  ✓   9 [chromium] › tests/e2e/update.spec.ts:55:1 › update flow: detect -> toast -> apply on user action -> exactly one reload (2.5s)
+  ✓  10 [chromium] › tests/e2e/update.spec.ts:87:1 › E9: a mid-edit session is never force-reloaded (2.5s)
+  ✓  12 [chromium] › tests/e2e/update.spec.ts:152:1 › stale-tab guard: a vanished lazy chunk is explained, never auto-fixed (Decision 3) (2.6s)
+  ✓  11 [chromium] › tests/e2e/update.spec.ts:126:1 › E9 multi-tab: applying in one tab never reloads another (2.6s)
+
+  1 skipped
+  11 passed (7.8s)

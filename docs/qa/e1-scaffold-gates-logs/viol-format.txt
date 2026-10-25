@@ -1,0 +1,7 @@
+
+> browser-todo-app@0.1.0 format:check
+> prettier --check .
+
+Checking formatting...
+[warn] src/viol-format.ts
+[warn] Code style issues found in the above file. Run Prettier with --write to fix.

@@ -1,0 +1,3 @@
+theme-boot sha256 hash matches shipped markup: sha256-LOSsDGWNzMa5G5XIx9VyH2TIWZ5M9GbQCuX/I7u5cKI=
+shipped CSP: default-src 'self'; script-src 'self' 'sha256-LOSsDGWNzMa5G5XIx9VyH2TIWZ5M9GbQCuX/I7u5cKI='; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'
+RESULT: PASS — policy matches section 7.2 (frame-ancestors dropped as documented)

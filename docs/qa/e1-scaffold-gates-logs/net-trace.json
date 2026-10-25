@@ -1,0 +1,36 @@
+{
+  "appUrl": "http://127.0.0.1:4173/browser-todo-app/",
+  "timestamp": "2026-10-23T12:08:39.255Z",
+  "headings": [
+    "Today",
+    "Settings",
+    "Today"
+  ],
+  "cspMeta": "default-src 'self'; script-src 'self' 'sha256-LOSsDGWNzMa5G5XIx9VyH2TIWZ5M9GbQCuX/I7u5cKI='; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'",
+  "requestCount": 4,
+  "uniqueUrls": [
+    "http://127.0.0.1:4173/browser-todo-app/",
+    "http://127.0.0.1:4173/browser-todo-app/assets/SettingsView-B2VEzhxE.js",
+    "http://127.0.0.1:4173/browser-todo-app/assets/index-BxbRxJcw.css",
+    "http://127.0.0.1:4173/browser-todo-app/assets/index-DyYZh3X9.js"
+  ],
+  "foreignOrigins": [],
+  "responses": [
+    {
+      "url": "http://127.0.0.1:4173/browser-todo-app/",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:4173/browser-todo-app/assets/index-BxbRxJcw.css",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:4173/browser-todo-app/assets/index-DyYZh3X9.js",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:4173/browser-todo-app/assets/SettingsView-B2VEzhxE.js",
+      "status": 200
+    }
+  ]
+}

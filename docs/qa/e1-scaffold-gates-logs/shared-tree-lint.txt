@@ -1,0 +1,85 @@
+
+> browser-todo-app@0.1.0 lint
+> eslint . --max-warnings 0
+
+
+/home/ubuntu/workspace/browser-todo-app/src/app/theme.ts
+  34:12  error  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+
+/home/ubuntu/workspace/browser-todo-app/src/storage/db.ts
+  107:23  error  Unnecessary conditional, the types have no overlap                                                                  @typescript-eslint/no-unnecessary-condition
+  212:64  error  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined                  @typescript-eslint/no-unnecessary-condition
+  252:15  error  This assertion is unnecessary since the receiver accepts the original type of the expression                        @typescript-eslint/no-unnecessary-type-assertion
+  411:7   error  Unnecessary conditional, the types have no overlap                                                                  @typescript-eslint/no-unnecessary-condition
+  411:32  error  Unnecessary conditional, the types have no overlap                                                                  @typescript-eslint/no-unnecessary-condition
+  447:35  error  Returning a void expression from an arrow function shorthand is forbidden. Please add braces to the arrow function  @typescript-eslint/no-confusing-void-expression
+
+/home/ubuntu/workspace/browser-todo-app/src/storage/id.ts
+  45:11  error  Invalid operand for a '+' operation. Operands must each be a number or string. Got `string | undefined`  @typescript-eslint/restrict-plus-operands
+  74:50  error  Invalid operand for a '+' operation. Operands must each be a number or string. Got `string | undefined`  @typescript-eslint/restrict-plus-operands
+
+/home/ubuntu/workspace/browser-todo-app/src/storage/migrations.ts
+   96:75   error  Invalid type "number" of template literal expression                                                @typescript-eslint/restrict-template-expressions
+   96:112  error  Invalid type "number" of template literal expression                                                @typescript-eslint/restrict-template-expressions
+  159:25   error  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+  168:5    error  Unsafe return of type `Map<any, any>` from function with return type `Map<string, unknown>`         @typescript-eslint/no-unsafe-return
+  171:3    error  Async method 'get' has no 'await' expression                                                        @typescript-eslint/require-await
+  175:3    error  Async method 'getAll' has no 'await' expression                                                     @typescript-eslint/require-await
+  187:30   error  Unnecessary conditional, the types have no overlap                                                  @typescript-eslint/no-unnecessary-condition
+  206:3    error  Async method 'put' has no 'await' expression                                                        @typescript-eslint/require-await
+  210:3    error  Async method 'delete' has no 'await' expression                                                     @typescript-eslint/require-await
+  253:107  error  Invalid type "number" of template literal expression                                                @typescript-eslint/restrict-template-expressions
+
+/home/ubuntu/workspace/browser-todo-app/src/storage/orderKey.ts
+  58:64  error  Invalid type "32" of template literal expression                                                         @typescript-eslint/restrict-template-expressions
+  89:30  error  Invalid operand for a '+' operation. Operands must each be a number or string. Got `string | undefined`  @typescript-eslint/restrict-plus-operands
+  94:30  error  Invalid operand for a '+' operation. Operands must each be a number or string. Got `string | undefined`  @typescript-eslint/restrict-plus-operands
+  98:15  error  Invalid operand for a '+' operation. Operands must each be a number or string. Got `string | undefined`  @typescript-eslint/restrict-plus-operands
+
+/home/ubuntu/workspace/browser-todo-app/src/storage/quarantine.ts
+  40:17  error  '(record as { id?: unknown } | null)?.id ?? ''' will use Object's default stringification format ('[object Object]') when stringified  @typescript-eslint/no-base-to-string
+  70:17  error  Invalid type "number" of template literal expression                                                                                   @typescript-eslint/restrict-template-expressions
+
+/home/ubuntu/workspace/browser-todo-app/src/storage/snapshots.ts
+   50:17  error  This assertion is unnecessary since it does not change the type of the expression                                           @typescript-eslint/no-unnecessary-type-assertion
+   51:18  error  This assertion is unnecessary since it does not change the type of the expression                                           @typescript-eslint/no-unnecessary-type-assertion
+   52:18  error  This assertion is unnecessary since it does not change the type of the expression                                           @typescript-eslint/no-unnecessary-type-assertion
+   53:21  error  This assertion is unnecessary since it does not change the type of the expression                                           @typescript-eslint/no-unnecessary-type-assertion
+   54:22  error  This assertion is unnecessary since it does not change the type of the expression                                           @typescript-eslint/no-unnecessary-type-assertion
+   55:30  error  This assertion is unnecessary since it does not change the type of the expression                                           @typescript-eslint/no-unnecessary-type-assertion
+  183:37  error  '(row as { id?: unknown }).id ?? ''' will use Object's default stringification format ('[object Object]') when stringified  @typescript-eslint/no-base-to-string
+  186:27  error  This assertion is unnecessary since it does not change the type of the expression                                           @typescript-eslint/no-unnecessary-type-assertion
+
+/home/ubuntu/workspace/browser-todo-app/src/storage/validate.ts
+  121:93   error  Invalid type "number" of template literal expression                               @typescript-eslint/restrict-template-expressions
+  121:113  error  Invalid type "number" of template literal expression                               @typescript-eslint/restrict-template-expressions
+  141:126  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+  184:116  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+  186:139  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+  195:69   error  Invalid type "50" of template literal expression                                   @typescript-eslint/restrict-template-expressions
+  196:142  error  Invalid type "64" of template literal expression                                   @typescript-eslint/restrict-template-expressions
+  239:118  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+  240:126  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+  264:29   error  Type parameter K is used only once in the function signature                       @typescript-eslint/no-unnecessary-type-parameters
+
+/home/ubuntu/workspace/browser-todo-app/tests/unit/storage/db.test.ts
+  20:27  error  Returning a void expression from an arrow function shorthand is forbidden. Please add braces to the arrow function  @typescript-eslint/no-confusing-void-expression
+  21:25  error  Expected the Promise rejection reason to be an Error                                                                @typescript-eslint/prefer-promise-reject-errors
+  21:25  error  Returning a void expression from an arrow function shorthand is forbidden. Please add braces to the arrow function  @typescript-eslint/no-confusing-void-expression
+  22:27  error  Returning a void expression from an arrow function shorthand is forbidden. Please add braces to the arrow function  @typescript-eslint/no-confusing-void-expression
+
+/home/ubuntu/workspace/browser-todo-app/tests/unit/storage/fixtures.ts
+  19:23  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+  19:36  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+
+/home/ubuntu/workspace/browser-todo-app/tests/unit/storage/migrations.test.ts
+   33:45  error  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+  201:19  error  This assertion is unnecessary since it does not change the type of the expression                   @typescript-eslint/no-unnecessary-type-assertion
+  210:15  error  This assertion is unnecessary since the receiver accepts the original type of the expression        @typescript-eslint/no-unnecessary-type-assertion
+
+/home/ubuntu/workspace/browser-todo-app/tests/unit/storage/snapshots.test.ts
+  154:5  error  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+
+✖ 53 problems (53 errors, 0 warnings)
+  19 errors and 0 warnings potentially fixable with the `--fix` option.
+

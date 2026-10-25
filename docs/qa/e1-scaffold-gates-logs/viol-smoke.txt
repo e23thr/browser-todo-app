@@ -1,0 +1,12 @@
+
+Running 7 tests using 6 workers
+
+  ✓  3 [chromium] › tests/e2e/smoke.spec.ts:23:1 › boots under a non-root base path with no failed asset requests (328ms)
+  ✓  4 [chromium] › tests/e2e/smoke.spec.ts:47:1 › an unknown hash renders the not-found view instead of a broken page (278ms)
+  ✓  5 [chromium] › tests/e2e/smoke.spec.ts:54:1 › the skip link is the first focusable element (320ms)
+  ✓  2 [chromium] › tests/e2e/smoke.spec.ts:65:1 › no CSP violation fires while the app boots and navigates (406ms)
+  ✓  1 [chromium] › tests/e2e/smoke.spec.ts:35:1 › hash deep links resolve without a server rewrite (454ms)
+  ✓  6 [chromium] › tests/e2e/smoke.spec.ts:86:1 › makes zero third-party requests at runtime (298ms)
+  ✓  7 [chromium] › tests/e2e/smoke.spec.ts:97:1 › the document ships the section 7.2 CSP meta tag without frame-ancestors (126ms)
+
+  7 passed (4.3s)

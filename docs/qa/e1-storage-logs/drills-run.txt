@@ -1,0 +1,26 @@
+
+ RUN  v5.0.5 /home/ubuntu/workspace/browser-todo-app
+
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 1: migration interrupted mid-chain rolls back via the pre-migration snapshot > v1 -> v4 chain failing at the last step restores the DB byte-equivalent to v1 22ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 1: migration interrupted mid-chain rolls back via the pre-migration snapshot > the rolled-back DB still migrates cleanly on the next boot with a fixed chain 7ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 1: migration interrupted mid-chain rolls back via the pre-migration snapshot > a step that wipes meta aborts as MIGRATION_FAILED and rolls back (no crash) 3ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 1: migration interrupted mid-chain rolls back via the pre-migration snapshot > rollback failure surfaces BOTH the step error and the rollback error 2ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 2: corrupt records quarantine to a downloadable, loadable recovery file > never crashes, never silently drops; the recovery file is loadable JSON with records verbatim 5ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 3: QuotaExceededError is a typed QUOTA_EXCEEDED on every write surface > put, tx, takeSnapshot, restoreSnapshot and purgeTombstones all surface the typed error 2ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 3: QuotaExceededError is a typed QUOTA_EXCEEDED on every write surface > boot survives quota exhaustion in bookkeeping: warnings carry QUOTA_EXCEEDED, never silent 2ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 4: boot validation on a mixed valid/invalid dataset > quarantines invalid rows across stores, keeps valid rows live, and purges >90d tombstones at boot 3ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 5: tombstone purge timing > constants match the contract: 90-day TTL and 24h auto throttle 1ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 5: tombstone purge timing > auto purges only tombstones strictly older than 90 days; live rows and snapshots untouched 2ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 5: tombstone purge timing > auto is throttled to one pass per 24h, then runs again after the interval 2ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 5: tombstone purge timing > explicit "Clean up storage" purges ALL tombstones immediately, any age 1ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 6: snapshot restore (take -> corrupt -> restore) > restores the exact data, keeps deviceId, and resets meta.schemaVersion to the payload 5ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 6: snapshot restore (take -> corrupt -> restore) > restoring a snapshot whose payload is missing is a typed error, not a crash 1ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 7: wrapper resilience > reports typed BLOCKED when another connection holds an older version open 1ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 7: wrapper resilience > snapshot reads on a closed DB return typed errors, never throw 1ms
+ ✓ tests/unit/storage/drills-qa.test.ts > Drill 7: wrapper resilience > a codec deserialization failure on restore is a typed error, not a crash 1ms
+
+ Test Files  1 passed (1)
+      Tests  17 passed (17)
+   Start at  19:58:18
+   Duration  779ms (environment 69%, transform 10%, tests 10%, setup 8%, import 3%, worker 1%)
+

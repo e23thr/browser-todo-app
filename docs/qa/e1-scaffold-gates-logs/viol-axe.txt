@@ -1,0 +1,43 @@
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/e2e/a11y.spec.ts:11:1 › core views have no serious or critical axe violations (664ms)
+
+
+  1) [chromium] › tests/e2e/a11y.spec.ts:11:1 › core views have no serious or critical axe violations 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "image-alt: Images must have alternative text",
+    + ]
+
+      28 |       (violation) => violation.impact === 'serious' || violation.impact === 'critical',
+      29 |     );
+    > 30 |     expect(blocking.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
+         |                                                                               ^
+      31 |   }
+      32 |
+      33 |   if (reported.length > 0) {
+        at /home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e1-gates/run-1792756788/work/tests/e2e/a11y.spec.ts:30:79
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-core-views-have-no-serious-or-critical-axe-violations-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-core-views-have-no-serious-or-critical-axe-violations-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/a11y-core-views-have-no-serious-or-critical-axe-violations-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/a11y-core-views-have-no-serious-or-critical-axe-violations-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/e2e/a11y.spec.ts:11:1 › core views have no serious or critical axe violations 

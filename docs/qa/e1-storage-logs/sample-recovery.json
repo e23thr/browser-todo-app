@@ -1,0 +1,51 @@
+{
+  "generatedAt": "2026-10-23T12:58:48.474Z",
+  "schemaVersion": 1,
+  "note": "Invalid records quarantined at boot. Nothing was deleted; import or merge manually after fixing.",
+  "quarantine": [
+    {
+      "store": "tasks",
+      "key": "01HF7YAT00QVQJKJFCBFZ9Z0Q2",
+      "record": {
+        "id": "01HF7YAT00QVQJKJFCBFZ9Z0Q2",
+        "listId": "01HF7YAT00QVQJKJFCBFZ9Z0Q3",
+        "title": "task with impossible due date",
+        "notes": null,
+        "status": "open",
+        "priority": 0,
+        "tags": [],
+        "sortOrder": "h",
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000,
+        "deletedAt": null,
+        "deviceId": "01HF7YAT00QVQJKJFCBFZ9Z0Q4",
+        "dueDate": "2026-02-30"
+      },
+      "issues": [
+        "dueDate: format (YYYY-MM-DD (real calendar day))"
+      ]
+    },
+    {
+      "store": "tasks",
+      "key": "01HF7YAT00QVQJKJFCBFZ9Z0Q5",
+      "record": {
+        "id": "01HF7YAT00QVQJKJFCBFZ9Z0Q5",
+        "listId": "01HF7YAT00QVQJKJFCBFZ9Z0Q6",
+        "title": "row with unknown field",
+        "notes": null,
+        "status": "open",
+        "priority": 0,
+        "tags": [],
+        "sortOrder": "h",
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000,
+        "deletedAt": null,
+        "deviceId": "01HF7YAT00QVQJKJFCBFZ9Z0Q7",
+        "hacked": true
+      },
+      "issues": [
+        "hacked: unknown (unexpected field)"
+      ]
+    }
+  ]
+}

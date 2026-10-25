@@ -1,0 +1,93 @@
+{
+  "probe": "Q15 criterion 1 — offline capture→plan→complete at mobile viewports",
+  "task": "t_7f1e8f29 (MVP Definition-of-Done gate)",
+  "appUrl": "http://127.0.0.1:4188/browser-todo-app/",
+  "ranAt": "2026-10-25T11:11:49.265Z",
+  "viewports": [
+    {
+      "viewport": "mobile-375x667",
+      "steps": [
+        {
+          "step": "sw-controls-page",
+          "ok": true,
+          "detail": "service worker controls the page before offline"
+        },
+        {
+          "step": "offline-engaged",
+          "ok": true,
+          "detail": "context.setOffline(true)"
+        },
+        {
+          "step": "capture-offline",
+          "ok": true,
+          "detail": "task captured and visible on #/all while offline"
+        },
+        {
+          "step": "plan-offline",
+          "ok": true,
+          "detail": "due-today task is a member of the Today view while offline"
+        },
+        {
+          "step": "complete-offline",
+          "ok": true,
+          "detail": "task completed and collapsed out of the open view"
+        },
+        {
+          "step": "offline-reload-boots",
+          "ok": true,
+          "detail": "shell booted offline, h1=\"Today\""
+        },
+        {
+          "step": "data-present-after-offline-reload",
+          "ok": true,
+          "detail": "completed task present and checked after the offline reload"
+        }
+      ],
+      "verdict": "PASS",
+      "consoleErrors": []
+    },
+    {
+      "viewport": "mobile-320x640",
+      "steps": [
+        {
+          "step": "sw-controls-page",
+          "ok": true,
+          "detail": "service worker controls the page before offline"
+        },
+        {
+          "step": "offline-engaged",
+          "ok": true,
+          "detail": "context.setOffline(true)"
+        },
+        {
+          "step": "capture-offline",
+          "ok": true,
+          "detail": "task captured and visible on #/all while offline"
+        },
+        {
+          "step": "plan-offline",
+          "ok": true,
+          "detail": "due-today task is a member of the Today view while offline"
+        },
+        {
+          "step": "complete-offline",
+          "ok": true,
+          "detail": "task completed and collapsed out of the open view"
+        },
+        {
+          "step": "offline-reload-boots",
+          "ok": true,
+          "detail": "shell booted offline, h1=\"Today\""
+        },
+        {
+          "step": "data-present-after-offline-reload",
+          "ok": true,
+          "detail": "completed task present and checked after the offline reload"
+        }
+      ],
+      "verdict": "PASS",
+      "consoleErrors": []
+    }
+  ],
+  "verdict": "PASS"
+}

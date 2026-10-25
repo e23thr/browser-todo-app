@@ -1,0 +1,10 @@
+{
+  "foreign": [],
+  "uniqueUrlCount": 4,
+  "headings": [
+    "Today",
+    "Settings",
+    "Today"
+  ],
+  "cspMeta": "default-src 'self'; script-src 'self' 'sha256-LOSsDGWNzMa5G5XIx9VyH2TIWZ5M9GbQCuX/I7u5cKI='; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'"
+}

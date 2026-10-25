@@ -1,0 +1,321 @@
+{
+  "config": {
+    "argv": [
+      "/usr/bin/node",
+      "/home/ubuntu/workspace/browser-todo-app/node_modules/.bin/playwright",
+      "test",
+      "--config",
+      "playwright.sw.config.ts",
+      "tests/e2e/offline-robustness.spec.ts",
+      "--reporter=json"
+    ],
+    "configFile": "/home/ubuntu/workspace/browser-todo-app/playwright.sw.config.ts",
+    "rootDir": "/home/ubuntu/workspace/browser-todo-app/tests/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": "/home/ubuntu/workspace/browser-todo-app/tests/e2e/fixtures/global-setup.mjs",
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 4
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/ubuntu/workspace/browser-todo-app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/ubuntu/workspace/browser-todo-app/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/(?:offline|update)(?:-[\\w-]+)?\\.spec\\.ts/u"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/home/ubuntu/workspace/browser-todo-app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "name": "chromium",
+        "testDir": "/home/ubuntu/workspace/browser-todo-app/tests/e2e",
+        "snapshotDir": "/home/ubuntu/workspace/browser-todo-app/tests/e2e",
+        "testIgnore": [],
+        "testMatch": {},
+        "timeout": 30000,
+        "use": {
+          "trace": "retain-on-failure",
+          "screenshot": "only-on-failure",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.4 Safari/537.36",
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "screen": {
+            "width": 1920,
+            "height": 1080
+          },
+          "deviceScaleFactor": 1,
+          "isMobile": false,
+          "hasTouch": false,
+          "defaultBrowserType": "chromium"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "chromium"
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.64.1",
+    "workers": 6,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "offline-robustness.spec.ts",
+      "file": "offline-robustness.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "degraded network (2 s per response): local writes stay optimistic and durable (§6.1)",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "degraded",
+                  "description": "optimistic write feedback with 2 s network latency: 50.3 ms (budget 100 ms)"
+                }
+              ],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 475,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-23T13:49:03.942Z",
+                  "annotations": [
+                    {
+                      "type": "degraded",
+                      "description": "optimistic write feedback with 2 s network latency: 50.3 ms (budget 100 ms)"
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "70be2e90cd592fcf35d6-00c12ff6ea6c91612517",
+          "file": "offline-robustness.spec.ts",
+          "line": 93,
+          "column": 1
+        },
+        {
+          "title": "degraded network (every response 500): writes persist and the update check is silent (Decision 6)",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 1965,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-23T13:49:03.925Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "70be2e90cd592fcf35d6-40ffe8d8b9889d2b6d35",
+          "file": "offline-robustness.spec.ts",
+          "line": 134,
+          "column": 1
+        },
+        {
+          "title": "cache lifecycle: activate purges old VERSIONS of this app only (Decision 3)",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "fail",
+                  "description": "known defect D1 (QA card t_be7f0810): src/sw/sw.ts activateShell() purges EVERY 'todo-shell:*' cache, so one app's update wipes a sibling project page's shell cache on the shared *.github.io origin — ADR-005 Decision 3 and the sw.ts header comment both say the base-path slug protects cross-app caches, but isShellCacheName() matches any slug. Expected to fail until the purge is scoped to the current slug; it flips red-on-pass when fixed (then delete this annotation).",
+                  "location": {
+                    "file": "/home/ubuntu/workspace/browser-todo-app/tests/e2e/offline-robustness.spec.ts",
+                    "line": 166,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "failed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 2,
+                  "status": "failed",
+                  "duration": 1515,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected value: \u001b[32m\"todo-shell:other-app:v:1111111111111111\"\u001b[39m\nReceived array: \u001b[31m[\"todo-shell:browser-todo-app:v:a421e35055099eb7\"]\u001b[39m",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected value: \u001b[32m\"todo-shell:other-app:v:1111111111111111\"\u001b[39m\nReceived array: \u001b[31m[\"todo-shell:browser-todo-app:v:a421e35055099eb7\"]\u001b[39m\n    at /home/ubuntu/workspace/browser-todo-app/tests/e2e/offline-robustness.spec.ts:199:19",
+                    "location": {
+                      "file": "/home/ubuntu/workspace/browser-todo-app/tests/e2e/offline-robustness.spec.ts",
+                      "column": 19,
+                      "line": 199
+                    },
+                    "snippet": "  197 |     expect(names).not.toContain(cacheA); // old version purged on activate ✓\n  198 |     expect(names).not.toContain(staleName); // stale version of THIS app purged ✓\n> 199 |     expect(names).toContain(foreignName); // a sibling app's cache must survive ✗ (defect D1)\n      |                   ^\n  200 |   } finally {\n  201 |     server.setRoot(FIXTURES.vA);\n  202 |   }"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/home/ubuntu/workspace/browser-todo-app/tests/e2e/offline-robustness.spec.ts",
+                        "column": 19,
+                        "line": 199
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected value: \u001b[32m\"todo-shell:other-app:v:1111111111111111\"\u001b[39m\nReceived array: \u001b[31m[\"todo-shell:browser-todo-app:v:a421e35055099eb7\"]\u001b[39m\n\n  197 |     expect(names).not.toContain(cacheA); // old version purged on activate ✓\n  198 |     expect(names).not.toContain(staleName); // stale version of THIS app purged ✓\n> 199 |     expect(names).toContain(foreignName); // a sibling app's cache must survive ✗ (defect D1)\n      |                   ^\n  200 |   } finally {\n  201 |     server.setRoot(FIXTURES.vA);\n  202 |   }\n    at /home/ubuntu/workspace/browser-todo-app/tests/e2e/offline-robustness.spec.ts:199:19"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-23T13:49:03.900Z",
+                  "annotations": [
+                    {
+                      "type": "fail",
+                      "description": "known defect D1 (QA card t_be7f0810): src/sw/sw.ts activateShell() purges EVERY 'todo-shell:*' cache, so one app's update wipes a sibling project page's shell cache on the shared *.github.io origin — ADR-005 Decision 3 and the sw.ts header comment both say the base-path slug protects cross-app caches, but isShellCacheName() matches any slug. Expected to fail until the purge is scoped to the current slug; it flips red-on-pass when fixed (then delete this annotation).",
+                      "location": {
+                        "file": "/home/ubuntu/workspace/browser-todo-app/tests/e2e/offline-robustness.spec.ts",
+                        "line": 166,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/ubuntu/workspace/browser-todo-app/test-results/offline-robustness-cache-l-2d43b-f-this-app-only-Decision-3--chromium/error-context.md"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/ubuntu/workspace/browser-todo-app/test-results/offline-robustness-cache-l-2d43b-f-this-app-only-Decision-3--chromium/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/home/ubuntu/workspace/browser-todo-app/tests/e2e/offline-robustness.spec.ts",
+                    "column": 19,
+                    "line": 199
+                  }
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "70be2e90cd592fcf35d6-9a329477d7533360d959",
+          "file": "offline-robustness.spec.ts",
+          "line": 163,
+          "column": 1
+        },
+        {
+          "title": "MVP install scope (PO Q12): no web manifest and no install prompt anywhere",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 345,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-23T13:49:03.929Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "70be2e90cd592fcf35d6-ae4f9cab369dbeb22dbe",
+          "file": "offline-robustness.spec.ts",
+          "line": 205,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-23T13:49:00.204Z",
+    "duration": 5857.905,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

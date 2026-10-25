@@ -1,0 +1,179 @@
+{
+  "measuredAt": "2026-10-23T13:52:16.447Z",
+  "budgetMs": 300,
+  "samplesPerMode": 10,
+  "summary": {
+    "unthrottled": {
+      "warm": {
+        "n": 10,
+        "min": 18.80000001192093,
+        "median": 29.950000002980232,
+        "max": 91
+      },
+      "offline": {
+        "n": 10,
+        "min": 15,
+        "median": 17.400000005960464,
+        "max": 105.5
+      },
+      "withinBudget": true
+    },
+    "cpu-4x": {
+      "warm": {
+        "n": 10,
+        "min": 75.2000000178814,
+        "median": 87.7999999821186,
+        "max": 101.19999998807907
+      },
+      "offline": {
+        "n": 10,
+        "min": 65.59999999403954,
+        "median": 73.19999998807907,
+        "max": 86.7000000178814
+      },
+      "withinBudget": true
+    }
+  },
+  "results": [
+    {
+      "mode": "unthrottled",
+      "cpuThrottle": 1,
+      "sample": 1,
+      "warmMs": 77,
+      "offlineMs": 105.5
+    },
+    {
+      "mode": "unthrottled",
+      "cpuThrottle": 1,
+      "sample": 2,
+      "warmMs": 40.69999998807907,
+      "offlineMs": 59.099999994039536
+    },
+    {
+      "mode": "unthrottled",
+      "cpuThrottle": 1,
+      "sample": 3,
+      "warmMs": 91,
+      "offlineMs": 67.09999999403954
+    },
+    {
+      "mode": "unthrottled",
+      "cpuThrottle": 1,
+      "sample": 4,
+      "warmMs": 70.2000000178814,
+      "offlineMs": 38.599999994039536
+    },
+    {
+      "mode": "unthrottled",
+      "cpuThrottle": 1,
+      "sample": 5,
+      "warmMs": 28.400000005960464,
+      "offlineMs": 16.30000001192093
+    },
+    {
+      "mode": "unthrottled",
+      "cpuThrottle": 1,
+      "sample": 6,
+      "warmMs": 27.900000005960464,
+      "offlineMs": 16.799999982118607
+    },
+    {
+      "mode": "unthrottled",
+      "cpuThrottle": 1,
+      "sample": 7,
+      "warmMs": 25.900000005960464,
+      "offlineMs": 17.900000005960464
+    },
+    {
+      "mode": "unthrottled",
+      "cpuThrottle": 1,
+      "sample": 8,
+      "warmMs": 29.900000005960464,
+      "offlineMs": 16.900000005960464
+    },
+    {
+      "mode": "unthrottled",
+      "cpuThrottle": 1,
+      "sample": 9,
+      "warmMs": 30,
+      "offlineMs": 15.600000023841858
+    },
+    {
+      "mode": "unthrottled",
+      "cpuThrottle": 1,
+      "sample": 10,
+      "warmMs": 18.80000001192093,
+      "offlineMs": 15
+    },
+    {
+      "mode": "cpu-4x",
+      "cpuThrottle": 4,
+      "sample": 1,
+      "warmMs": 90.90000000596046,
+      "offlineMs": 86.7000000178814
+    },
+    {
+      "mode": "cpu-4x",
+      "cpuThrottle": 4,
+      "sample": 2,
+      "warmMs": 91.69999998807907,
+      "offlineMs": 73.59999999403954
+    },
+    {
+      "mode": "cpu-4x",
+      "cpuThrottle": 4,
+      "sample": 3,
+      "warmMs": 101.19999998807907,
+      "offlineMs": 71.7999999821186
+    },
+    {
+      "mode": "cpu-4x",
+      "cpuThrottle": 4,
+      "sample": 4,
+      "warmMs": 85.89999997615814,
+      "offlineMs": 80.30000001192093
+    },
+    {
+      "mode": "cpu-4x",
+      "cpuThrottle": 4,
+      "sample": 5,
+      "warmMs": 89.69999998807907,
+      "offlineMs": 74.59999999403954
+    },
+    {
+      "mode": "cpu-4x",
+      "cpuThrottle": 4,
+      "sample": 6,
+      "warmMs": 85.80000001192093,
+      "offlineMs": 78.19999998807907
+    },
+    {
+      "mode": "cpu-4x",
+      "cpuThrottle": 4,
+      "sample": 7,
+      "warmMs": 91.90000000596046,
+      "offlineMs": 72.7999999821186
+    },
+    {
+      "mode": "cpu-4x",
+      "cpuThrottle": 4,
+      "sample": 8,
+      "warmMs": 77.80000001192093,
+      "offlineMs": 65.59999999403954
+    },
+    {
+      "mode": "cpu-4x",
+      "cpuThrottle": 4,
+      "sample": 9,
+      "warmMs": 78.80000001192093,
+      "offlineMs": 67.59999999403954
+    },
+    {
+      "mode": "cpu-4x",
+      "cpuThrottle": 4,
+      "sample": 10,
+      "warmMs": 75.2000000178814,
+      "offlineMs": 67.19999998807907
+    }
+  ]
+}
