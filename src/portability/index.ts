@@ -37,6 +37,24 @@ export type {
 /* ---- import pipeline (Decision 5) ---- */
 export { applyImport, prepareImport, prepareSnapshotRestore, restoreSnapshot } from './import';
 export type { ApplyImportOptions, PrepareImportOptions } from './import';
+
+/* ---- foreign importers (S12) — same pipeline, detected format ---- */
+export {
+  convertCsv,
+  convertTodoTxt,
+  defaultListName,
+  detectImportFormat,
+  parseCsvTable,
+  prepareForeignImport,
+} from './foreign';
+export type {
+  Conversion,
+  ConvertContext,
+  ForeignFormat,
+  ForeignPrepareOptions,
+  ImportFormat,
+  RejectedRow,
+} from './foreign';
 export { validateRecords } from './records';
 export type { Anchored, StageBInput, StageBOutput } from './records';
 export { upgradeRawBackup } from './upgrade';

@@ -14,6 +14,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import type { ComponentChildren, JSX, TargetedEvent } from 'preact';
 
 import { t } from '../../i18n';
+import { openPickedFile, supportsFsaOpen } from '../../portability/fsa';
 import { BackupRow } from './BackupRow';
 import { PersistenceRow } from './PersistenceRow';
 import { QuotaMeter } from './QuotaMeter';
@@ -90,7 +91,27 @@ export function StoragePanel({
   }, [pickTick]);
 
   const pickFile = (): void => {
-    fileRef.current?.click();
+    // S10: on Chromium the SYSTEM open dialog is offered inside this click
+    // gesture; everywhere else — and on any picker failure — the hidden input
+    // stays the universal upload path. A user-cancelled dialog is a cancel,
+    // not an error: no fallback, no message.
+    if (!supportsFsaOpen()) {
+      fileRef.current?.click();
+      return;
+    }
+    void openPickedFile({
+      extensions: ['.json', '.txt', '.todo', '.csv'],
+      description: t('dataSafety.backup.import'),
+    }).then((outcome) => {
+      if (outcome.status === 'picked') {
+        onImport(outcome.value);
+        return;
+      }
+      if (outcome.status === 'error') {
+        console.warn('data-safety: FSA open failed, using upload fallback', outcome.message);
+        fileRef.current?.click();
+      }
+    });
   };
 
   const handleFile = (event: TargetedEvent<HTMLInputElement>): void => {
@@ -162,7 +183,8 @@ export function StoragePanel({
         <input
           ref={fileRef}
           type="file"
-          accept="application/json,.json"
+          // S12: the same picker accepts JSON backups and the Todo.txt/CSV importers.
+          accept="application/json,.json,.txt,.todo,.csv,text/csv,text/plain"
           class="visually-hidden"
           data-testid="import-file-input"
           // The visible "Import…" button is what people use (it calls pickFile()), so this

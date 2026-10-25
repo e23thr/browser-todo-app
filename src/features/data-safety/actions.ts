@@ -11,7 +11,9 @@
  */
 
 import { announce } from '../../app/announce';
-import { deleteAllData, exportBackup } from '../../portability';
+import { backupFileName, deleteAllData, downloadTextFile, exportBackup } from '../../portability';
+import { pickSaveFile, supportsFsaSave, writeTextToHandle } from '../../portability/fsa';
+import type { SavePickOutcome } from '../../portability/fsa';
 import { t } from '../../i18n';
 import { deriveBanners } from './derive';
 import { markRecoveryStarted } from './flags';
@@ -32,13 +34,31 @@ let deleteInFlight = false;
 
 /**
  * Run an export (§4.3 "Back up now", plus every "Export a backup" crisis action).
- * Returns `true` when the file was handed to the browser.
+ * Returns `true` when the file was delivered (written or downloaded).
+ *
+ * S10: on Chromium the SYSTEM save dialog must open inside this click gesture,
+ * so `pickSaveFile` is invoked synchronously before any `await`; the backup is
+ * serialized afterwards and written to the chosen handle. Everywhere else — and
+ * on any picker failure or cancel — the universal anchor download delivers the
+ * same bytes (a cancel is a cancel, never an error).
  */
-export async function runExport(): Promise<boolean> {
-  if (isBusy()) return false;
+export function runExport(): Promise<boolean> {
+  if (isBusy()) return Promise.resolve(false);
+  const pick: Promise<SavePickOutcome> | null = supportsFsaSave()
+    ? pickSaveFile({
+        suggestedName: backupFileName(Date.now()),
+        extensions: ['.json'],
+        description: t('app.name'),
+      })
+    : null;
+  return runExportFlow(pick);
+}
+
+async function runExportFlow(pick: Promise<SavePickOutcome> | null): Promise<boolean> {
   patchState({ exportState: 'saving', panelState: 'export-loading' });
   try {
-    const result = await exportBackup({ download: true });
+    // The FSA path writes the serialized document itself — skip the anchor download.
+    const result = await exportBackup({ download: pick === null });
     if (!result.ok) {
       patchState({ exportState: 'error' });
       if (isQuotaExceeded(result.error)) {
@@ -58,7 +78,42 @@ export async function runExport(): Promise<boolean> {
     for (const warning of result.value.warnings) {
       console.warn('data-safety: export warning', warning);
     }
-    const doneMessage = t(firstEver ? 'dataSafety.backup.doneSafe' : 'dataSafety.backup.doneShort');
+
+    // How the bytes actually reached the user (drives the honest toast copy).
+    let delivery: 'fsa' | 'download' = 'download';
+    if (pick !== null) {
+      const outcome = await pick;
+      if (outcome.status === 'dismissed') {
+        // The user closed the save dialog: nothing failed, nothing was written.
+        patchState({ exportState: 'idle' });
+        return false;
+      }
+      const written =
+        outcome.status === 'picked'
+          ? await writeTextToHandle(outcome.value, result.value.document)
+          : false;
+      if (!written) {
+        // Universal fallback — the backup still reaches the user as a download.
+        if (outcome.status === 'error') {
+          console.warn('data-safety: FSA save failed, falling back to download', outcome.message);
+        }
+        if (!downloadTextFile(result.value.fileName, result.value.document)) {
+          patchState({ exportState: 'error' });
+          announce(t('dataSafety.backup.error'), 'assertive');
+          return false;
+        }
+        delivery = 'download';
+      } else {
+        delivery = 'fsa';
+      }
+    }
+
+    // §7 vs §9 copy honesty: the toast names WHERE the file actually went —
+    // a picker write never claims "your downloads".
+    const doneMessage =
+      delivery === 'fsa'
+        ? t('dataSafety.backup.doneFsa')
+        : t(firstEver ? 'dataSafety.backup.doneSafe' : 'dataSafety.backup.doneShort');
     announce(doneMessage);
     pushToast({ message: doneMessage, variant: 'success' });
     await refreshQuota();

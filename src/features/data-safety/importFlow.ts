@@ -28,11 +28,12 @@ import { signal } from '@preact/signals';
 import { announce } from '../../app/announce';
 import {
   applyImport,
+  detectImportFormat,
   downloadTextFile,
-  prepareImport,
+  prepareForeignImport,
   prepareSnapshotRestore,
 } from '../../portability';
-import type { ImportError, ImportPlan } from '../../portability';
+import type { ImportError, ImportFormat, ImportPlan } from '../../portability';
 import { t } from '../../i18n';
 import { deriveBanners } from './derive';
 import { invalidateCounts, loadCounts, refreshLastBackupAt, resolveDb } from './dbAccess';
@@ -42,7 +43,7 @@ import { dataSafetyState, patchState } from './state';
 import type { ImportPreview, SnapshotMeta } from './types';
 
 export type ImportInvalidReason =
-  'bad-json' | 'schema-unknown' | 'too-large' | 'not-our-file' | 'newer-version';
+  'bad-json' | 'bad-format' | 'schema-unknown' | 'too-large' | 'not-our-file' | 'newer-version';
 
 export type ImportState =
   | { readonly step: 'pick' }
@@ -104,20 +105,47 @@ function toPreview(plan: ImportPlan, bytes: number, exportedAt: number | null): 
 
 /* ------------------------------ error copy ------------------------------ */
 
+/** Localized label for the picked file's format (error copy names it). */
+function formatLabel(format: ImportFormat): string {
+  switch (format) {
+    case 'csv':
+      return t('dataSafety.format.csv');
+    case 'todotxt':
+      return t('dataSafety.format.todotxt');
+    case 'json':
+      return t('dataSafety.format.json');
+  }
+}
+
 /** Stage A failure → §5.7 `invalid(reason)` + the §7 inline copy (all static keys). */
-function invalidFrom(error: ImportError): {
+function invalidFrom(
+  error: ImportError,
+  format: ImportFormat,
+): {
   readonly reason: ImportInvalidReason;
   readonly message: string;
 } {
   const appName = t('app.name');
+  const foreign = format !== 'json';
   switch (error.code) {
     case 'PARSE_ERROR':
-      return { reason: 'bad-json', message: t('dataSafety.import.error.badJson') };
+      // A Todo.txt/CSV parse failure is not "bad JSON" — name the format the user picked.
+      return foreign
+        ? {
+            reason: 'bad-format',
+            message: t('dataSafety.import.error.foreignParse', { format: formatLabel(format) }),
+          }
+        : { reason: 'bad-json', message: t('dataSafety.import.error.badJson') };
     case 'NOT_A_BACKUP':
-      return {
-        reason: 'not-our-file',
-        message: t('dataSafety.import.error.notBackup', { appName }),
-      };
+      return foreign
+        ? {
+            reason: 'bad-format',
+            message: t('dataSafety.import.error.foreignParse', { format: formatLabel(format) }),
+          }
+        : {
+            reason: 'not-our-file',
+            message: t('dataSafety.import.error.notBackup', { appName }),
+          };
     case 'FILE_TOO_LARGE':
       return { reason: 'too-large', message: t('dataSafety.import.error.tooLarge') };
     case 'FORMAT_TOO_NEW':
@@ -195,9 +223,17 @@ export async function chooseImportFile(file: File): Promise<void> {
   patchState({ panelState: 'import-loading' });
   importState.value = { step: 'validating' };
 
-  const plan = await prepareImport(file);
+  // S12: JSON backups, Todo.txt and CSV all ride the SAME validated pipeline —
+  // the bridge detects the format and routes (foreign formats get converted
+  // into an ADR-004 document first; rejection is still zero-side-effect).
+  const head = await file
+    .slice(0, 4096)
+    .text()
+    .catch(() => '');
+  const format = detectImportFormat(file, head);
+  const plan = await prepareForeignImport(file);
   if (!plan.ok) {
-    const invalid = invalidFrom(plan.error);
+    const invalid = invalidFrom(plan.error, format);
     importState.value = { step: 'invalid', ...invalid };
     announce(invalid.message, 'assertive');
     patchState({ panelState: 'idle' });
