@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "budget": "node scripts/check-bundle-budget.mjs",
+    "perf:budget": "node scripts/check-perf-budget.mjs",
     "i18n:check": "node scripts/check-i18n.mjs",
     "audit:gate": "npm audit --omit=dev --audit-level=high",
     "e2e:install": "playwright install chromium",
@@ -36,6 +37,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^9.39.5",
+    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.64.1",
     "@preact/preset-vite": "^2.10.6",
     "@testing-library/preact": "^3.2.6",

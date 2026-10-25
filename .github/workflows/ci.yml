@@ -1,8 +1,8 @@
 name: CI
 
 # Every PR and every push to main runs the full quality-gate matrix of ADR-001 §7
-# (lint, typecheck, unit, build, bundle-budget, e2e-smoke, a11y-axe, audit) and only a green
-# main may deploy to GitHub Pages (§9.5).
+# (lint, typecheck, unit, build, bundle-budget, perf-budget, e2e-smoke, a11y-axe, audit) and only a
+# green main may deploy to GitHub Pages (§9.5).
 on:
   push:
     branches: [main]
@@ -133,6 +133,44 @@ jobs:
       - name: Enforce section 9.2 budgets
         run: node scripts/check-bundle-budget.mjs --dist dist
 
+  perf-budget:
+    name: perf-budget
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - run: npm ci
+      # Lighthouse needs a Chrome; chrome-launcher resolves the runner's preinstalled one.
+      # Fail fast with a legible message if that ever stops being true (CHROME_PATH can point
+      # at another Chromium, e.g. Playwright's, without changing the gate).
+      - name: Chrome for Lighthouse
+        run: google-chrome --version
+      # §9.1 measured perf (the half of "budgets green in CI" the bundle-budget job does not
+      # cover): LCP/TBT/CLS via Lighthouse CI against this very dist, served by `vite preview`
+      # under the deploy's BASE_PATH, on the §9.1 condition (mobile, simulated slow-4G + 4× CPU)
+      # and on desktop. Hard gates: LCP ≤ 2500 ms, TBT ≤ 200 ms, CLS ≤ 0.1
+      # (scripts/perf-budgets.json — single source of truth with scripts/check-perf-budget.mjs).
+      # §9.1's stricter recommended LCP < 1500 ms is reported as a non-blocking warning only.
+      - name: Section 9.1 perf budgets (Lighthouse CI, mobile + desktop)
+        run: npm run perf:budget
+      # DoD evidence: every Lighthouse LHR of this run, retained for 7 days like `dist`.
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: lighthouse-reports/
+          retention-days: 7
+          if-no-files-found: warn
+
   e2e-smoke:
     name: e2e-smoke
     needs: build
@@ -244,6 +282,7 @@ jobs:
       - build
       - precache-freshness
       - bundle-budget
+      - perf-budget
       - e2e-smoke
       - a11y-axe
       - audit

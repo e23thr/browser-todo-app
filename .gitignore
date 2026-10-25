@@ -15,6 +15,11 @@ playwright-report/
 blob-report/
 .playwright/
 
+# Lighthouse CI reports (perf-budget gate): .lighthouseci is LHCI's scratch dir, lighthouse-reports/
+# is the archived per-preset run set the perf-budget CI job uploads as an artifact (7 days).
+.lighthouseci/
+lighthouse-reports/
+
 # Logs
 logs/
 *.log

@@ -1,0 +1,48 @@
+{
+  "$comment": [
+    "Single source of truth for the PROJECT_ANALYSIS.md section 9.1 measured-performance budgets,",
+    "restated as CI gate thresholds (ADR-001 section 8) — the measured-perf half of the DoD line",
+    "\"budgets green in CI\" (bundle section 9.2 lives in scripts/bundle-budgets.json).",
+    "Consumed by lighthouserc.cjs (Lighthouse CI collect/assert) and scripts/check-perf-budget.mjs",
+    "(median summary, the non-blocking recommended line, and the uploaded report), so a threshold",
+    "change is a one-file diff. Units: lcp/tbt are milliseconds of the Lighthouse metric value,",
+    "cls is the unitless layout-shift score. Hard limits fail the build; `recommended` never does."
+  ],
+  "collect": {
+    "numberOfRuns": 3,
+    "aggregationMethod": "median",
+    "presets": {
+      "mobile": {
+        "settings": {},
+        "description": "The section 9.1 measurement condition: Lighthouse's default mobile preset — Moto G class device emulation, simulated slow 4G (1.63 Mbps down / 150 ms RTT) and a 4x CPU slowdown."
+      },
+      "desktop": {
+        "settings": {
+          "preset": "desktop"
+        },
+        "description": "Lighthouse desktop preset — desktop form factor, simulated 10 Mbps cable, 1x CPU."
+      }
+    }
+  },
+  "gates": {
+    "lcp": {
+      "auditId": "largest-contentful-paint",
+      "unit": "ms",
+      "limit": 2500,
+      "recommended": 1500,
+      "description": "First-load LCP: FAIL above 2500 ms (task DoD threshold, both presets). WARN at >= 1500 ms against section 9.1's RECOMMENDED '< 1.5 s first load' line — non-blocking until the measured mobile LCP (1624 ms) is brought under 1.5 s."
+    },
+    "tbt": {
+      "auditId": "total-blocking-time",
+      "unit": "ms",
+      "limit": 200,
+      "description": "Total blocking time: FAIL above 200 ms (task DoD threshold)."
+    },
+    "cls": {
+      "auditId": "cumulative-layout-shift",
+      "unit": "score",
+      "limit": 0.1,
+      "description": "Cumulative layout shift: FAIL above 0.1 (task DoD threshold)."
+    }
+  }
+}
