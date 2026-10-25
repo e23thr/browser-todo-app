@@ -35,7 +35,10 @@ never verified, never dropped.
    (the PR/push gate is chromium and is green),
    but a real V1 signal given the Q10 browser floor (Firefox/Safari in scope). Follow-up: fix card `t_e20c2adb` (h_junior_coder).
 3. **C3 functional finding F1** — restored data invisible in the *running* UI after import until
-   a manual reload (**no data loss**; fidelity proven 100%). Fix card `t_85e19c39` open.
+   a manual reload (**no data loss**; fidelity proven 100%). **RESOLVED** in fix card
+   `t_85e19c39`, commit `4ee55bb` — re-verified in §2 C3 (probe step
+   `post-import-ui-live-without-reload`, 11/11 PASS); no longer an open item, §5 row 3 kept for
+   the audit trail. Flip card `t_5586c72b`.
 4. **C4 finding F-1** — route change focuses the composer input, not the view `h1`; deviates from
    design `core-domain.md` §5.2 (WCAG 2.4.3 itself satisfied). Needs design/PO ruling.
 5. **§9.1 recommended `< 1.5 s` mobile LCP line** measures 1.624 s — WARN only; the CI gate's own
@@ -54,6 +57,7 @@ never verified, never dropped.
 | `docs/qa/evidence/scope-fidelity.md` | `t_5511a0f3` / `df331ae` | HEAD `6a3f5ab` + live Pages fetch |
 | Gate first run (this file, previous state) | `t_7f1e8f29` / `6a3f5ab` | First-hand battery at `225a1f3` (local `e584488`): C1/C2/C3/C5 PASS, C4 blocker found → §C4 resolution trail |
 | Release-state re-check by this compile | `t_7998ae0b` @ `0a8702a` | `gh run view/list` (CI + nightly job matrices), live Pages asset hash + `last-modified`, `git ls-remote origin main`, `scripts/perf-budgets.json`, `ci.yml` job graph |
+| C3 / F1 resolution re-check (this card, C3 only) | `t_5586c72b` @ `4ee55bb` (local, on top of `1fce11a`) | `probe-export-restore` **11/11** incl. hard step `post-import-ui-live-without-reload`; unit+component **940/940** (83 files); `e2e:data-safety` **16/16**; format/lint/typecheck/bundle-budget clean |
 
 ## 2. Q15 criterion-by-criterion
 
@@ -93,7 +97,7 @@ this gate by explicit PO acceptance.
 - No open data-loss defect. Documented non-findings: tombstones (`deletedAt`) per ADR-004;
   volatile `lastOpenedAt`; fresh boot's 1 empty auto-snapshot row.
 
-### C3 — export/restore verified (export → wipe → import → restored) — **PASS** (open finding F1)
+### C3 — export/restore verified (export → wipe → import → restored) — **PASS** (finding F1 resolved — `t_85e19c39` / `4ee55bb`)
 
 - `functional.md` §4 — scripted UI journey: export byte-exact → app "Delete all data" + full
   storage wipe (`IndexedDB=[]`, `localStorage=0`, `caches=[]`, `swRegs=0`) → import → **record
@@ -102,10 +106,30 @@ this gate by explicit PO acceptance.
   device-local paths** (ADR-004/ADR-002 semantics). Diffs saved.
 - Scripted drill 1 re-run first-hand: `e2e:data-safety` **16/16** incl. *export → wipe → import →
   byte-equivalent restore, offline*; runs on every PR/push (`ci.yml`).
-- **Open finding F1 (moderate, NO data loss):** restored data is not visible in the running UI
-  until a manual reload (`importFlow.applyPlan()` never reloads the tasks/lists store; tab-sync
-  sweep can miss imported rows). Reproduced 3/3. Fix card **`t_85e19c39`** (h_senior_coder).
-  Data-fidelity verdict unaffected.
+- **Finding F1 (moderate, NO data loss) — RESOLVED in `t_85e19c39` / commit `4ee55bb`:** restored
+  data was not visible in the running UI until a manual reload (`importFlow.applyPlan()` never
+  reloaded the tasks/lists store; the tab-sync sweep could miss imported rows). Reproduced 3/3 at
+  the gate run; **fixed by the post-commit data-replaced seam** (`src/portability/side-effects.ts`
+  — `applyImport` / `restoreSnapshot` / wipe all refresh the acting tab's tasks/lists store and
+  settings with no reload and announce `change:'all'` so peer tabs converge; ADR-003 Decision
+  8.1, D4 watermark semantics untouched). The data-fidelity verdict was unaffected then and is
+  unaffected now.
+  - **Probe evidence (the flip):** `probe-export-restore` gained the hard step
+    `post-import-ui-live-without-reload` — **11/11 steps, VERDICT PASS**: **6 task rows on `#/all`
+    and 2 list rows on `#/lists` visible BEFORE any reload**, Settings theme radio **checked**,
+    **`theme=dark` applied immediately** (design/data-safety §8.3 erratum), `html lang` stays `en`
+    until next boot (locale's documented timing). Fresh run:
+    `docs/qa/evidence/functional-logs/export-restore-summary.json` +
+    `export-restore-findings.json` (`status: fixed`) +
+    `screens/2026-10-25T17-58-26-816Z-06b-*.png` / `...06b2-*.png`.
+  - **Regression coverage:** `tests/component/data-safety-import-refresh.test.tsx` (import +
+    undo-restore visible with zero reloads), `tests/unit/app/tabSync.test.ts` (`replaceAll`
+    two-tab convergence via `change:'all'`; D4 watermark semantics untouched),
+    `tests/unit/domain/pipeline-reload.test.ts`, `tests/unit/portability/data-replaced.test.ts`,
+    `tests/unit/settings.test.ts` — **30/30** across those five files.
+  - **Gates re-run first-hand by the flip card `t_5586c72b` at `4ee55bb`:** unit+component suite
+    **940/940** (83 files), `e2e:data-safety` **16/16**, format/lint/typecheck + `npm run budget`
+    all clean.
 
 ### C4 — WCAG 2.2 AA passed — **PASS with explicit PO waivers**
 
@@ -191,7 +215,9 @@ not a nit.
    (deviceId survives purge+reboot) regression-tested.
 3. **Data safety (M10–M12)** — export→wipe→import byte-equivalent restore, snapshots (last-3 +
    manual permanence), pre-import snapshot undo, hostile-import rejection, quarantine-to-recovery,
-   quota atomic abort. Known UX gap: post-import UI staleness until reload (`t_85e19c39`).
+   quota atomic abort. Post-import/restore UI staleness (finding F1) **fixed at `4ee55bb`** —
+   restored data visible with no reload, peer tabs converge via `change:'all'`, regression-tested
+   (§2 C3).
 4. **WCAG 2.2 AA baseline met — "PASS with explicit PO waivers"** (Orca 10/10 executed; NVDA +
    VoiceOver PO-waived `t_2ce8fc1f`); SC 4.1.3 deferred-announce race fixed (`64c0ee4`) and
    regression-tested. Carry the waiver note verbatim; never restate as a bare PASS. Open design
@@ -218,7 +244,7 @@ not a nit.
 |---|---|---|---|
 | 1 | `precache-freshness` red at `0a8702a` (committed manifest stale after `64c0ee4`) → `deploy` skipped → live Pages still pre-fix; F-3 re-check pending | Release hygiene — **blocks shipping the a11y fix**, not a Q15 criterion | Fix card **`t_27c2b0e8`** (h_junior_coder): regenerate + commit `src/sw/precache-manifest.ts` per ADR-005 D2, verify green-main run incl. deploy, confirm live asset hash ≠ `index-CA0Rb68-.js` |
 | 2 | Nightly `e2e-full` red on webkit + firefox at `0a8702a` (webkit: CSP checks; firefox: keyboard `tabTo` + `persist()` probe; update-toast pair flaky on both); chromium + th-TH green | Cross-browser signal (Q10 floor) | Triage card **`t_e20c2adb`** (h_junior_coder) |
-| 3 | F1 post-import UI staleness (no data loss) | Moderate | Fix card **`t_85e19c39`** (h_senior_coder) |
+| 3 | F1 post-import UI staleness (no data loss) — **RESOLVED** at `4ee55bb` (probe step `post-import-ui-live-without-reload`, 11/11 PASS — §2 C3) | Moderate → **closed** | Fixed by card **`t_85e19c39`** (h_senior_coder); flipped by `t_5586c72b`. Row kept for the audit trail. |
 | 4 | F-1 route-change focus target deviates from design §5.2 | Non-blocking, decision needed | Design/PO ruling (amend impl or §5.2/F7.2) |
 | 5 | Mobile LCP 1.624 s vs §9.1 *recommended* <1.5 s | WARN (non-binding) | V1 perf follow-up |
 | 6 | **30 days of daily use** | PO-PENDING, deferred by PO | Separate sign-off ~2026-11-24 (h_pm reminder) |
