@@ -69,10 +69,10 @@ test.afterAll(() => {
 async function installTrace(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const holder = window as unknown as {
-      __writeTrace: { issued: number[]; settled: number[] };
+      __writeTrace: { issued: number[]; settled: number[]; order: string[] };
       __announcements: { polite: string[]; assertive: string[] };
     };
-    holder.__writeTrace = { issued: [], settled: [] };
+    holder.__writeTrace = { issued: [], settled: [], order: [] };
     holder.__announcements = { polite: [], assertive: [] };
 
     // Announcement recorder: the polite region is shared by several features, so a later
@@ -112,6 +112,7 @@ async function installTrace(page: Page): Promise<void> {
       const original = methodDescriptor(method);
       const patched = function (this: IDBObjectStore, ...args: unknown[]): IDBRequest {
         holder.__writeTrace.issued.push(performance.now());
+        holder.__writeTrace.order.push('issued');
         return original.apply(this, args);
       };
       Object.defineProperty(IDBObjectStore.prototype, method, {
@@ -151,6 +152,7 @@ async function installTrace(page: Page): Promise<void> {
       }
       const wrapped = function (this: IDBRequest, event: Event): void {
         holder.__writeTrace.settled.push(performance.now());
+        holder.__writeTrace.order.push('settled');
         listener.call(this, event);
       };
       addEventListenerOriginal.call(this, type, wrapped, options);
@@ -277,11 +279,12 @@ async function armAddProbe(page: Page, title: string): Promise<void> {
   await page.evaluate((wanted) => {
     const holder = window as unknown as {
       __addProbe: { keydownAt: number | null; visibleAt: number | null };
-      __writeTrace: { issued: number[]; settled: number[] };
+      __writeTrace: { issued: number[]; settled: number[]; order: string[] };
     };
     holder.__addProbe = { keydownAt: null, visibleAt: null };
     holder.__writeTrace.issued = [];
     holder.__writeTrace.settled = [];
+    holder.__writeTrace.order = [];
 
     document.addEventListener(
       'keydown',
@@ -302,6 +305,7 @@ async function armAddProbe(page: Page, title: string): Promise<void> {
       );
       if (!present) return;
       holder.__addProbe.visibleAt = performance.now();
+      holder.__writeTrace.order.push('visible');
       observer.disconnect();
     });
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
@@ -360,13 +364,14 @@ test('keyboard-only: F1 capture → F2 edit → F3 complete → F4 delete → F6
   const probe = await page.evaluate(() => {
     const holder = window as unknown as {
       __addProbe: { keydownAt: number | null; visibleAt: number | null };
-      __writeTrace: { issued: number[]; settled: number[] };
+      __writeTrace: { issued: number[]; settled: number[]; order: string[] };
     };
     return {
       keydownAt: holder.__addProbe.keydownAt,
       visibleAt: holder.__addProbe.visibleAt,
       issued: [...holder.__writeTrace.issued],
       settled: [...holder.__writeTrace.settled],
+      order: [...holder.__writeTrace.order],
     };
   });
   expect(probe.keydownAt).not.toBeNull();
@@ -382,11 +387,17 @@ test('keyboard-only: F1 capture → F2 edit → F3 complete → F4 delete → F6
   // §9.1 / design §5.6: perceived add latency budget < 100 ms — measured, not claimed.
   expect(visibleMs).toBeLessThan(100);
   // …and the paint happens before the IndexedDB write settles: the UI never waits on I/O.
-  expect(probe.visibleAt ?? Number.POSITIVE_INFINITY).toBeLessThan(firstSettled);
+  // Asserted as EVENT ORDER rather than clock order: firefox quantizes performance.now() to
+  // 1 ms, so the MutationObserver microtask and the IDB success task routinely land in the
+  // SAME millisecond (measured ties: 966=966, 2314=2314 in the local matrix once tabTo stopped
+  // masking this line) and a strict timestamp `<` cannot observe sub-millisecond ordering at
+  // all, while the execution sequence can — and it is strictly stronger: a settle that beat
+  // the row into the DOM fails here even when both events share one timestamp.
+  expect(probe.order.indexOf('visible')).toBeLessThan(probe.order.indexOf('settled'));
   record(
     `  PASS 4. optimistic add measured: row in the DOM +${visibleMs.toFixed(1)} ms after Enter; ` +
       `IndexedDB write issued +${issuedMs.toFixed(1)} ms, settled +${settledMs.toFixed(1)} ms ` +
-      `(visible strictly before settle)`,
+      `(visible precedes settle in event order)`,
   );
 
   // Capture stays ready (D6): the next capture starts straight away.
