@@ -150,24 +150,6 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      # TEMPORARY diagnostic (t_46622f83, remove after root cause confirmed): replay the exact
-      # failing webServer command (no --host) and show what the runner actually binds vs what
-      # the readiness poll asks (127.0.0.1). Fails nothing; prints evidence only.
-      - name: 'Diag (t_46622f83): preview bind vs 127.0.0.1 readiness poll'
-        run: |
-          node -e "require('node:dns').lookup('localhost',(e,a,f)=>console.log('dns.lookup(localhost) ->',a,'family',f))"
-          npm run build
-          npx vite preview --port 4174 --strictPort &
-          PREVIEW_PID=$!
-          for _ in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -s -o /dev/null --max-time 2 "http://127.0.0.1:4174/browser-todo-app/" || curl -s -o /dev/null --max-time 2 "http://[::1]:4174/browser-todo-app/"; then break; fi
-            sleep 1
-          done
-          echo "curl 127.0.0.1:4174/browser-todo-app/ -> $(curl -s -o /dev/null -w '%{http_code}' --max-time 3 http://127.0.0.1:4174/browser-todo-app/ || echo UNREACHABLE)"
-          echo "curl [::1]:4174/browser-todo-app/     -> $(curl -s -o /dev/null -w '%{http_code}' --max-time 3 'http://[::1]:4174/browser-todo-app/' || echo UNREACHABLE)"
-          ss -ltnp | grep 4174 || true
-          kill $PREVIEW_PID 2>/dev/null || true
-          wait $PREVIEW_PID 2>/dev/null || true
       - name: E2E smoke (base path, hash routes, CSP listener, zero third-party)
         run: npm run e2e:smoke
 
