@@ -28,6 +28,7 @@
     "tests/e2e",
     "playwright.config.ts",
     "playwright.sw.config.ts",
-    "playwright.data-safety.config.ts"
+    "playwright.data-safety.config.ts",
+    "playwright.e7.config.ts"
   ]
 }
