@@ -31,6 +31,18 @@
       content="A local-first, privacy-preserving todo app that runs entirely in your browser."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!--
+      PWA install surface (ADR-008, S13). The manifest itself is generated at build time with
+      the configured base path baked into start_url/scope (scripts/webmanifest.mjs, emitted by
+      the `app:webmanifest` Vite plugin) — the href below is rewritten to that same base at
+      build time. Icons are self-hosted under /icons/ (ADR-008 Decision 2: zero third-party
+      bytes). The apple-* meta tags give iOS Safari a real home-screen install (it ignores
+      `display: standalone` in the manifest for the Add to Home Screen flow).
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Todo" />
     <title>Todo — local-first</title>
     <!--
       No-flash theme boot (design §5.2 / M7): reads the ADR-002 boot-prefs mirror

@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto';
 import preact from '@preact/preset-vite';
 import { defineConfig, type Plugin } from 'vitest/config';
 
+import { renderWebManifest } from './scripts/webmanifest.mjs';
+
 /**
  * Configurable base path (ADR-001 §3, PROJECT_ANALYSIS §9.5).
  *
@@ -20,6 +22,39 @@ function normalizeBase(raw: string | undefined): string {
 }
 
 const BASE = normalizeBase(process.env['BASE_PATH']);
+
+/**
+ * Web app manifest emission (ADR-008 Decision 1): `scripts/webmanifest.mjs` builds the manifest
+ * from the SAME normalized base as Vite `base` — `start_url`/`scope`/icon URLs must match the
+ * ADR-005 Decision 8 service-worker scope exactly. Emitted as `manifest.webmanifest` at the
+ * dist root (unhashed: it is a stable install endpoint), and never precached (ADR-005
+ * Decision 2's `*.webmanifest` exclusion). Every build gets it for free — including the E2E
+ * fixture builds, which run through this same config.
+ */
+function webmanifestPlugin(base: string): Plugin {
+  return {
+    name: 'app:webmanifest',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'manifest.webmanifest',
+        source: renderWebManifest(base),
+      });
+    },
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        // Pin the manifest href to the configured base regardless of how the HTML asset
+        // pipeline treated the root-absolute reference (idempotent: the regex matches any
+        // prefix, so running twice cannot double-prefix).
+        return html.replace(
+          /href="[^"]*manifest\.webmanifest"/u,
+          `href="${base}manifest.webmanifest"`,
+        );
+      },
+    },
+  };
+}
 
 /**
  * Placeholder replaced at HTML-transform time with the real SHA-256 of the inline theme-boot
@@ -61,7 +96,7 @@ function themeBootCspPlugin(): Plugin {
 
 export default defineConfig({
   base: BASE,
-  plugins: [preact(), themeBootCspPlugin()],
+  plugins: [preact(), themeBootCspPlugin(), webmanifestPlugin(BASE)],
   build: {
     target: 'es2022',
     // Never publish source maps (ADR-001 §3): smaller artifact, no source disclosure.
