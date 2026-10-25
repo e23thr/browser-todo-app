@@ -65,16 +65,18 @@ PROBE rows above, whose CONTROL column fails them.
 | `lint` | PASS (one `no-unnecessary-type-conversion` found in the new spec on first run, fixed in 69dc2bc) |
 | `typecheck` | PASS |
 | `i18n:check` | PASS (en/th consistent — no locale bytes touched; budget headroom untouched) |
-| `test:coverage` | 1293 passed / 4 expected-fail / **3 load-flake failures** — see note below |
+| `test:coverage` | PASS — **120 files, 1296 passed, 4 expected-fail, 0 failed** in the final full `npm run ci` at c2bc820 (exit 0) |
 | `build` | PASS |
 | `budget` | PASS — **`no-external-refs` 0 hits over 13 shipped files**, i.e. the CSP edit does not trip the gate; its new loopback allow-list entry is unit-tested both ways (`tests/unit/bundle-budget.test.ts` 15/15: CSP meta passes, `http://cdn.example.com/` still FAILs) |
+| `audit:gate` | PASS — 0 high/critical production advisories (measured separately; not part of `ci`) |
 
-*Load-flake note:* the 3 first-run failures (and a different set of 6 on a second run) are timing
-budgets (`repos-e7` sweep < 60 s, `e2-qa-probes` search/boot budgets, `core-ui-virtual`
-window-math, plus two component tests) on a host shared with concurrently running sibling workers.
-Every one of them re-run green in isolation (`repos-e7` 8/8; `app/core-ui-search/core-ui-virtual/
-e2-qa-probes` 56/56), the failing set differs run-to-run, and none touches this change's blast
-radius (index.html, `bundle-budgets.json`, one unit test file, smoke e2e, docs).
+*Load-flake note (historical):* an earlier run of the same suite on this shared host showed 3
+(and on a second run 6) timing-budget failures (`repos-e7` sweep < 60 s, `e2-qa-probes`
+search/boot budgets, `core-ui-virtual` window-math, plus two component tests) — every one re-run
+green in isolation (`repos-e7` 8/8; `app/core-ui-search/core-ui-virtual/e2-qa-probes` 56/56), the
+failing set differed run-to-run, none touched this change's blast radius (index.html,
+`bundle-budgets.json`, one unit test file, smoke e2e, docs), and the quiet-host full run above is
+green. Treat those as load-sensitive perf budgets on the shared box, not as regressions.
 
 ## 5. Files (commit 81fc501 + lint follow-up 69dc2bc)
 
