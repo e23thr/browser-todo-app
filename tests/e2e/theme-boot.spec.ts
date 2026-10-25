@@ -13,8 +13,8 @@ import { APP_URL, seedOnboardingDone } from './helpers';
  *
  * First-run handshake (E3): a fresh profile's true first paint is the onboarding screen, so the
  * shell-bound scenarios take `seedOnboardingDone()` on boot (the probe below is untouched); the
- * 'absent preference' scenario additionally proves the ONBOARDING screen's own first paint is
- * flash-free via the real, unseeded first-run journey.
+ * dedicated first-run scenario proves the ONBOARDING screen's own first paint is flash-free via
+ * the real, unseeded journey — M7's contract covers every first paint, not just the shell's.
  */
 
 const THEME_KEY = 'todo:prefs:v1:theme';
@@ -158,22 +158,22 @@ test('system preference follows a light OS colour scheme', async ({ page }) => {
   await expectThemePaintedBeforeFirstPaint(page, 'light');
 });
 
-test('an absent preference behaves like system', async ({ page, browser }) => {
+test('an absent preference behaves like system', async ({ page }) => {
   await instrument(page, null, 'dark');
   await seedOnboardingDone(page);
   await expectThemePaintedBeforeFirstPaint(page, 'dark');
+});
 
-  // The true first paint on a fresh profile is the onboarding screen, so it must be
-  // flash-free too: replay the real, UNSEEDED first-run journey and check the probe
-  // BEFORE dismissing it.
-  const firstRun = await browser.newContext();
-  const onboardingPage = await firstRun.newPage();
-  await onboardingPage.emulateMedia({ colorScheme: 'dark' });
-  await instrument(onboardingPage, null, 'dark');
-  await onboardingPage.goto(APP_URL);
+test('a first-run profile boots flash-free on the onboarding screen', async ({ page }) => {
+  // M7 covers EVERY first paint: on a truly fresh profile (no seedOnboardingDone) the first
+  // screen a user ever sees is E3's onboarding, so the inline boot snippet must have painted
+  // the theme before its first frame too. System mode at minimum — the preference machinery is
+  // proven above; here the subject is the unseeded boot surface itself.
+  await instrument(page, null, 'dark');
+  await page.goto(APP_URL);
 
   await expect(
-    onboardingPage.getByRole('heading', {
+    page.getByRole('heading', {
       level: 1,
       name: 'Your data lives in this browser',
       exact: true,
@@ -183,13 +183,9 @@ test('an absent preference behaves like system', async ({ page, browser }) => {
   // The existing shell-bound helper reads the probe only after the shell's heavier render, so
   // the PerformanceObserver has always delivered FCP by then; the onboarding surface paints
   // fast enough to race it, so wait for the delivery before reading (assertions unchanged).
-  await onboardingPage.waitForFunction(
-    () => ((window as WindowWithProbe).__themeProbe ?? null)?.fcp != null,
-  );
+  await page.waitForFunction(() => ((window as WindowWithProbe).__themeProbe ?? null)?.fcp != null);
 
-  const probe = await onboardingPage.evaluate(
-    () => (window as WindowWithProbe).__themeProbe ?? null,
-  );
+  const probe = await page.evaluate(() => (window as WindowWithProbe).__themeProbe ?? null);
   expect(probe, 'the pre-paint probe must have been installed').not.toBeNull();
   expect(probe?.fcp, 'first-contentful-paint must have been observed').not.toBeNull();
   const painted = probe?.events.find((event) => event.value !== null);
@@ -198,7 +194,7 @@ test('an absent preference behaves like system', async ({ page, browser }) => {
   // No flash on the onboarding screen's own first paint either.
   expect(painted?.time).toBeLessThanOrEqual(probe?.fcp ?? Number.POSITIVE_INFINITY);
 
-  const state = await onboardingPage.evaluate((): Omit<DocumentState, 'storageKeys'> => ({
+  const state = await page.evaluate((): Omit<DocumentState, 'storageKeys'> => ({
     theme: document.documentElement.dataset['theme'] ?? null,
     colorScheme: document.documentElement.style.colorScheme,
   }));
@@ -206,10 +202,6 @@ test('an absent preference behaves like system', async ({ page, browser }) => {
   expect(state.colorScheme).toBe('dark');
 
   // The handshake completes exactly as a real first run: the shell mounts after "Get started".
-  await onboardingPage.getByRole('button', { name: 'Get started', exact: true }).click();
-  await expect(
-    onboardingPage.getByRole('heading', { level: 1, name: 'Today', exact: true }),
-  ).toBeVisible();
-
-  await firstRun.close();
+  await page.getByRole('button', { name: 'Get started', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Today', exact: true })).toBeVisible();
 });
