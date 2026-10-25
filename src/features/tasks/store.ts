@@ -274,6 +274,29 @@ export function retryBoot(): void {
   void startTaskStore();
 }
 
+/* -------------------------- bulk data replacement -------------------------- */
+
+/**
+ * A wholesale data replacement landed outside the pipeline (import / snapshot
+ * restore / wipe — ADR-004's atomic `applyImport` writes through the storage
+ * layer and bypasses `MutationRunner.onCommitted`, so nothing announces it):
+ * re-read the whole dataset into state and announce the bulk change so every
+ * other tab runs its `'all'` refresh path (ADR-003 Decision 8.1). Watermark
+ * semantics (D4) are untouched — `TabSync.replaceAll()` is not a sweep.
+ *
+ * Wired to the engine's post-commit seam by `wireDataReplacedRefresh()`.
+ */
+export async function refreshAfterDataReplace(): Promise<void> {
+  const sync = tabSync;
+  if (sync !== null) {
+    await sync.replaceAll();
+    return;
+  }
+  const r = runner;
+  if (r === null) return;
+  await r.load();
+}
+
 /* ------------------------------- failure UX ------------------------------- */
 
 /**

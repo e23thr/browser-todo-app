@@ -24,7 +24,7 @@
           "weekStart": 1,
           "defaultListId": null,
           "notificationsEnabled": false,
-          "lastBackupAt": 1792948461311
+          "lastBackupAt": 1792951100636
         },
         "idbRow": {
           "id": "settings",
@@ -33,7 +33,7 @@
           "weekStart": 1,
           "defaultListId": null,
           "notificationsEnabled": false,
-          "lastBackupAt": 1792948461311
+          "lastBackupAt": 1792951100636
         }
       }
     }
@@ -42,13 +42,13 @@
     "allDifferences": [
       {
         "path": "$.exportedAt",
-        "before": 1792948461311,
-        "after": 1792948471824
+        "before": 1792951100636,
+        "after": 1792951112001
       },
       {
         "path": "$.deviceId",
-        "before": "01M5T0W58XH5Y62JFXRR9P3BV4",
-        "after": "01M5T0WT8V43M8Q85A6F22Z6EX"
+        "before": "01M5T3CQHGEG5V8XA3C9JR5CPE",
+        "after": "01M5T3DBD67YWPGN3RY52050CY"
       },
       {
         "path": "$.counts.snapshots",
@@ -57,34 +57,34 @@
       },
       {
         "path": "$.data.settings.lastBackupAt",
-        "before": 1792948461311,
-        "after": 1792948471824
+        "before": 1792951100636,
+        "after": 1792951112001
       },
       {
         "path": "$.data.snapshots.0.id",
-        "before": "01M5T0W59KNE824V0AFXXXPB91",
-        "after": "01M5T0WTAPSPRT49BFCATP89PY"
+        "before": "01M5T3CQJ6T1DKTM36QD358GKF",
+        "after": "01M5T3DBDCJDBRW7212TK8E9HJ"
       },
       {
         "path": "$.data.snapshots.0.takenAt",
-        "before": 1792948442419,
-        "after": 1792948463958
+        "before": 1792951082566,
+        "after": 1792951102892
       },
       {
         "path": "$.data.snapshots.0.payloadRef",
-        "before": "01M5T0W59KNE824V0AFXXXPB91",
-        "after": "01M5T0WTAPSPRT49BFCATP89PY"
+        "before": "01M5T3CQJ6T1DKTM36QD358GKF",
+        "after": "01M5T3DBDCJDBRW7212TK8E9HJ"
       },
       {
         "path": "$.data.snapshots.1",
         "after": {
-          "id": "01M5T0WWX2WTGWZ1TJD2SBAFXQ",
-          "takenAt": 1792948466594,
+          "id": "01M5T3DDP3DT5D89AQDF16W6SW",
+          "takenAt": 1792951105219,
           "kind": "auto",
           "reason": "pre-import",
           "sizeBytes": 865,
           "schemaVersion": 1,
-          "payloadRef": "01M5T0WWX2WTGWZ1TJD2SBAFXQ"
+          "payloadRef": "01M5T3DDP3DT5D89AQDF16W6SW"
         }
       }
     ],

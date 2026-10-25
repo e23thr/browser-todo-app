@@ -26,7 +26,7 @@ import type { AppDB } from '../../../src/storage/db';
 import { openForTests } from '../../../src/storage/db';
 import { newUlid } from '../../../src/storage/id';
 import { orderKeyBetween, orderKeyFirst } from '../../../src/storage/orderKey';
-import { makeTask, T0, uniqueDbName } from '../storage/fixtures';
+import { makeList, makeTask, T0, uniqueDbName } from '../storage/fixtures';
 
 /** Test double for BroadcastChannel: one shared bus, per-tab endpoints. */
 class FakeBus {
@@ -83,6 +83,7 @@ type Tab = {
   writes: number;
   committed: ChangeAnnouncement[];
   reads: TabSyncReads;
+  sync: ReturnType<typeof createTabSync>;
 };
 
 async function makeTab(
@@ -161,6 +162,7 @@ async function makeTab(
     },
     committed,
     reads,
+    sync: tabSync,
   };
 }
 
@@ -286,6 +288,64 @@ describe('two-tab concurrency (acceptance scenario)', () => {
     await flush();
     const inB = h.tabB.runner.getState().tasks.get(created.value.id);
     expect(inB?.title).toBe('renamed-bulk');
+  });
+
+  it("replaceAll(): a bulk replacement (import shape) refreshes the acting tab and announces 'all' to peers", async () => {
+    const h = await setup('tabs-replace-all');
+    const list = await h.seed();
+    const created = await h.tabA.runner.createTask(draft(list.id, 'pre-import row'));
+    await flush();
+    if (!created.ok) throw new Error('create failed');
+    // A standalone observer for B's watermark (D4 assertions below).
+    const syncB = createTabSync({
+      runner: h.tabB.runner,
+      reads: h.tabB.reads,
+      clock: () => T0,
+      tabId: 'TAB-B',
+      channelFactory: (name) => new FakeChannel(h.bus, name),
+    });
+    syncB.start();
+    const watermarkA = h.tabA.sync.watermark;
+    const watermarkB = syncB.watermark;
+
+    // Import-shaped bulk replace (applyImport's transaction): hard-delete every old
+    // row, put the restored rows verbatim with their ORIGINAL updatedAt stamps.
+    await h.inner.delete('tasks', created.value.id);
+    await h.inner.delete('lists', list.id);
+    const importedList = makeList({
+      id: '01ARZ3NDEKTSV4RRFFQ6000091',
+      name: 'Imported',
+      updatedAt: T0 - 5000,
+    });
+    const importedTask = makeTask({
+      id: '01ARZ3NDEKTSV4RRFFQ6000092',
+      listId: importedList.id,
+      title: 'restored row',
+      updatedAt: T0 - 5000,
+    });
+    expect((await h.inner.put('lists', importedList)).ok).toBe(true);
+    expect((await h.inner.put('tasks', importedTask)).ok).toBe(true);
+
+    await h.tabA.sync.replaceAll();
+
+    // 1. the acting tab reflects the replacement WITHOUT a page reload: new rows in,
+    //    replaced rows evicted.
+    expect(h.tabA.runner.getState().tasks.get(importedTask.id)?.title).toBe('restored row');
+    expect(h.tabA.runner.getState().tasks.has(created.value.id)).toBe(false);
+    expect(h.tabA.runner.getState().lists.has(list.id)).toBe(false);
+    expect(h.tabA.runner.getState().lists.has(importedList.id)).toBe(true);
+
+    // 2. the peer converges through the documented 'all' refresh path…
+    await flush();
+    expect(h.tabB.runner.getState().tasks.get(importedTask.id)?.title).toBe('restored row');
+    expect(h.tabB.runner.getState().tasks.has(created.value.id)).toBe(false);
+    expect(h.tabB.runner.getState().lists.has(list.id)).toBe(false);
+
+    // 3. D4 watermark semantics are untouched: a replace is not a sweep, and neither
+    //    is its receipt — the imported rows carry updatedAt BELOW both watermarks and
+    //    must not have leapfrogged anything.
+    expect(h.tabA.sync.watermark).toBe(watermarkA);
+    expect(syncB.watermark).toBe(watermarkB);
   });
 });
 

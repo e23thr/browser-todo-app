@@ -1,6 +1,7 @@
 import { render } from 'preact';
 
 import { App } from './App';
+import { wireDataReplacedRefresh } from './dataReplace';
 import { registerSettingsPersistence } from './settings';
 import { createIdbSettingsPersistence } from './settingsPersistence';
 import { bootServiceWorker } from './sw-boot';
@@ -45,6 +46,10 @@ async function start(root: HTMLElement): Promise<void> {
   await probe;
   // First-run screen (§6.1): the durable marker decides BEFORE the first paint.
   initFirstRunFlag();
+  // Post-import/post-restore UI refresh (finding F1, fix card t_85e19c39): the
+  // engine announces a wholesale data replacement; the shell re-reads the store
+  // and settings so the restored data is visible WITHOUT a page reload.
+  wireDataReplacedRefresh();
   render(<App />, root);
   // Service-worker registration + update flow (ADR-005) — after first render so the shell is
   // interactive before any SW work; also records the `app:interactive` mark (§9.1 budget).

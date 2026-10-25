@@ -65,6 +65,14 @@ export type TabSync = {
   stop(): void;
   /** Broadcast AFTER commit (wired via `MutationRunner.onCommitted`). */
   announce(change: ChangeAnnouncement): void;
+  /**
+   * Wholesale data replacement (import / snapshot restore / wipe): re-read the whole
+   * store through the SAME path receivers use for `change: 'all'`, then announce `'all'`
+   * so every other tab runs that path too (ADR-003 Decision 8.1 rule 2). The acting tab
+   * gets its refresh locally — no page reload — and D4 stands: nothing here moves the
+   * watermark (a replace is not a sweep, and neither is its receipt).
+   */
+  replaceAll(): Promise<void>;
   /** Watermark sweep (also bound to `visibilitychange -> visible` while started). */
   sweep(): Promise<void>;
   readonly watermark: number;
@@ -166,6 +174,39 @@ export function createTabSync(deps: TabSyncDeps): TabSync {
     for (const l of listRows) watermark = Math.max(watermark, l.updatedAt);
   }
 
+  function announce(change: ChangeAnnouncement): void {
+    if (
+      change !== 'all' &&
+      (change.tasks?.length ?? 0) === 0 &&
+      (change.lists?.length ?? 0) === 0 &&
+      change.settings !== true
+    ) {
+      return;
+    }
+    channel?.postMessage({
+      v: 1,
+      type: 'data-changed',
+      origin: tabId,
+      at: clock(),
+      change,
+    } satisfies BroadcastMessage);
+    // D4: NO watermark bump — this tab's own commit says nothing about rows
+    // written by other tabs that it has not observed yet.
+  }
+
+  async function replaceAll(): Promise<void> {
+    // The acting tab's own re-read goes through the receiver path ('all' → full
+    // reload) so both sides converge through exactly one code path.
+    await refresh({
+      v: 1,
+      type: 'data-changed',
+      origin: tabId,
+      at: clock(),
+      change: 'all',
+    } satisfies BroadcastMessage);
+    announce('all');
+  }
+
   return {
     start() {
       if (started) return;
@@ -193,25 +234,8 @@ export function createTabSync(deps: TabSyncDeps): TabSync {
         document.removeEventListener('visibilitychange', onVisibility);
       }
     },
-    announce(change: ChangeAnnouncement): void {
-      if (
-        change !== 'all' &&
-        (change.tasks?.length ?? 0) === 0 &&
-        (change.lists?.length ?? 0) === 0 &&
-        change.settings !== true
-      ) {
-        return;
-      }
-      channel?.postMessage({
-        v: 1,
-        type: 'data-changed',
-        origin: tabId,
-        at: clock(),
-        change,
-      } satisfies BroadcastMessage);
-      // D4: NO watermark bump — this tab's own commit says nothing about rows
-      // written by other tabs that it has not observed yet.
-    },
+    announce,
+    replaceAll,
     sweep,
     get watermark() {
       return watermark;

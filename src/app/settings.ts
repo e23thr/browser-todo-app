@@ -139,6 +139,32 @@ export async function loadSettings(): Promise<void> {
   stopThemeTracking = startThemeTracking(() => settings.value.theme);
 }
 
+/**
+ * Re-read the durable record into the signal without touching anything else
+ * (fix card t_85e19c39, design §8.3 erratum): a wholesale data replacement
+ * (import / snapshot restore) writes the `settings` record directly, so the
+ * running UI must re-load — the imported `theme` applies immediately, and
+ * `locale` deliberately does NOT (it drives `html lang` on next boot, its
+ * documented timing). Never rejects: a broken backend keeps the session values.
+ */
+export async function reloadSettings(): Promise<void> {
+  if (persistence === null) return;
+  try {
+    const result = await persistence.load();
+    if (!result.ok) {
+      console.warn('settings: durable reload failed', result.error.code);
+      return;
+    }
+    const mirrored: AppSettings = { ...DEFAULT_SETTINGS, theme: readThemePref() };
+    const merged: AppSettings = { ...mirrored, ...withoutUndefined(result.value ?? {}) };
+    settings.value = merged;
+    if (merged.theme !== readThemePref()) writeThemePref(merged.theme);
+    applyToDocument(merged);
+  } catch (error: unknown) {
+    console.warn('settings: durable reload threw', error);
+  }
+}
+
 /** Change the theme preference (design §5.3: instant apply + mirror write). */
 export function setThemePref(pref: ThemePref): void {
   const next: AppSettings = { ...settings.value, theme: pref };

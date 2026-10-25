@@ -5,13 +5,14 @@ import {
   getSettings,
   loadSettings,
   registerSettingsPersistence,
+  reloadSettings,
   setDefaultListId,
   setThemePref,
   setWeekStart,
   type AppSettings,
   type SettingsPersistence,
 } from '../../src/app/settings';
-import { THEME_PREF_KEY } from '../../src/app/theme';
+import { THEME_PREF_KEY, prefersDark, resolveTheme } from '../../src/app/theme';
 import { ok, err, type StorageError } from '../../src/storage/errors';
 
 function memoryPersistence(initial: Partial<AppSettings> | null = null) {
@@ -162,5 +163,59 @@ describe('durable persistence (ADR-002 settings record)', () => {
     await expect(loadSettings()).resolves.toBeUndefined();
     expect(warn).toHaveBeenCalled();
     expect(getSettings()).toEqual(DEFAULT_SETTINGS);
+  });
+});
+
+describe('reloadSettings (post-import refresh, data-safety §8.3 erratum)', () => {
+  it('re-reads the durable record and applies the imported theme immediately', async () => {
+    const store = memoryPersistence({ theme: 'light', weekStart: 1, defaultListId: null });
+    registerSettingsPersistence(store.persistence);
+    await loadSettings();
+    expect(document.documentElement.dataset['theme']).toBe('light');
+
+    // A wholesale data replacement writes the record directly (no setter round trip):
+    // the settings screen and the painted theme must follow without a page reload.
+    store.stored = { theme: 'dark', weekStart: 0, defaultListId: 'list-9' };
+    await reloadSettings();
+
+    expect(getSettings()).toEqual({ theme: 'dark', weekStart: 0, defaultListId: 'list-9' });
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+    expect(document.documentElement.style.colorScheme).toBe('dark');
+    expect(window.localStorage.getItem(THEME_PREF_KEY)).toBe('dark');
+  });
+
+  it('falls back to defaults when the durable record is gone (post-wipe)', async () => {
+    const store = memoryPersistence({ theme: 'dark', weekStart: 0, defaultListId: 'list-9' });
+    registerSettingsPersistence(store.persistence);
+    await loadSettings();
+    expect(getSettings().theme).toBe('dark');
+
+    store.stored = null;
+    // The wipe (`deleteAllData` → `clearPrefs`) also clears the theme mirror, so the
+    // fresh mirror-first fallback resolves to the defaults.
+    window.localStorage.removeItem(THEME_PREF_KEY);
+    await reloadSettings();
+
+    expect(getSettings()).toEqual(DEFAULT_SETTINGS);
+    expect(document.documentElement.dataset['theme']).toBe(
+      resolveTheme(DEFAULT_SETTINGS.theme, prefersDark()),
+    );
+  });
+
+  it('never rejects when the durable reload fails — the session keeps its values', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const store = memoryPersistence({ theme: 'dark', weekStart: 0, defaultListId: 'list-9' });
+    registerSettingsPersistence(store.persistence);
+    await loadSettings();
+    registerSettingsPersistence({
+      load: async () => {
+        throw new Error('boom');
+      },
+      save: (settings) => store.persistence.save(settings),
+    });
+
+    await expect(reloadSettings()).resolves.toBeUndefined();
+    expect(getSettings().theme).toBe('dark');
+    expect(warn).toHaveBeenCalled();
   });
 });

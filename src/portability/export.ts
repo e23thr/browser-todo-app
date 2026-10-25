@@ -24,7 +24,7 @@ import {
 } from './constants';
 import { resolveDataSafetyDb } from './context';
 import { downloadTextFile } from './download';
-import { broadcastDataReplaced } from './side-effects';
+import { broadcastDataReplaced, notifyDataReplaced } from './side-effects';
 import type { ExportError, ExportReport } from './types';
 
 export type ExportBackupOptions = {
@@ -192,6 +192,9 @@ export async function deleteAllData(
 
   clearPrefs(opts.storage ?? defaultStorage());
   broadcastDataReplaced();
+  // A wipe is a wholesale replacement too — same UI refresh seam as import/restore
+  // (t_85e19c39): the running store must show the empty state without a reload.
+  notifyDataReplaced();
   return ok(undefined);
 }
 

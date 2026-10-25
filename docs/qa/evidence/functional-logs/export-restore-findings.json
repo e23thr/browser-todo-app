@@ -1,13 +1,15 @@
 [
   {
     "id": "F1",
-    "title": "restored data is not visible in the running UI after a successful import — a manual reload is required",
+    "status": "fixed in t_85e19c39 — asserted as step post-import-ui-live-without-reload",
+    "title": "restored data was not visible in the running UI after a successful import until a manual reload",
     "observed": {
-      "taskRowsVisibleOnAllBeforeReload": 0,
-      "listRowsVisibleBeforeReload": 0
+      "taskRowsVisibleOnAllBeforeReload": 6,
+      "listRowsVisibleInManageViewBeforeReload": 2,
+      "settingsThemeRadioCheckedBeforeReload": true,
+      "themeAppliedImmediately": "dark",
+      "htmlLangBeforeReload": "en"
     },
-    "dataIntactElsewhere": "the same records are present in IndexedDB (4a) and re-export through the app export path (4c); they appear in the UI after page.reload()",
-    "mechanism": "src/features/data-safety/importFlow.ts applyPlan() refreshes only counts/snapshots/lastBackupAt — the tasks/lists store is never reloaded after applyImport(); tabSync.sweep() only picks up rows with updatedAt > watermark and imported rows keep their original updatedAt",
-    "severity": "moderate (UX/visibility — no data loss)"
+    "mechanism": "was: applyPlan() never reloaded the tasks/lists store and the importer announced no bulk change; fixed: applyImport/restoreSnapshot/wipe fire the data-replaced seam (src/portability/side-effects.ts) which reloads the store + settings in the acting tab and announces change:\"all\" to peer tabs (ADR-003 Decision 8.1)"
   }
 ]

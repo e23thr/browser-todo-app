@@ -5,11 +5,17 @@
  *   `settings.theme` (ADR-002 §3.4 mirror rule — `settings` is the durable
  *   source of truth);
  * - `BroadcastChannel("local-first-todo")` posts `{type: "data-replaced"}` so
- *   other tabs refresh (E5).
+ *   other tabs refresh (E5);
+ * - registered handlers run (`onDataReplaced`) so the acting tab's OWN running UI
+ *   refreshes too (fix card t_85e19c39 — functional QA finding F1: a replace
+ *   bypasses `MutationRunner.onCommitted`, so without this seam the restored data
+ *   stayed invisible until a manual page reload). The shell wires its store +
+ *   settings refresh through `wireDataReplacedRefresh()` (`src/app/dataReplace.ts`).
  *
- * Both are fire-and-forget and feature-detected: a hardened/private browser
+ * All are fire-and-forget and feature-detected: a hardened/private browser
  * where localStorage or BroadcastChannel throws must not fail an import that
- * already committed.
+ * already committed, and neither must a broken UI handler — every one of these
+ * runs AFTER the atomic replace (ADR-004) is over.
  */
 
 import { writeThemePref } from '../app/theme';
@@ -32,5 +38,37 @@ export function broadcastDataReplaced(): void {
     channel.close();
   } catch {
     // Cross-tab notice is best-effort; the replacement itself already committed.
+  }
+}
+
+/** A UI-side reaction to a wholesale data replacement (runs after the commit). */
+export type DataReplacedHandler = () => void;
+
+const dataReplacedHandlers = new Set<DataReplacedHandler>();
+
+/**
+ * Register a handler for wholesale data replacements (import / snapshot restore /
+ * wipe). Returns the disposer. Handlers are fanned out synchronously by
+ * `notifyDataReplaced()` and must stay fire-and-forget.
+ */
+export function onDataReplaced(handler: DataReplacedHandler): () => void {
+  dataReplacedHandlers.add(handler);
+  return () => {
+    dataReplacedHandlers.delete(handler);
+  };
+}
+
+/**
+ * Fan out to every registered handler. One handler throwing never blocks the
+ * others (or the replacement that already committed) — a UI refresh is not part
+ * of the transaction.
+ */
+export function notifyDataReplaced(): void {
+  for (const handler of [...dataReplacedHandlers]) {
+    try {
+      handler();
+    } catch (error: unknown) {
+      console.warn('data-replaced handler failed', error);
+    }
   }
 }

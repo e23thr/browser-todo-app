@@ -277,31 +277,55 @@ try {
   step('import-via-ui', true, 'import confirm dialog → "Replace and import" → import-complete toast');
 
   /* ---------- 4. fidelity ---------- */
-  // 4a-0. OBSERVATION (finding F1): the running UI right after the import, before any reload.
+  // 4a-0. Post-import UI state BEFORE any reload — finding F1 (fix card t_85e19c39),
+  // now a hard expectation: the restored corpus is visible in the RUNNING UI with no
+  // page.reload(), the imported theme applies immediately (data-safety §8.3 erratum),
+  // and the imported locale is NOT applied yet — it drives `html lang` on next boot,
+  // its documented timing (asserted after the reload in 4d).
   await page.goto(`${APP_URL}#/all`);
   await page.waitForTimeout(1_500);
   const preReloadUiRows = await page.locator('li.task-row').count();
-  const preReloadLists = await page.locator('.list-row[data-list-id]').count();
   await shot(page, timeline, '06b-post-import-ui-before-reload');
+  // List rows live in the list MANAGER view (`ListsManageView`) — same-document hash
+  // navigations only, still no reload.
+  await page.goto(`${APP_URL}#/lists`);
+  await page.waitForTimeout(800);
+  const preReloadLists = await page.locator('.list-row[data-list-id]').count();
+  // Settings screen follows the imported record immediately (§8.3 erratum).
+  await page.goto(`${APP_URL}#/settings`);
+  await page.waitForTimeout(800);
+  const preReloadTheme = await page.evaluate(() => document.documentElement.dataset.theme ?? null);
+  const preReloadLang = await page.evaluate(() => document.documentElement.lang);
+  const settingsThemeChecked = await page
+    .getByRole('radio', { name: label('settings.theme.dark'), exact: true })
+    .isChecked();
+  await shot(page, timeline, '06b2-post-import-settings-before-reload');
   evidence.findings = [
     {
       id: 'F1',
+      status: 'fixed in t_85e19c39 — asserted as step post-import-ui-live-without-reload',
       title:
-        'restored data is not visible in the running UI after a successful import — a manual reload is required',
+        'restored data was not visible in the running UI after a successful import until a manual reload',
       observed: {
         taskRowsVisibleOnAllBeforeReload: preReloadUiRows,
-        listRowsVisibleBeforeReload: preReloadLists,
+        listRowsVisibleInManageViewBeforeReload: preReloadLists,
+        settingsThemeRadioCheckedBeforeReload: settingsThemeChecked,
+        themeAppliedImmediately: preReloadTheme,
+        htmlLangBeforeReload: preReloadLang,
       },
-      dataIntactElsewhere:
-        'the same records are present in IndexedDB (4a) and re-export through the app export path (4c); they appear in the UI after page.reload()',
       mechanism:
-        'src/features/data-safety/importFlow.ts applyPlan() refreshes only counts/snapshots/lastBackupAt — the tasks/lists store is never reloaded after applyImport(); tabSync.sweep() only picks up rows with updatedAt > watermark and imported rows keep their original updatedAt',
-      severity: 'moderate (UX/visibility — no data loss)',
+        'was: applyPlan() never reloaded the tasks/lists store and the importer announced no bulk change; fixed: applyImport/restoreSnapshot/wipe fire the data-replaced seam (src/portability/side-effects.ts) which reloads the store + settings in the acting tab and announces change:"all" to peer tabs (ADR-003 Decision 8.1)',
     },
   ];
   writeJson('export-restore-findings.json', evidence.findings);
-  console.log(
-    `[FINDING F1] post-import UI rows before reload: ${preReloadUiRows} (imported corpus should show 6 open rows)`,
+  step(
+    'post-import-ui-live-without-reload',
+    preReloadUiRows === 6 &&
+      preReloadLists === 2 &&
+      settingsThemeChecked === true &&
+      preReloadTheme === 'dark' &&
+      preReloadLang === 'en',
+    `before any reload: task rows on #/all=${preReloadUiRows} (6), list rows on #/lists=${preReloadLists} (2), Settings theme radio=dark checked (${settingsThemeChecked}), theme=${preReloadTheme} (dark — applies immediately per §8.3 erratum), html lang=${preReloadLang} (en — imported locale th drives html lang on next boot)`,
   );
 
   // Reload the page (the user-visible "restored" state), then verify UI fidelity.

@@ -5,80 +5,88 @@
       "step": "seed-corpus",
       "ok": true,
       "detail": "9 records seeded through the real UI (incl. 1 tombstone)",
-      "at": "2026-10-25T17:14:18.208Z"
+      "at": "2026-10-25T17:58:17.826Z"
     },
     {
       "step": "seed-settings-metadata",
       "ok": true,
       "detail": "theme=dark + language=th set through the Settings UI (html lang=th)",
-      "at": "2026-10-25T17:14:19.823Z"
+      "at": "2026-10-25T17:58:19.203Z"
     },
     {
       "step": "export-via-ui",
       "ok": true,
-      "detail": "download local-first-todo-backup-2026-10-25T171421Z.json captured byte-exact (5640 bytes)",
-      "at": "2026-10-25T17:14:21.516Z"
+      "detail": "download local-first-todo-backup-2026-10-25T175820Z.json captured byte-exact (5640 bytes)",
+      "at": "2026-10-25T17:58:20.708Z"
     },
     {
       "step": "app-delete-all",
       "ok": true,
       "detail": "Settings → Delete all data → confirm dialog → wiped",
-      "at": "2026-10-25T17:14:23.274Z"
+      "at": "2026-10-25T17:58:22.356Z"
     },
     {
       "step": "all-storage-cleared",
       "ok": true,
       "detail": "at the instant of the wipe: IndexedDB=[] localStorage=0 caches=[] swRegs=0",
-      "at": "2026-10-25T17:14:23.807Z"
+      "at": "2026-10-25T17:58:22.865Z"
     },
     {
       "step": "fresh-install-after-wipe",
       "ok": true,
       "detail": "first-run onboarding=true, store rows={\"lists\":0,\"meta\":1,\"settings\":1,\"snapshot_payloads\":1,\"snapshots\":1,\"tasks\":0}",
-      "at": "2026-10-25T17:14:25.307Z"
+      "at": "2026-10-25T17:58:24.136Z"
     },
     {
       "step": "import-via-ui",
       "ok": true,
       "detail": "import confirm dialog → \"Replace and import\" → import-complete toast",
-      "at": "2026-10-25T17:14:26.793Z"
+      "at": "2026-10-25T17:58:25.312Z"
+    },
+    {
+      "step": "post-import-ui-live-without-reload",
+      "ok": true,
+      "detail": "before any reload: task rows on #/all=6 (6), list rows on #/lists=2 (2), Settings theme radio=dark checked (true), theme=dark (dark — applies immediately per §8.3 erratum), html lang=en (en — imported locale th drives html lang on next boot)",
+      "at": "2026-10-25T17:58:28.544Z"
     },
     {
       "step": "record-fidelity-100-percent",
       "ok": true,
       "detail": "tasks diff=0, lists diff=0, settings diff=0, unexpected envelope diffs=0",
-      "at": "2026-10-25T17:14:31.836Z"
+      "at": "2026-10-25T17:58:32.006Z"
     },
     {
       "step": "thai-english-content-fidelity",
       "ok": true,
       "detail": "byte-exact strings checked=16; missing data=0, missing UI=0; UI rows after reload: open=6 (6), completed=2 (2), tombstone hidden=true",
-      "at": "2026-10-25T17:14:31.836Z"
+      "at": "2026-10-25T17:58:32.006Z"
     },
     {
       "step": "settings-metadata-roundtrip",
       "ok": true,
       "detail": "locale in file=th, restored=th, html lang=th; theme restored=true",
-      "at": "2026-10-25T17:14:32.345Z"
+      "at": "2026-10-25T17:58:32.520Z"
     }
   ],
   "findings": [
     {
       "id": "F1",
-      "title": "restored data is not visible in the running UI after a successful import — a manual reload is required",
+      "status": "fixed in t_85e19c39 — asserted as step post-import-ui-live-without-reload",
+      "title": "restored data was not visible in the running UI after a successful import until a manual reload",
       "observed": {
-        "taskRowsVisibleOnAllBeforeReload": 0,
-        "listRowsVisibleBeforeReload": 0
+        "taskRowsVisibleOnAllBeforeReload": 6,
+        "listRowsVisibleInManageViewBeforeReload": 2,
+        "settingsThemeRadioCheckedBeforeReload": true,
+        "themeAppliedImmediately": "dark",
+        "htmlLangBeforeReload": "en"
       },
-      "dataIntactElsewhere": "the same records are present in IndexedDB (4a) and re-export through the app export path (4c); they appear in the UI after page.reload()",
-      "mechanism": "src/features/data-safety/importFlow.ts applyPlan() refreshes only counts/snapshots/lastBackupAt — the tasks/lists store is never reloaded after applyImport(); tabSync.sweep() only picks up rows with updatedAt > watermark and imported rows keep their original updatedAt",
-      "severity": "moderate (UX/visibility — no data loss)"
+      "mechanism": "was: applyPlan() never reloaded the tasks/lists store and the importer announced no bulk change; fixed: applyImport/restoreSnapshot/wipe fire the data-replaced seam (src/portability/side-effects.ts) which reloads the store + settings in the acting tab and announces change:\"all\" to peer tabs (ADR-003 Decision 8.1)"
     }
   ],
   "verdict": "PASS",
   "consoleErrors": [],
-  "appUrl": "http://127.0.0.1:4291/browser-todo-app/",
-  "buildSha": "b820ad723e7c66317cb1e741b21891ada6de60b4",
-  "ranAt": "2026-10-25T17:14:32.345Z",
+  "appUrl": "http://127.0.0.1:4296/browser-todo-app/",
+  "buildSha": "unknown",
+  "ranAt": "2026-10-25T17:58:32.521Z",
   "chromiumVersion": "156.0.8078.4"
 }

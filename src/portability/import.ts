@@ -29,7 +29,7 @@ import { buildRecoveryDocumentFile } from './recovery-document';
 import { takeSnapshot } from './snapshots-api';
 import type { ImportPlan, ImportReport, ImportError } from './types';
 import { upgradeRawBackup } from './upgrade';
-import { broadcastDataReplaced, mirrorTheme } from './side-effects';
+import { broadcastDataReplaced, mirrorTheme, notifyDataReplaced } from './side-effects';
 
 export type PrepareImportOptions = {
   /** Test seam: inject a migration registry (production uses `productionMigrations`). */
@@ -204,9 +204,11 @@ export async function applyImport(
     return err(toImportError(applied.error));
   }
 
-  // Stage 7 side effects: theme mirror (ADR-002 §3.4) + cross-tab notice (E5).
+  // Stage 7 side effects: theme mirror (ADR-002 §3.4) + cross-tab notice (E5) +
+  // the acting tab's own UI refresh seam (t_85e19c39 / finding F1).
   mirrorTheme(plan.records.settings);
   broadcastDataReplaced();
+  notifyDataReplaced();
 
   return ok({
     outcome: plan.quarantined.length > 0 ? 'partial' : 'applied',

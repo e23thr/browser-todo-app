@@ -158,17 +158,36 @@ export class MutationRunner {
     };
   }
 
-  /** Initial load: replace state wholesale from the repos (committed truth). */
+  /**
+   * Initial load / wholesale re-read: replace state from the repos (committed truth).
+   *
+   * WHOLESALE is the binding part: rows the fresh read no longer returns are evicted
+   * here (tombstones are already filtered by `loadAll`). A merge-only apply would leave
+   * pre-import rows on screen after a bulk replacement — the database no longer has
+   * them but state would (functional QA finding F1, fix card t_85e19c39). As in
+   * `reconcile` (rule 2), a record with an in-flight optimistic op is not committed
+   * truth yet and survives the re-read untouched.
+   */
   async load(): Promise<Result<void, AppError>> {
     const loaded = await this.#deps.tasks.loadAll();
     if (!loaded.ok) {
       this.#recordError('create-task', 'load', loaded.error, []);
       return err(loaded.error);
     }
+    const freshTasks = new Set(loaded.value.tasks.map((t) => t.id));
+    const freshLists = new Set(loaded.value.lists.map((l) => l.id));
+    const evictTasks = [...this.#state.tasks.keys()].filter(
+      (id) => !freshTasks.has(id) && !this.#state.pending.has(id),
+    );
+    const evictLists = [...this.#state.lists.keys()].filter(
+      (id) => !freshLists.has(id) && !this.#state.pending.has(id),
+    );
     const update: RecordUpdate = {
       tasks: loaded.value.tasks,
       lists: loaded.value.lists,
       settings: loaded.value.settings,
+      ...(evictTasks.length > 0 ? { evictTasks } : {}),
+      ...(evictLists.length > 0 ? { evictLists } : {}),
     };
     this.applyExternal(update);
     return ok(undefined);
