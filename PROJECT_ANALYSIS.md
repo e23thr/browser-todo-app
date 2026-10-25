@@ -545,6 +545,7 @@ should prompt for install at the right moment (after first task created).
 ➡️ Recommendation: the capture→plan→complete loop works offline on desktop + mobile for 30 days of
 daily use with zero data loss, export/restore verified, WCAG 2.2 AA passed, budgets green in CI.
 ✅ PO answer (2026-10-23): **agree** — MVP DoD as stated: capture→complete works offline on desktop + mobile through 30 days of daily use with zero data loss; export/restore verified; WCAG 2.2 AA passed; budgets green in CI. DECIDED.
+✅ PO answer (2026-10-26, MVP gate close, relayed verbatim by h_pm): **"ปิด MVP gate เลย เริ่ม V1 ทันที (แนะนำ) — เก็บ 30-day เป็น sign-off แยกต่างหาก ~24 พ.ย."** — close the MVP gate now and start V1 immediately; the *"30 days of daily use"* element is carried as a **separate PO sign-off due ~2026-11-24** (deferred, never dropped). All automatable criteria verified PASS at release HEAD `0a8702a` (`docs/qa/mvp-dod.md`). DECIDED (30-day deferral accepted).
 
 **Explicitly out of scope** (settled): accounts, server-side anything, real-time collaboration,
 push notifications, native apps (§2), attachments (PO Q7).
