@@ -111,23 +111,23 @@ describe('QA: tombstone purge policy (§5.2: purge older than 90 days / explicit
       listId: list.value.id,
       title: 'boundary',
       notes: null,
-      priority: 0,
+      priority: 'P3',
       tags: [],
     });
     const overBoundary = await h.tasks.create({
       listId: list.value.id,
       title: 'over',
       notes: null,
-      priority: 0,
+      priority: 'P3',
       tags: [],
     });
     if (!atBoundary.ok || !overBoundary.ok) throw new Error('create failed');
 
     const now = T0 + TOMBSTONE_TTL_MS * 2;
     h.setNow(now - TOMBSTONE_TTL_MS); // t1 deletedAt == now - TTL — exactly 90 days old
-    await h.tasks.remove(atBoundary.value.id);
+    await h.tasks.remove(atBoundary.value.id, { mode: 'cascade' });
     h.setNow(now - TOMBSTONE_TTL_MS - 1); // t2 deletedAt == now - TTL - 1ms — strictly older
-    await h.tasks.remove(overBoundary.value.id);
+    await h.tasks.remove(overBoundary.value.id, { mode: 'cascade' });
     h.setNow(now);
 
     const purged = await purgeTombstones(h.inner, { now, mode: 'auto' });
@@ -146,18 +146,18 @@ describe('QA: tombstone purge policy (§5.2: purge older than 90 days / explicit
       listId: list.value.id,
       title: 'dead',
       notes: null,
-      priority: 0,
+      priority: 'P3',
       tags: [],
     });
     const alive = await h.tasks.create({
       listId: list.value.id,
       title: 'alive',
       notes: null,
-      priority: 0,
+      priority: 'P3',
       tags: [],
     });
     if (!dead.ok || !alive.ok) throw new Error('create failed');
-    await h.tasks.remove(dead.value.id); // seconds old — auto would keep it
+    await h.tasks.remove(dead.value.id, { mode: 'cascade' }); // seconds old — auto would keep it
 
     const purged = await purgeTombstones(h.inner, { now: T0 + 1, mode: 'explicit' });
     expect(purged.ok && purged.value).toBe(1);
@@ -181,7 +181,7 @@ describe('QA: reorder is a single-record write (ADR-003 Decision 4)', () => {
         listId: list.value.id,
         title,
         notes: null,
-        priority: 0,
+        priority: 'P3',
         tags: [],
       });
       if (!r.ok) throw new Error('create failed');
@@ -228,12 +228,12 @@ describe('QA: tombstone visibility (reads vs export/sync paths)', () => {
       listId: list.value.id,
       title: 'doomed',
       notes: null,
-      priority: 0,
+      priority: 'P3',
       tags: [],
     });
     if (!t1.ok) throw new Error('create failed');
     h.setNow(T0 + 5);
-    await h.tasks.remove(t1.value.id);
+    await h.tasks.remove(t1.value.id, { mode: 'cascade' });
 
     const all = await h.tasks.loadAll();
     if (!all.ok) throw new Error('load failed');

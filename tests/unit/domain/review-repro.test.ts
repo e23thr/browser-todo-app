@@ -88,7 +88,7 @@ describe('review repro A2: ghost committed images must not resurrect deleted row
     await runner.load();
 
     // Delete X (succeeds -> tombstoned in the store).
-    const p = runner.removeTask('X');
+    const p = runner.removeTask('X', { mode: 'cascade' });
     await flushMicrotasks();
     rec.succeed(undefined);
     await p;

@@ -86,6 +86,8 @@ import type {
   MoveTarget,
   SettingsPort,
   TaskPort,
+  TaskRemoveDisposition,
+  TaskRemoveOutcome,
 } from '../../src/domain/ports';
 import { addTask, bindRunnerForTest, resetTaskStore } from '../../src/features/tasks/store';
 import type { DataCounts, ImportPreview, SnapshotMeta } from '../../src/features/data-safety/types';
@@ -427,7 +429,8 @@ describe('S3 — persist() requested after the FIRST task created, exactly once'
       notes: null,
       dueDate: null,
       listId: 'L1',
-      priority: 0,
+      priority: 'P3',
+      tags: [],
     });
     expect(first.ok).toBe(true);
     await waitFor(() => {
@@ -440,7 +443,8 @@ describe('S3 — persist() requested after the FIRST task created, exactly once'
       notes: null,
       dueDate: null,
       listId: 'L1',
-      priority: 0,
+      priority: 'P3',
+      tags: [],
     });
     expect(second.ok).toBe(true);
     await waitFor(() => undefined);
@@ -463,7 +467,8 @@ describe('S3 — persist() requested after the FIRST task created, exactly once'
       notes: null,
       dueDate: null,
       listId: 'L1',
-      priority: 0,
+      priority: 'P3',
+      tags: [],
     });
     expect(failed.ok).toBe(false);
     await waitFor(() => undefined);
@@ -544,7 +549,8 @@ describe('S4 — quota-exceeded write: dialog appears, the write is NEVER droppe
       notes: null,
       dueDate: null,
       listId: 'L1',
-      priority: 0,
+      priority: 'P3',
+      tags: [],
     });
     expect(result.ok).toBe(false);
 
@@ -592,7 +598,14 @@ describe('S4 — quota-exceeded write: dialog appears, the write is NEVER droppe
     bindRunnerForTest(built.runner);
     render(<DataSafetyHost />);
 
-    await addTask({ title: 'Buy milk', notes: null, dueDate: null, listId: 'L1', priority: 0 });
+    await addTask({
+      title: 'Buy milk',
+      notes: null,
+      dueDate: null,
+      listId: 'L1',
+      priority: 'P3',
+      tags: [],
+    });
     await waitFor(() => {
       expect(currentDialog()?.request.kind).toBe('quota-exceeded');
     });
@@ -1460,9 +1473,49 @@ function makeQuotaRunner(): {
       if (current === undefined) return err({ code: 'RULE', rule: 'TASK_MISSING', message: id });
       return ok({ row: { ...current, listId: target.group.listId }, rebalanced: false });
     },
-    async remove(id: string): Promise<Result<void, AppError>> {
+    async remove(
+      id: string,
+      disposition: TaskRemoveDisposition,
+    ): Promise<Result<TaskRemoveOutcome, AppError>> {
+      const now = Date.now();
+      const current = tasks.get(id);
+      if (current === undefined) return ok({ tombstoned: [], promoted: [] });
+      const children = [...tasks.values()].filter((task) => task.parentTaskId === id);
+      const tombstoned: Task[] = [{ ...current, deletedAt: now, updatedAt: now }];
+      const promoted: Task[] = [];
       tasks.delete(id);
-      return ok(undefined);
+      if (disposition.mode === 'cascade') {
+        for (const child of children) {
+          tombstoned.push({ ...child, deletedAt: now, updatedAt: now });
+          tasks.delete(child.id);
+        }
+      } else {
+        for (const child of children) {
+          const row: Task = { ...child, updatedAt: now };
+          delete row.parentTaskId;
+          tasks.set(child.id, row);
+          promoted.push(row);
+        }
+      }
+      return ok({ tombstoned, promoted });
+    },
+    async sweepTag(from: string, to: string | null): Promise<Result<Task[], AppError>> {
+      const now = Date.now();
+      const rewritten: Task[] = [];
+      for (const task of tasks.values()) {
+        if (!task.tags.includes(from)) continue;
+        const row: Task = {
+          ...task,
+          tags:
+            to === null
+              ? task.tags.filter((tag) => tag !== from)
+              : [...new Set(task.tags.map((tag) => (tag === from ? to : tag)))],
+          updatedAt: now,
+        };
+        tasks.set(row.id, row);
+        rewritten.push(row);
+      }
+      return ok(rewritten);
     },
     async upsertImported(rows: Task[]): Promise<Result<void, AppError>> {
       for (const row of rows) tasks.set(row.id, row);

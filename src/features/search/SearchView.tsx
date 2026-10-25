@@ -22,12 +22,12 @@ import type { JSX } from 'preact';
 import { announce } from '../../app/announce';
 import { t } from '../../app/i18n';
 import { useMediaQuery, WIDE_QUERY } from '../../app/media';
-import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { EmptyState, View } from '../../components/View';
 import type { Task } from '../../domain/model';
 import { selectView } from '../../domain/views';
 import { TaskEditor } from '../tasks/TaskEditor';
 import { MoveToListDialog } from '../tasks/MoveToListDialog';
+import { TaskDeleteDialog } from '../tasks/TaskDeleteDialog';
 import { TaskList } from '../tasks/TaskList';
 import type { EditingTask } from '../tasks/TaskScreen';
 import {
@@ -37,6 +37,7 @@ import {
   setTaskDone,
   state,
   status,
+  tagFilter,
   today,
 } from '../tasks/store';
 import { SearchField } from './SearchField';
@@ -90,6 +91,8 @@ export function SearchView(): JSX.Element {
         {
           today: day,
           index: searchIndexFor(storeState),
+          // S1: the tag filter chosen on the task screens also narrows search hits.
+          ...(tagFilter.value !== null ? { tag: tagFilter.value } : {}),
         },
       )
     : null;
@@ -200,8 +203,14 @@ export function SearchView(): JSX.Element {
 
       {editingTask !== undefined ? (
         <TaskEditor
+          key={editingTask.id}
           task={editingTask}
           lists={lists}
+          onNavigate={(id) => {
+            const task = storeState.tasks.get(id);
+            if (task === undefined) return;
+            setEditing({ id, task });
+          }}
           onClose={() => {
             setEditing(null);
           }}
@@ -230,16 +239,12 @@ export function SearchView(): JSX.Element {
       ) : null}
 
       {confirmingTask !== undefined ? (
-        <ConfirmDialog
-          titleKey="confirm.deleteTask.title"
-          bodyKey="confirm.deleteTask.body"
-          params={{ title: confirmingTask.title }}
-          confirmKey="confirm.deleteTask.confirm"
-          tone="danger"
-          onConfirm={() => {
+        <TaskDeleteDialog
+          task={confirmingTask}
+          onConfirm={(disposition) => {
             const task = confirmingTask;
             setConfirmingId(null);
-            void deleteTask(task.id).then((result) => {
+            void deleteTask(task.id, disposition).then((result) => {
               if (result.ok) announce(t('a11y.taskDeleted'));
             });
           }}

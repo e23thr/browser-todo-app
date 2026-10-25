@@ -69,7 +69,7 @@ function makeRunner() {
   };
 }
 
-const draft = { listId: 'L1', title: 'Buy milk', notes: null, priority: 0 as const, tags: [] };
+const draft = { listId: 'L1', title: 'Buy milk', notes: null, priority: 'P3' as const, tags: [] };
 
 describe('pipeline: optimistic apply (steps 1-2)', () => {
   it('state is updated SYNCHRONOUSLY, before any write resolves', async () => {
@@ -315,7 +315,7 @@ describe('pipeline: move / remove / setDone specifics', () => {
         makeTaskRow({ id: 'T9' }),
       ],
     });
-    const p = h.runner.removeTask('P1');
+    const p = h.runner.removeTask('P1', { mode: 'cascade' });
     expect(h.runner.getState().tasks.has('P1')).toBe(false);
     expect(h.runner.getState().tasks.has('S1')).toBe(false);
     expect(h.runner.getState().tasks.has('S2')).toBe(false);

@@ -39,6 +39,22 @@ export type TaskPosition = MoveTarget['position'];
 export type ListRemoveDisposition = { mode: 'move'; targetListId: string } | { mode: 'tombstone' };
 
 /**
+ * Subtask disposition for `TaskPort.remove` (E7 S2, "consistent with the
+ * list-deletion UX"): `cascade` tombstones the task AND its direct subtasks
+ * (the MVP behavior); `promote` tombstones only the task and moves its direct
+ * subtasks up to the top level of their list. ONE transaction either way.
+ */
+export type TaskRemoveDisposition = { mode: 'cascade' } | { mode: 'promote' };
+
+/**
+ * Rows a task-delete transaction wrote: `tombstoned` is always non-empty (the
+ * task itself), `promoted` is non-empty for `mode: 'promote'` (re-parented +
+ * restamped). Returned so the pipeline can re-anchor / evict the committed
+ * baseline for every touched id (ADR-003 Decision 3 step 4a).
+ */
+export type TaskRemoveOutcome = { tombstoned: Task[]; promoted: Task[] };
+
+/**
  * `move()` outcome (pipeline step 4a): the authoritative row the repo wrote,
  * plus `rebalanced` — true when the order-key exhaustion hatch re-keyed EVERY
  * row of the sibling group in that transaction (ADR-002 §4.2 rule 4). The flag
@@ -63,8 +79,24 @@ export interface TaskPort {
   setDone(id: string, done: boolean): Promise<Result<Task, AppError>>;
   /** SINGLE-record write: resolves neighbor keys, one `put` of the moved row. */
   move(id: string, target: MoveTarget): Promise<Result<MoveOutcome<Task>, AppError>>;
-  /** Tombstone + direct-subtask cascade in ONE transaction; idempotent. */
-  remove(id: string): Promise<Result<void, AppError>>;
+  /**
+   * Tombstone the task plus its subtask disposition in ONE transaction;
+   * idempotent (removing an absent/tombstoned row resolves with empty outcome).
+   */
+  remove(
+    id: string,
+    disposition: TaskRemoveDisposition,
+  ): Promise<Result<TaskRemoveOutcome, AppError>>;
+  /**
+   * S1 tag rename/delete sweep over the DENORMALIZED `tags: string[]` model
+   * (ADR-002 §3.5): ONE transaction rewriting every row carrying `from` —
+   * `to: string` renames (de-duplicating when both names are present on a row),
+   * `to: null` deletes the tag from every row. Tombstoned rows are swept too so
+   * exports/sync never resurrect a renamed-away name. Changed rows are
+   * restamped (`updatedAt`/`deviceId`) like every other write; resolves with the
+   * rows the transaction wrote.
+   */
+  sweepTag(from: string, to: string | null): Promise<Result<Task[], AppError>>;
   /** M11 import path: rows keep their original stamps. */
   upsertImported(rows: Task[]): Promise<Result<void, AppError>>;
 }

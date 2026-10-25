@@ -16,6 +16,8 @@ import type {
   MoveTarget,
   SettingsPort,
   TaskPort,
+  TaskRemoveDisposition,
+  TaskRemoveOutcome,
 } from '../../../src/domain/ports';
 
 type Deferred<T> = { promise: Promise<T>; resolve: (v: T) => void };
@@ -78,7 +80,7 @@ export function makeTaskRow(over: Partial<Task> = {}): Task {
     title: over.title ?? 'title',
     notes: over.notes ?? null,
     status: over.status ?? 'open',
-    priority: over.priority ?? 0,
+    priority: over.priority ?? 'P4',
     tags: over.tags ?? [],
     sortOrder: over.sortOrder ?? 'h',
     createdAt: over.createdAt ?? 1,
@@ -147,8 +149,15 @@ export class FakeTaskPort implements TaskPort {
     return this.rec.record<MoveOutcome<Task>>('move', [id, target]);
   }
 
-  remove(id: string): Promise<Result<void, AppError>> {
-    return this.rec.record<undefined>('remove', [id]);
+  remove(
+    id: string,
+    disposition: TaskRemoveDisposition,
+  ): Promise<Result<TaskRemoveOutcome, AppError>> {
+    return this.rec.record<TaskRemoveOutcome>('remove', [id, disposition]);
+  }
+
+  sweepTag(from: string, to: string | null): Promise<Result<Task[], AppError>> {
+    return this.rec.record<Task[]>('sweepTag', [from, to]);
   }
 
   upsertImported(rows: Task[]): Promise<Result<void, AppError>> {

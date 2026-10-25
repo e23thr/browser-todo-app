@@ -7,10 +7,11 @@
  * keyboard and locale behaviour stay the platform's (§9.5).
  */
 
-import { useId } from 'preact/hooks';
+import { useId, useState } from 'preact/hooks';
 import type { JSX } from 'preact';
 
 import { t, getLocale } from '../../app/i18n';
+import { Icon } from '../../app/icons';
 import type { Priority } from '../../domain/model';
 
 /** `YYYY-MM-DD` → a localized medium date (never `toISOString`, E6). */
@@ -158,12 +159,13 @@ export interface PriorityFieldProps {
 }
 
 const PRIORITIES: readonly { readonly value: Priority; readonly labelKey: string }[] = [
-  { value: 0, labelKey: 'priority.low' },
-  { value: 1, labelKey: 'priority.medium' },
-  { value: 2, labelKey: 'priority.high' },
+  { value: 'P1', labelKey: 'priority.p1' },
+  { value: 'P2', labelKey: 'priority.p2' },
+  { value: 'P3', labelKey: 'priority.p3' },
+  { value: 'P4', labelKey: 'priority.p4' },
 ];
 
-/** Priority radio group (D4: always the current value, default low). */
+/** Priority radio group (S3 four levels; default `P4` = no priority). */
 export function PriorityField({ value, onChange }: PriorityFieldProps): JSX.Element {
   const name = useId();
   return (
@@ -185,5 +187,103 @@ export function PriorityField({ value, onChange }: PriorityFieldProps): JSX.Elem
         ))}
       </div>
     </fieldset>
+  );
+}
+
+export interface TagsFieldProps {
+  readonly value: readonly string[];
+  readonly onChange: (tags: string[]) => void;
+  /** Every tag currently in use — offered as `<datalist>` suggestions (S1). */
+  readonly suggestions?: readonly string[];
+}
+
+/** Tag name rules (ADR-004 §6.2): 1..100 chars, non-blank when trimmed. */
+export function isValidTagName(name: string): boolean {
+  return name.length >= 1 && name.length <= 100 && name.trim().length >= 1;
+}
+
+/**
+ * Tags chip editor (S1): type a name + Enter/Add to attach, Backspace on the
+ * empty input removes the last chip, each chip carries its own remove button.
+ * Creating a tag = attaching a new name to a task (the model is denormalized,
+ * ADR-002 §3.5 — there is no separate tag record).
+ */
+export function TagsField({ value, onChange, suggestions = [] }: TagsFieldProps): JSX.Element {
+  const id = useId();
+  const [draft, setDraft] = useState('');
+  const trimmed = draft.trim();
+
+  const add = (): void => {
+    if (!isValidTagName(trimmed)) return;
+    if (value.includes(trimmed)) {
+      setDraft('');
+      return;
+    }
+    onChange([...value, trimmed]);
+    setDraft('');
+  };
+
+  return (
+    <div class="field">
+      <label class="field-label" htmlFor={id}>
+        {t('composer.label.tags')}
+      </label>
+      {value.length > 0 ? (
+        <ul class="tag-chips" aria-label={t('composer.label.tags')}>
+          {value.map((tag) => (
+            <li key={tag} class="tag-chip">
+              <span>{tag}</span>
+              <button
+                type="button"
+                class="tag-chip-remove"
+                aria-label={t('tags.remove', { name: tag })}
+                onClick={() => {
+                  onChange(value.filter((entry) => entry !== tag));
+                }}
+              >
+                <Icon name="x" size={14} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <div class="tag-input-row">
+        <input
+          id={id}
+          class="input"
+          type="text"
+          maxlength={100}
+          list={`${id}-tags`}
+          placeholder={t('tags.placeholder')}
+          value={draft}
+          onInput={(event) => {
+            setDraft(event.currentTarget.value);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              add();
+            } else if (event.key === 'Backspace' && draft === '' && value.length > 0) {
+              onChange(value.slice(0, -1));
+            }
+          }}
+        />
+        <datalist id={`${id}-tags`}>
+          {suggestions
+            .filter((tag) => !value.includes(tag))
+            .map((tag) => (
+              <option key={tag} value={tag} />
+            ))}
+        </datalist>
+        <button
+          type="button"
+          class="button button-secondary"
+          disabled={!isValidTagName(trimmed)}
+          onClick={add}
+        >
+          {t('tags.add')}
+        </button>
+      </div>
+    </div>
   );
 }

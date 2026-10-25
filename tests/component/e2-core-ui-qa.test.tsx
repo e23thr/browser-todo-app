@@ -430,7 +430,7 @@ describe('M1 editor (F2) — save, focus return, taskGone', () => {
 
     const title = within(dialog).getByLabelText<HTMLInputElement>('Title', { exact: true });
     fireEvent.input(title, { target: { value: 'New name' } });
-    fireEvent.click(within(dialog).getByLabelText('Medium', { exact: true }));
+    fireEvent.click(within(dialog).getByLabelText('P2 (Medium)', { exact: true }));
     fireEvent.change(within(dialog).getByRole('combobox', { name: 'List' }), {
       target: { value: 'L2' },
     });
@@ -442,7 +442,7 @@ describe('M1 editor (F2) — save, focus return, taskGone', () => {
     const saved = state.value.tasks.get('T1');
     expect(saved?.title).toBe('New name');
     expect(saved?.listId).toBe('L2');
-    expect(saved?.priority).toBe(1);
+    expect(saved?.priority).toBe('P2');
     await waitFor(() => {
       expect(regions.polite?.textContent).toBe('Task saved');
     });
@@ -470,7 +470,7 @@ describe('M1 editor (F2) — save, focus return, taskGone', () => {
     // removeTask EVICTS the row from state. The composed screen must NOT unmount the
     // editor over that — it holds the last known task so the §14 `error.taskGone` state
     // is reachable in situ (E2 F-3; core-ui-composer.test.tsx pins the standalone half).
-    await built.runner.removeTask('T1');
+    await built.runner.removeTask('T1', { mode: 'cascade' });
 
     // 1. The dialog is still open and the §14 row renders inside it.
     const gone = await within(dialog).findByText('This task no longer exists', { exact: true });

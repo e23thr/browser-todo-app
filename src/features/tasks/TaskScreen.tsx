@@ -22,19 +22,31 @@ import { announce } from '../../app/announce';
 import { t } from '../../app/i18n';
 import { useMediaQuery, WIDE_QUERY } from '../../app/media';
 import { startQuickAdd } from '../../app/quickAdd';
-import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { EmptyState, View } from '../../components/View';
 import type { Task } from '../../domain/model';
-import type { TaskPosition } from '../../domain/ports';
+import type { TaskPosition, TaskRemoveDisposition } from '../../domain/ports';
 import { selectView, type ViewId, type ViewRow } from '../../domain/views';
 import type { IconName } from '../../app/icons';
 import { Composer } from './Composer';
 import { BootErrorPanel } from './BootErrorPanel';
 import { MoveToListDialog } from './MoveToListDialog';
 import type { MoveDelta } from './TaskRow';
+import { TaskDeleteDialog } from './TaskDeleteDialog';
 import { TaskEditor } from './TaskEditor';
 import { TaskList } from './TaskList';
-import { deleteTask, liveLists, moveTaskTo, setTaskDone, state, status, today } from './store';
+import { TagsManageDialog } from './TagsManageDialog';
+import {
+  allTags,
+  deleteTask,
+  liveLists,
+  moveTaskTo,
+  setTaskDone,
+  sortMode,
+  state,
+  status,
+  tagFilter,
+  today,
+} from './store';
 
 /** Rows just completed stay visible this long so the user sees what they checked (F3). */
 export const RETAIN_COMPLETED_MS = 900;
@@ -127,6 +139,7 @@ export function TaskScreen({
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [movingId, setMovingId] = useState<string | null>(null);
   const [movedId, setMovedId] = useState<string | null>(null);
+  const [managingTags, setManagingTags] = useState(false);
   const [retained, setRetained] = useState<readonly Retained[]>([]);
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
@@ -143,7 +156,11 @@ export function TaskScreen({
     };
   }, []);
 
-  const result = selectView(storeState, view, { today: day });
+  const result = selectView(storeState, view, {
+    today: day,
+    ...(tagFilter.value !== null ? { tag: tagFilter.value } : {}),
+    ...(sortMode.value === 'priority' ? { sortBy: 'priority' as const } : {}),
+  });
   const rows = withRetained(result.rows, retained, storeState.tasks);
   const taskCount = rows.flatMap((row) => (row.type === 'task' ? [row] : [])).length;
   const showListBadge = view.kind !== 'list';
@@ -187,7 +204,7 @@ export function TaskScreen({
     setConfirmingId(id);
   };
 
-  const confirmDelete = (): void => {
+  const confirmDelete = (disposition: TaskRemoveDisposition): void => {
     const task = confirmingTask;
     setConfirmingId(null);
     if (task === undefined) return;
@@ -199,7 +216,7 @@ export function TaskScreen({
     }
     setRetained((current) => current.filter((entry) => entry.id !== task.id));
     setEditing(null);
-    void deleteTask(task.id).then((result) => {
+    void deleteTask(task.id, disposition).then((result) => {
       if (result.ok) announce(t('a11y.taskDeleted'));
     });
   };
@@ -236,8 +253,9 @@ export function TaskScreen({
 
   /** Keyboard/menu move (§8.2): one position per press; boundaries announce, never move. */
   const onMove = (id: string, delta: MoveDelta): void => {
-    if (view.kind !== 'list') {
-      // D1: aggregate/search views derive their order — the alternative is Move to list.
+    if (view.kind !== 'list' || sortMode.value === 'priority') {
+      // D1: aggregate/search views derive their order — the alternative is Move to
+      // list. Priority sort is equally derived (S3), so manual reorder is off there.
       announce(t('a11y.reorderUnavailable'));
       return;
     }
@@ -332,6 +350,57 @@ export function TaskScreen({
     </View>
   );
 
+  // S1 tag filter + S3 sort toolbar (choices are session-scoped store signals so
+  // they survive view switches; `resetTaskStore` clears them).
+  const tagUsage = allTags(storeState);
+  const toolbar =
+    phase === 'ready' && view.kind !== 'search' && listResolved ? (
+      <div class="view-toolbar" data-testid="view-toolbar">
+        <label class="view-toolbar-field">
+          <span class="field-label">{t('tags.filter.label')}</span>
+          <select
+            class="select"
+            data-testid="tag-filter"
+            value={tagFilter.value ?? ''}
+            onChange={(event) => {
+              const next = event.currentTarget.value;
+              tagFilter.value = next === '' ? null : next;
+            }}
+          >
+            <option value="">{t('tags.filter.all')}</option>
+            {tagUsage.map((tag) => (
+              <option key={tag.name} value={tag.name}>
+                {`${tag.name} (${String(tag.count)})`}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label class="view-toolbar-field">
+          <span class="field-label">{t('sort.label')}</span>
+          <select
+            class="select"
+            data-testid="sort-mode"
+            value={sortMode.value}
+            onChange={(event) => {
+              sortMode.value = event.currentTarget.value === 'priority' ? 'priority' : 'manual';
+            }}
+          >
+            <option value="manual">{t('sort.manual')}</option>
+            <option value="priority">{t('sort.priority')}</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          class="button button-secondary"
+          onClick={() => {
+            setManagingTags(true);
+          }}
+        >
+          {t('tags.manage')}
+        </button>
+      </div>
+    ) : null;
+
   let body: JSX.Element;
   if (phase === 'loading' || phase === 'idle') {
     body = <SkeletonList />;
@@ -362,7 +431,7 @@ export function TaskScreen({
         lists={lists}
         showListBadge={showListBadge}
         retainedIds={retained.map((entry) => entry.id)}
-        reorderable={view.kind === 'list'}
+        reorderable={view.kind === 'list' && sortMode.value !== 'priority'}
         movedId={movedId}
         onToggle={onToggle}
         onOpen={onOpen}
@@ -383,13 +452,16 @@ export function TaskScreen({
   return (
     <>
       {header}
+      {toolbar}
       {phase === 'ready' && wide && listResolved ? <Composer variant="inline" /> : null}
       {body}
 
       {editingTask !== undefined ? (
         <TaskEditor
+          key={editingTask.id}
           task={editingTask}
           lists={lists}
+          onNavigate={onOpen}
           onClose={() => {
             setEditing(null);
           }}
@@ -408,15 +480,19 @@ export function TaskScreen({
       ) : null}
 
       {confirmingTask !== undefined ? (
-        <ConfirmDialog
-          titleKey="confirm.deleteTask.title"
-          bodyKey="confirm.deleteTask.body"
-          params={{ title: confirmingTask.title }}
-          confirmKey="confirm.deleteTask.confirm"
-          tone="danger"
+        <TaskDeleteDialog
+          task={confirmingTask}
           onConfirm={confirmDelete}
           onCancel={() => {
             setConfirmingId(null);
+          }}
+        />
+      ) : null}
+
+      {managingTags ? (
+        <TagsManageDialog
+          onClose={() => {
+            setManagingTags(false);
           }}
         />
       ) : null}

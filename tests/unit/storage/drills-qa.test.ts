@@ -27,6 +27,7 @@ import { openRawAppDB } from '../../../src/storage/db';
 import { err, ok, unknownError } from '../../../src/storage/errors';
 import type { Result, StorageError } from '../../../src/storage/errors';
 import type { MigrationRegistry, MigrationStep } from '../../../src/storage/migrations';
+import { IDB_VERSION } from '../../../src/storage/schema';
 import { purgeTombstones, PURGE_INTERVAL_MS, TOMBSTONE_TTL_MS } from '../../../src/storage/purge';
 import {
   getSnapshotPayload,
@@ -315,7 +316,7 @@ describe('Drill 2: corrupt records quarantine to a downloadable, loadable recove
       // to the binding format; the pre-fix shape was defect D7).
       expect(reloaded.format).toBe('local-first-todo-recovery'); // NOT importable
       expect(reloaded.createdAt).toBeTruthy();
-      expect(reloaded.schemaVersion).toBe(1);
+      expect(reloaded.schemaVersion).toBe(3);
       expect(reloaded.entries).toHaveLength(3);
 
       // Every quarantined record appears VERBATIM (nothing lost in the file).
@@ -401,7 +402,7 @@ describe('Drill 3: QuotaExceededError is a typed QUOTA_EXCEEDED on every write s
   it('boot survives quota exhaustion in bookkeeping: warnings carry QUOTA_EXCEEDED, never silent', async () => {
     const name = uniqueDbName('drill3-bootwarn');
     await seedDb(name, {
-      meta: makeMeta({ schemaVersion: 1 }),
+      meta: makeMeta({ schemaVersion: 3 }),
       tasks: [makeTask({ deletedAt: T0 - 100 * DAY })],
     });
     const restore = injectQuotaOnPuts();
@@ -440,7 +441,7 @@ describe('Drill 4: boot validation on a mixed valid/invalid dataset', () => {
     const oldTombstone = makeTask({ title: 'ancient', deletedAt: T0 - 91 * DAY });
     const freshTombstone = makeTask({ title: 'recent', deletedAt: T0 - DAY });
     await seedDb(name, {
-      meta: makeMeta({ schemaVersion: 1 }),
+      meta: makeMeta({ schemaVersion: 3 }),
       lists: [goodList, badList],
       tasks: [goodTask, badDue, oldTombstone, freshTombstone],
       settings: [badSettings],
@@ -595,8 +596,8 @@ describe('Drill 6: snapshot restore (take -> corrupt -> restore)', () => {
     // Identity stays with the profile; schemaVersion follows the payload.
     expect(db.deviceId).toBe(deviceId);
     const meta = await db.get('meta', 'meta');
-    expect(meta.ok && meta.value?.schemaVersion).toBe(2);
-    expect(db.schemaVersion).toBe(2);
+    expect(meta.ok && meta.value?.schemaVersion).toBe(3);
+    expect(db.schemaVersion).toBe(3);
 
     // The snapshot itself survives its own restore (evidence kept).
     const snaps = await listSnapshots(db);
@@ -622,9 +623,9 @@ describe('Drill 6: snapshot restore (take -> corrupt -> restore)', () => {
 describe('Drill 7: wrapper resilience', () => {
   it('reports typed BLOCKED when another connection holds an older version open', async () => {
     const name = uniqueDbName('drill7-blocked');
-    const holder = await openFixtureDb(name); // stays open at IDB_VERSION 1
+    const holder = await openFixtureDb(name); // stays open at the current IDB_VERSION
     try {
-      const result = await openRawAppDB({ dbName: name, idbVersion: 2 });
+      const result = await openRawAppDB({ dbName: name, idbVersion: IDB_VERSION + 1 });
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error.code).toBe('BLOCKED');
     } finally {
@@ -719,7 +720,9 @@ describe('Regression P2 (D2): quarantine.purge() never destroys the singletons',
     const file = JSON.parse(db.quarantine.recoveryFile().json) as { entries: unknown[] };
     expect(file.entries).toHaveLength(1); // ...and still downloadable
     const raw = await db.readUnfiltered('meta');
-    expect(raw.ok && raw.value).toEqual([badMeta]); // byte-identical in the DB
+    // Identity fields stay byte-identical; `schemaVersion` moved in-step with the
+    // migration chain (executeStep bumps meta inside its own transaction).
+    expect(raw.ok && raw.value).toEqual([{ ...badMeta, schemaVersion: 3 }]); // byte-identical identity
 
     resetBootSingleton(name);
     const second = await bootOk(name);

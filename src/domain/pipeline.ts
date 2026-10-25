@@ -40,6 +40,8 @@ import type {
   OrderKeyOps,
   SettingsPort,
   TaskPort,
+  TaskRemoveDisposition,
+  TaskRemoveOutcome,
 } from './ports';
 import {
   applyOptimistic,
@@ -117,9 +119,14 @@ function refIdOf(
   return 'afterId' in position ? position.afterId : position.beforeId;
 }
 
-/** `Result<void, E>` -> `Result<undefined, E>` (the ports' void-op seam). */
-function asUndefined(r: Result<void, AppError>): Result<undefined, AppError> {
+/** `Result<unknown, E>` -> `Result<undefined, E>` (the ports' void-op seam). */
+function asUndefined(r: Result<unknown, AppError>): Result<undefined, AppError> {
   return r.ok ? ok(undefined) : err(r.error);
+}
+
+/** ADR-004 §6.2 tag-name rules: 1..100 chars, non-blank when trimmed. */
+function isTagName(name: string): boolean {
+  return name.length >= 1 && name.length <= 100 && name.trim().length >= 1;
 }
 
 function omit<T extends object, K extends keyof T>(obj: T, key: K): Omit<T, K> {
@@ -358,24 +365,100 @@ export class MutationRunner {
     );
   }
 
-  removeTask(id: string): Promise<Result<void, AppError>> {
+  removeTask(id: string, disposition: TaskRemoveDisposition): Promise<Result<undefined, AppError>> {
     const opId = this.#nextOpId();
     const prev = this.#state.tasks.get(id);
     if (prev === undefined) {
       return this.#rejectSync('remove-task', opId, 'TASK_MISSING', `no task ${id}`);
     }
-    const childIds = [...this.#state.tasks.values()]
-      .filter((t) => t.parentTaskId === id)
-      .map((t) => t.id);
+    const children = [...this.#state.tasks.values()].filter((t) => t.parentTaskId === id);
+    const childIds = children.map((t) => t.id);
+    if (disposition.mode === 'promote') {
+      // S2 disposition: subtasks move up to the list's top level (their
+      // `sortOrder` is kept — the `(sortOrder, id)` order is already total).
+      const now = this.#deps.clock();
+      const promoted = children.map((t) => {
+        const next: Task = { ...t, updatedAt: now, deviceId: this.#deps.deviceId };
+        delete next.parentTaskId;
+        return next;
+      });
+      let written: TaskRemoveOutcome | undefined;
+      const readWritten = async (): Promise<Result<undefined, AppError>> => {
+        const r = await this.#deps.tasks.remove(id, disposition);
+        if (!r.ok) return r;
+        written = r.value;
+        return ok(undefined);
+      };
+      return this.#run<undefined>(
+        'remove-task',
+        opId,
+        { evictTasks: [id], tasks: promoted },
+        { tasks: [id, ...childIds] },
+        readWritten,
+        () => ({
+          evictTasks: [id],
+          // A void-resolving port falls back to the optimistic image so the
+          // baseline can never stay pre-move (same rule as removeList D1).
+          tasks: written !== undefined && written.promoted.length > 0 ? written.promoted : promoted,
+        }),
+      );
+    }
     return this.#run<undefined>(
       'remove-task',
       opId,
       { evictTasks: [id, ...childIds] },
       { tasks: [id, ...childIds] },
-      async () => asUndefined(await this.#deps.tasks.remove(id)),
+      async () => asUndefined(await this.#deps.tasks.remove(id, disposition)),
       // D2: a successful delete evicts the rows from the COMMITTED baseline too
       // — otherwise a later failed write would re-anchor the ghost image.
       () => ({ evictTasks: [id, ...childIds] }),
+    );
+  }
+
+  /**
+   * S1 tag rename: ONE sweep over the denormalized `tags: string[]` model.
+   * Bulk op — announces `'all'` (ADR-003 Decision 8.1 sender rule 2).
+   */
+  renameTag(from: string, to: string): Promise<Result<Task[], AppError>> {
+    return this.#sweepTag(from, to);
+  }
+
+  /** S1 tag delete: same sweep with `to = null` (removes the name everywhere). */
+  deleteTag(name: string): Promise<Result<Task[], AppError>> {
+    return this.#sweepTag(name, null);
+  }
+
+  #sweepTag(from: string, to: string | null): Promise<Result<Task[], AppError>> {
+    const opId = this.#nextOpId();
+    const tagName = from.trim();
+    const target = to === null ? null : to.trim();
+    if (!isTagName(tagName) || (target !== null && !isTagName(target))) {
+      return this.#rejectSync('sweep-tag', opId, 'TAG_INVALID', 'tag names are 1..100 chars');
+    }
+    const matching = [...this.#state.tasks.values()].filter((t) => t.tags.includes(tagName));
+    const now = this.#deps.clock();
+    const rewritten = matching.map((t) => ({
+      ...t,
+      tags:
+        target === null
+          ? t.tags.filter((tag) => tag !== tagName)
+          : [...new Set(t.tags.map((tag) => (tag === tagName ? target : tag)))],
+      updatedAt: now,
+      deviceId: this.#deps.deviceId,
+    }));
+    return this.#run<Task[]>(
+      'sweep-tag',
+      opId,
+      { tasks: rewritten },
+      'all',
+      async () => {
+        const r = await this.#deps.tasks.sweepTag(tagName, target);
+        if (!r.ok) return r;
+        // The repo also sweeps tombstoned rows (export/sync consistency); state
+        // holds live rows only.
+        return ok(r.value.filter((t) => t.deletedAt === null));
+      },
+      (rows) => ({ tasks: rows }),
     );
   }
 
@@ -614,7 +697,8 @@ export class MutationRunner {
       | 'PARENT_DEPTH_EXCEEDED'
       | 'REORDER_TARGET_NOT_IN_GROUP'
       | 'LIST_DELETE_TARGET_MISSING'
-      | 'TASK_MISSING',
+      | 'TASK_MISSING'
+      | 'TAG_INVALID',
     message: string,
   ): Promise<Result<T, AppError>> {
     const error = ruleError(rule, message);

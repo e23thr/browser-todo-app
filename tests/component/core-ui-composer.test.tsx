@@ -206,7 +206,7 @@ describe('S4 task editor — F2 edit', () => {
     fireEvent.change(screen.getByLabelText<HTMLSelectElement>('List', { exact: true }), {
       target: { value: 'L2' },
     });
-    fireEvent.click(screen.getByRole('radio', { name: 'High' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'P1 (High)' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
@@ -217,7 +217,7 @@ describe('S4 task editor — F2 edit', () => {
     expect(saved?.title).toBe('New title');
     expect(saved?.notes).toBe('fresh notes');
     expect(saved?.listId).toBe('L2');
-    expect(saved?.priority).toBe(2);
+    expect(saved?.priority).toBe('P1');
     await waitFor(() => {
       expect(regions.polite?.textContent).toBe('Task saved');
     });
@@ -351,7 +351,8 @@ describe('E2 review rework — composer default list & draft discard', () => {
       notes: null,
       dueDate: null,
       listId: 'L2',
-      priority: 0,
+      priority: 'P3',
+      tags: [],
     });
     expect(added.ok).toBe(true);
 

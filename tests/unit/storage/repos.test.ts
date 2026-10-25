@@ -129,7 +129,7 @@ function draft(over: Partial<TaskDraft> = {}): TaskDraft {
     listId: 'L',
     title: 'Write tests',
     notes: null,
-    priority: 0,
+    priority: 'P3',
     tags: [],
     ...over,
   };
@@ -212,8 +212,15 @@ describe('TaskRepo: CRUD semantics and stamping (ADR-002 Decision 5)', () => {
     const other = await h.tasks.create(draft({ listId: list.id, title: 'other' }));
     if (!other.ok) throw new Error('create failed');
 
-    const r = await h.tasks.remove(parent.value.id);
+    const r = await h.tasks.remove(parent.value.id, { mode: 'cascade' });
     expect(r.ok).toBe(true);
+    if (!r.ok) throw new Error('remove failed');
+    // The disposition outcome reports the rows the transaction wrote (cascade:
+    // the task + its direct subtasks tombstoned, nothing promoted).
+    expect(r.value.tombstoned.map((t) => t.id).sort()).toEqual(
+      [parent.value.id, child.value.id].sort(),
+    );
+    expect(r.value.promoted).toEqual([]);
     const all = await h.tasks.loadAll();
     if (!all.ok) throw new Error('load failed');
     const ids = all.value.tasks.map((t) => t.id);
@@ -234,8 +241,8 @@ describe('TaskRepo: CRUD semantics and stamping (ADR-002 Decision 5)', () => {
     const list = await seedList(h);
     const created = await h.tasks.create(draft({ listId: list.id }));
     if (!created.ok) throw new Error('create failed');
-    expect((await h.tasks.remove(created.value.id)).ok).toBe(true);
-    expect((await h.tasks.remove(created.value.id)).ok).toBe(true); // idempotent
+    expect((await h.tasks.remove(created.value.id, { mode: 'cascade' })).ok).toBe(true);
+    expect((await h.tasks.remove(created.value.id, { mode: 'cascade' })).ok).toBe(true); // idempotent
 
     const patch = await h.tasks.patch(created.value.id, { title: 'zombie' });
     expect(patch.ok).toBe(false);
@@ -529,9 +536,9 @@ describe('Tombstone purge policy (ADR-002 Decision 6)', () => {
     const old = await h.tasks.create(draft({ listId: list.id, title: 'old' }));
     const fresh = await h.tasks.create(draft({ listId: list.id, title: 'fresh' }));
     if (!old.ok || !fresh.ok) throw new Error('create failed');
-    await h.tasks.remove(old.value.id); // tombstoned at T0
+    await h.tasks.remove(old.value.id, { mode: 'cascade' }); // tombstoned at T0
     h.setNow(T0 + TOMBSTONE_TTL_MS); // fresh dies exactly at the 90-day horizon
-    await h.tasks.remove(fresh.value.id);
+    await h.tasks.remove(fresh.value.id, { mode: 'cascade' });
 
     const purged = await purgeTombstones(h.inner, {
       now: T0 + TOMBSTONE_TTL_MS + 5000, // old is > 90d old, fresh is not
@@ -558,7 +565,7 @@ describe('Tombstone purge policy (ADR-002 Decision 6)', () => {
     const t1 = await h.tasks.create(draft({ listId: list.id, title: 't1' }));
     const t2 = await h.tasks.create(draft({ listId: list.id, title: 't2' }));
     if (!t1.ok || !t2.ok) throw new Error('create failed');
-    await h.tasks.remove(t1.value.id); // fresh tombstone — auto would keep it
+    await h.tasks.remove(t1.value.id, { mode: 'cascade' }); // fresh tombstone — auto would keep it
     const purged = await purgeTombstones(h.inner, { now: T0 + 1, mode: 'explicit' });
     expect(purged.ok && purged.value).toBe(1);
     const all = await h.tasks.loadAll();
@@ -579,7 +586,7 @@ describe('changedSince: the tab-sync watermark read', () => {
     h.setNow(T0 + 10);
     await h.tasks.patch(t1.value.id, { title: 'renamed' });
     h.setNow(T0 + 20);
-    await h.tasks.remove(t1.value.id);
+    await h.tasks.remove(t1.value.id, { mode: 'cascade' });
 
     const since0 = await h.tasks.changedSince(T0 + 5);
     expect(since0.ok && since0.value.map((t) => t.id)).toEqual([t1.value.id]);

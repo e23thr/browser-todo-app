@@ -92,9 +92,8 @@ describe('validate.ts (ADR-002 Decision 11)', () => {
   it('validates recurrence strictly', () => {
     expect(validateTask(makeTask({ recurrence: { freq: 'daily', interval: 1 } })).ok).toBe(true);
     expect(
-      validateTask(
-        makeTask({ recurrence: { freq: 'weekly', interval: 2, until: '2026-01-31', count: 3 } }),
-      ).ok,
+      validateTask(makeTask({ recurrence: { freq: 'weekly', interval: 2, until: '2026-01-31' } }))
+        .ok,
     ).toBe(true);
     expect(
       validateTask(makeTask({ recurrence: { freq: 'yearly' as never, interval: 1 } })).ok,

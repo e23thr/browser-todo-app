@@ -26,22 +26,29 @@ import type { FlushOutcome } from '../../app/update';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Dialog } from '../../components/Dialog';
 import type { List, Priority, Task } from '../../domain/model';
-import { DateField, ListSelect, PriorityField } from './fields';
+import { DateField, ListSelect, PriorityField, TagsField } from './fields';
 import { useEditSession } from './editSession';
 import { ListDialog } from '../lists/ListDialog';
-import { addList, deleteTask, saveTask, state } from './store';
+import { TaskDeleteDialog } from './TaskDeleteDialog';
+import { liveSubtasks } from './TaskDeleteDialog';
+import { addList, addTask, deleteTask, saveTask, setTaskDone, state, allTags } from './store';
 
 export interface TaskEditorProps {
   readonly task: Task;
   readonly lists: readonly List[];
   readonly onClose: () => void;
+  /**
+   * S2 navigation: opening a subtask from the subtask list (the composed screen
+   * swaps the edited task; the dialog remounts via `key`).
+   */
+  readonly onNavigate?: (id: string) => void;
 }
 
 function sameDay(a: string | null, b: string | undefined): boolean {
   return (a ?? undefined) === b;
 }
 
-export function TaskEditor({ task, lists, onClose }: TaskEditorProps): JSX.Element {
+export function TaskEditor({ task, lists, onClose, onNavigate }: TaskEditorProps): JSX.Element {
   const uid = useId();
 
   const [title, setTitle] = useState(task.title);
@@ -49,6 +56,8 @@ export function TaskEditor({ task, lists, onClose }: TaskEditorProps): JSX.Eleme
   const [due, setDue] = useState<string | null>(task.dueDate ?? null);
   const [listId, setListId] = useState(task.listId);
   const [priority, setPriority] = useState<Priority>(task.priority);
+  const [tags, setTags] = useState<string[]>([...task.tags]);
+  const [subtaskDraft, setSubtaskDraft] = useState('');
   const [saving, setSaving] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -62,7 +71,8 @@ export function TaskEditor({ task, lists, onClose }: TaskEditorProps): JSX.Eleme
     notes !== (task.notes ?? '') ||
     !sameDay(due, task.dueDate) ||
     listId !== task.listId ||
-    priority !== task.priority;
+    priority !== task.priority ||
+    tags.join('\u0000') !== task.tags.join('\u0000');
 
   /**
    * Durable commit of the in-flight edit (ADR-005 Decision 7 rule 2): the update flow's
@@ -83,6 +93,7 @@ export function TaskEditor({ task, lists, onClose }: TaskEditorProps): JSX.Eleme
       dueDate: due,
       listId,
       priority,
+      tags,
     });
     return result.ok ? { ok: true } : { ok: false };
   };
@@ -118,6 +129,7 @@ export function TaskEditor({ task, lists, onClose }: TaskEditorProps): JSX.Eleme
       dueDate: due,
       listId,
       priority,
+      tags,
     }).then((result) => {
       setSaving(false);
       if (result.ok) {
@@ -126,6 +138,29 @@ export function TaskEditor({ task, lists, onClose }: TaskEditorProps): JSX.Eleme
       }
       // Failure: keep the dialog open with the user's text (S4 error state); the
       // store already raised the assertive toast with Retry.
+    });
+  };
+
+  /** Live direct subtasks in `(sortOrder, id)` order (S2 renders them here). */
+  const subtasks = [...liveSubtasks(task.id)].sort((a, b) =>
+    a.sortOrder !== b.sortOrder ? (a.sortOrder < b.sortOrder ? -1 : 1) : a.id < b.id ? -1 : 1,
+  );
+
+  /** S2 create: a subtask lives in this task's list, one level deep (guarded). */
+  const addSubtask = (): void => {
+    const subtaskTitle = subtaskDraft.trim();
+    if (subtaskTitle === '' || gone) return;
+    setSubtaskDraft('');
+    void addTask({
+      title: subtaskTitle,
+      notes: null,
+      dueDate: null,
+      listId: task.listId,
+      priority: 'P4',
+      tags: [],
+      parentTaskId: task.id,
+    }).then((result) => {
+      if (result.ok) announce(t('a11y.subtaskAdded', { title: subtaskTitle }));
     });
   };
 
@@ -269,6 +304,83 @@ export function TaskEditor({ task, lists, onClose }: TaskEditorProps): JSX.Eleme
 
           <PriorityField value={priority} onChange={setPriority} />
 
+          <TagsField
+            value={tags}
+            onChange={setTags}
+            suggestions={allTags().map((entry) => entry.name)}
+          />
+
+          {task.parentTaskId === undefined && !gone ? (
+            <fieldset class="field subtasks-field">
+              <legend class="field-label">{t('subtasks.title')}</legend>
+              {subtasks.length > 0 ? (
+                <ul class="subtask-list" aria-label={t('subtasks.title')}>
+                  {subtasks.map((subtask) => (
+                    <li key={subtask.id} class="subtask-row">
+                      <label class="task-check-hit">
+                        <input
+                          type="checkbox"
+                          class="task-check"
+                          checked={subtask.status === 'done'}
+                          aria-label={
+                            subtask.status === 'done'
+                              ? t('a11y.untoggleTask', { title: subtask.title })
+                              : t('a11y.toggleTask', { title: subtask.title })
+                          }
+                          onChange={(event) => {
+                            void setTaskDone(subtask.id, event.currentTarget.checked);
+                          }}
+                        />
+                      </label>
+                      {onNavigate !== undefined ? (
+                        <button
+                          type="button"
+                          class="subtask-title"
+                          onClick={() => {
+                            onNavigate(subtask.id);
+                          }}
+                        >
+                          {subtask.title}
+                        </button>
+                      ) : (
+                        <span class="subtask-title">{subtask.title}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p class="field-hint">{t('subtasks.empty')}</p>
+              )}
+              <div class="tag-input-row">
+                <input
+                  class="input"
+                  type="text"
+                  maxlength={200}
+                  aria-label={t('subtasks.add')}
+                  placeholder={t('subtasks.add')}
+                  value={subtaskDraft}
+                  onInput={(event) => {
+                    setSubtaskDraft(event.currentTarget.value);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      addSubtask();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  class="button button-secondary"
+                  disabled={subtaskDraft.trim() === ''}
+                  onClick={addSubtask}
+                >
+                  {t('subtasks.add')}
+                </button>
+              </div>
+            </fieldset>
+          ) : null}
+
           {/* Hidden submit so Enter in any single-line field saves (§9.5). */}
           <button type="submit" class="visually-hidden" tabIndex={-1} aria-hidden="true">
             {t('editor.save')}
@@ -291,13 +403,9 @@ export function TaskEditor({ task, lists, onClose }: TaskEditorProps): JSX.Eleme
       ) : null}
 
       {confirmingDelete ? (
-        <ConfirmDialog
-          titleKey="confirm.deleteTask.title"
-          bodyKey="confirm.deleteTask.body"
-          params={{ title: task.title }}
-          confirmKey="confirm.deleteTask.confirm"
-          tone="danger"
-          onConfirm={() => {
+        <TaskDeleteDialog
+          task={task}
+          onConfirm={(disposition) => {
             setConfirmingDelete(false);
             // Close BEFORE the optimistic remove evicts the row: the composed screen now
             // keeps this dialog mounted across a concurrent delete (§14 error.taskGone),
@@ -306,7 +414,7 @@ export function TaskEditor({ task, lists, onClose }: TaskEditorProps): JSX.Eleme
             // way out. Outcome is unchanged: S7 closes the confirm on either leg, and
             // `Task deleted` still only announces on the ok leg.
             onClose();
-            void deleteTask(task.id).then((result) => {
+            void deleteTask(task.id, disposition).then((result) => {
               if (result.ok) announce(t('a11y.taskDeleted'));
             });
           }}

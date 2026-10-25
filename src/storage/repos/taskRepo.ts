@@ -9,7 +9,13 @@
 import { err, ok, ruleError, type AppError, type Result } from '../../domain/kernel';
 import type { List, Settings, Task, TaskDraft, TaskPatch } from '../../domain/model';
 import { DEFAULT_SETTINGS } from '../../domain/model';
-import type { MoveTarget, MoveOutcome, TaskPort } from '../../domain/ports';
+import type {
+  MoveTarget,
+  MoveOutcome,
+  TaskPort,
+  TaskRemoveDisposition,
+  TaskRemoveOutcome,
+} from '../../domain/ports';
 import { invalidRecord } from '../errors';
 import { logAppError } from '../errorLog';
 import { OrderKeyError, orderKeyBetween, orderKeyFirst } from '../orderKey';
@@ -192,19 +198,76 @@ export class TaskRepo implements TaskPort {
     });
   }
 
-  remove(id: string): Promise<Result<void, AppError>> {
+  remove(
+    id: string,
+    disposition: TaskRemoveDisposition,
+  ): Promise<Result<TaskRemoveOutcome, AppError>> {
     const { clock, db } = this.#deps;
     return txApp(db, ['tasks'], 'readwrite', async (t) => {
+      const empty: TaskRemoveOutcome = { tombstoned: [], promoted: [] };
       const row = await t.get('tasks', id);
-      if (row === undefined || row.deletedAt !== null) return ok(undefined); // idempotent
+      if (row === undefined || row.deletedAt !== null) return ok(empty); // idempotent
       const children = (await t.getAll('tasks', { index: 'by_parent', range: { eq: id } })).filter(
         (r) => r.deletedAt === null,
       );
       const now = clock();
-      for (const r of [row, ...children]) {
-        await t.put('tasks', { ...r, deletedAt: now, updatedAt: now, deviceId: db.deviceId });
+      const stamp = { updatedAt: now, deviceId: db.deviceId } as const;
+      const tombstoned: Task[] = [];
+      const promoted: Task[] = [];
+      // Subtask disposition FIRST, the task itself last — one transaction either
+      // way (E7 S2: `promote` moves direct subtasks up to the list's top level).
+      for (const child of children) {
+        if (disposition.mode === 'promote') {
+          const up: Task = { ...child, ...stamp };
+          delete up.parentTaskId;
+          const validated = this.#validate(up);
+          if (!validated.ok) return validated;
+          await t.put('tasks', up);
+          promoted.push(up);
+        } else {
+          const tomb: Task = { ...child, deletedAt: now, ...stamp };
+          await t.put('tasks', tomb);
+          tombstoned.push(tomb);
+        }
       }
-      return ok(undefined);
+      const tomb: Task = { ...row, deletedAt: now, ...stamp };
+      await t.put('tasks', tomb);
+      tombstoned.push(tomb);
+      return ok({ tombstoned, promoted });
+    });
+  }
+
+  /**
+   * S1 tag rename/delete sweep (ADR-002 §3.5 denormalized model): ONE
+   * transaction rewriting EVERY row carrying `from` — tombstoned rows included
+   * so exports/sync never resurrect a renamed-away name. Changed rows are
+   * restamped like every other write.
+   */
+  sweepTag(from: string, to: string | null): Promise<Result<Task[], AppError>> {
+    const { clock, db } = this.#deps;
+    return txApp(db, ['tasks'], 'readwrite', async (t) => {
+      const rows = await t.getAll('tasks');
+      const now = clock();
+      const written: Task[] = [];
+      // Every request is issued synchronously and awaited in ONE batch: the
+      // transaction is still exactly one (atomic) sweep, but the write path
+      // never round-trips per row — this is the 10k rename-propagation budget
+      // (E7 S1 benchmark in `tests/unit/storage/repos-e7.test.ts`).
+      const puts: Promise<unknown>[] = [];
+      for (const row of rows) {
+        if (!row.tags.includes(from)) continue;
+        const tags =
+          to === null
+            ? row.tags.filter((tag) => tag !== from)
+            : [...new Set(row.tags.map((tag) => (tag === from ? to : tag)))];
+        const next: Task = { ...row, tags, updatedAt: now, deviceId: db.deviceId };
+        const validated = this.#validate(next);
+        if (!validated.ok) return validated;
+        puts.push(t.put('tasks', next));
+        written.push(next);
+      }
+      await Promise.all(puts);
+      return ok(written);
     });
   }
 

@@ -365,7 +365,7 @@ describe('S5 editor across a concurrent delete (E2 F-3 — §14 error.taskGone)'
     // Concurrent delete (another tab) while the search screen's dialog is open: the row
     // leaves the results, but the dialog must hold its last known task and flip to the
     // §14 state rather than unmount over the unsaved edits.
-    await built.runner.removeTask('T1');
+    await built.runner.removeTask('T1', { mode: 'cascade' });
 
     await within(dialog).findByText('This task no longer exists', { exact: true });
     expect(within(dialog).getByLabelText<HTMLInputElement>('Title', { exact: true }).value).toBe(

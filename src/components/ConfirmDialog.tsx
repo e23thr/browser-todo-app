@@ -21,7 +21,9 @@ import { Dialog } from './Dialog';
 
 /** What the caller must execute when the disposition dialog confirms. */
 export type DispositionValue =
-  { readonly mode: 'move'; readonly targetListId: string } | { readonly mode: 'delete' };
+  | { readonly mode: 'move'; readonly targetListId: string }
+  | { readonly mode: 'delete' }
+  | { readonly mode: 'promote' };
 
 export interface ConfirmDialogProps {
   readonly titleKey: string;
@@ -31,11 +33,13 @@ export interface ConfirmDialogProps {
   readonly cancelKey?: string;
   readonly tone: 'danger' | 'neutral';
   readonly initialFocus?: 'cancel' | 'confirm';
-  readonly extra?: 'delete-list-disposition';
+  readonly extra?: 'delete-list-disposition' | 'delete-task-disposition';
   /** Live lists offered as move targets (already excludes the list being deleted). */
   readonly lists?: readonly { readonly id: string; readonly name: string }[];
   /** Total tasks affected by disposition option B (`confirm.deleteList.deleteTasks`). */
   readonly deleteCount?: number;
+  /** Direct subtasks affected by the task-delete disposition (E7 S2). */
+  readonly subtaskCount?: number;
   /** Confirm in flight (S7 loading: confirm disabled while the transaction runs). */
   readonly busy?: boolean;
   readonly onConfirm: (value?: DispositionValue) => void;
@@ -53,6 +57,7 @@ export function ConfirmDialog({
   extra,
   lists,
   deleteCount = 0,
+  subtaskCount = 0,
   busy = false,
   onConfirm,
   onCancel,
@@ -62,25 +67,35 @@ export function ConfirmDialog({
 
   // S7.2: option A (move) is the default WHEN another list exists; otherwise the only
   // valid choice is option B, preselected so Confirm is never permanently disabled.
+  // E7 S2: the task-delete disposition defaults to `promote` (subtasks keep living).
   const targets = lists ?? [];
-  const [mode, setMode] = useState<'move' | 'delete'>(targets.length > 0 ? 'move' : 'delete');
+  const listDisposition = extra === 'delete-list-disposition';
+  const taskDisposition = extra === 'delete-task-disposition';
+  const [mode, setMode] = useState<'move' | 'delete' | 'promote'>(
+    taskDisposition ? 'promote' : targets.length > 0 ? 'move' : 'delete',
+  );
   const [targetId, setTargetId] = useState<string>(targets[0]?.id ?? '');
 
-  const disposition = extra === 'delete-list-disposition';
   const valid =
-    !disposition ||
+    !listDisposition ||
     mode === 'delete' ||
     (targetId !== '' && targets.some((l) => l.id === targetId));
 
   const bodyParams: Readonly<Record<string, string | number>> = {
     ...(params ?? {}),
-    ...(disposition ? { count: deleteCount } : {}),
+    ...(listDisposition || taskDisposition
+      ? { count: listDisposition ? deleteCount : subtaskCount }
+      : {}),
   };
 
   const confirm = (): void => {
     if (!valid || busy) return;
+    if (listDisposition) {
+      onConfirm(mode === 'move' ? { mode, targetListId: targetId } : { mode: 'delete' });
+      return;
+    }
     onConfirm(
-      disposition ? (mode === 'move' ? { mode, targetListId: targetId } : { mode }) : undefined,
+      taskDisposition ? (mode === 'promote' ? { mode: 'promote' } : { mode: 'delete' }) : undefined,
     );
   };
 
@@ -112,7 +127,7 @@ export function ConfirmDialog({
         {t(bodyKey, bodyParams)}
       </p>
 
-      {disposition ? (
+      {listDisposition ? (
         <div class="disposition">
           <label class={`disposition-option${targets.length === 0 ? ' is-disabled' : ''}`}>
             <input
@@ -163,6 +178,35 @@ export function ConfirmDialog({
           {targets.length === 0 ? (
             <p class="field-hint">{t('confirm.deleteList.noTarget')}</p>
           ) : null}
+        </div>
+      ) : null}
+
+      {taskDisposition ? (
+        <div class="disposition">
+          <label class="disposition-option">
+            <input
+              type="radio"
+              name={groupName}
+              value="promote"
+              checked={mode === 'promote'}
+              onChange={() => {
+                setMode('promote');
+              }}
+            />
+            <span>{t('confirm.deleteTask.promoteSubtasks', { count: subtaskCount })}</span>
+          </label>
+          <label class="disposition-option disposition-option-danger">
+            <input
+              type="radio"
+              name={groupName}
+              value="delete"
+              checked={mode === 'delete'}
+              onChange={() => {
+                setMode('delete');
+              }}
+            />
+            <span>{t('confirm.deleteTask.deleteSubtasks', { count: subtaskCount })}</span>
+          </label>
         </div>
       ) : null}
     </Dialog>

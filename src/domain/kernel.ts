@@ -36,7 +36,8 @@ export type RuleId =
   | 'PARENT_DEPTH_EXCEEDED' // subtask of a subtask (V1 is one level)
   | 'REORDER_TARGET_NOT_IN_GROUP' // move target ids must belong to the declared group
   | 'LIST_DELETE_TARGET_MISSING' // move-disposition target list missing or identical
-  | 'TASK_MISSING'; // mutation on a record absent from state (stale UI)
+  | 'TASK_MISSING' // mutation on a record absent from state (stale UI)
+  | 'TAG_INVALID'; // tag rename target fails the ADR-004 §6.2 tag-name rules
 
 export type RuleError = { code: 'RULE'; rule: RuleId; message: string };
 

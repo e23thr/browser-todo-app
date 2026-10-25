@@ -76,11 +76,11 @@ describe('canonical serialization (ADR-004 §2.4)', () => {
   it('canonicalizes nested recurrence in declaration order and drops unknown fields', () => {
     const canonical = canonicalizeRecord('tasks', {
       ...makeTask({ id: fixtureId(21), listId: fixtureId(10) }),
-      recurrence: { count: 3, freq: 'weekly', interval: 2, until: '2026-12-01', evil: 'dropped' },
+      recurrence: { freq: 'weekly', interval: 2, until: '2026-12-01', evil: 'dropped' },
       bogus: 'dropped',
     });
     const rec = canonical['recurrence'] as Record<string, unknown>;
-    expect(Object.keys(rec)).toEqual(['freq', 'interval', 'until', 'count']);
+    expect(Object.keys(rec)).toEqual(['freq', 'interval', 'until']);
     expect(canonical['bogus']).toBeUndefined();
   });
 

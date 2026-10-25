@@ -65,8 +65,8 @@ export interface TaskRowProps {
   readonly onRowKeyDown: (event: TargetedEvent<HTMLElement, KeyboardEvent>) => void;
 }
 
-const PRIORITY_ICON = { 1: 'flag-medium', 2: 'flag-high' } as const;
-const PRIORITY_KEY = { 1: 'priority.medium', 2: 'priority.high' } as const;
+const PRIORITY_ICON = { P1: 'flag-high', P2: 'flag-medium', P3: 'flag' } as const;
+const PRIORITY_KEY = { P1: 'priority.p1', P2: 'priority.p2', P3: 'priority.p3' } as const;
 
 /** Render `text` with `<mark>` around every query-token occurrence (S5). */
 function SegmentedText({
@@ -118,10 +118,8 @@ export function TaskRow({
   const done = task.status === 'done';
   const badge = done ? null : dueBadge(task.dueDate, today);
   const innerTabIndex = current ? 0 : -1;
-  const priorityKey =
-    task.priority === 2 ? PRIORITY_KEY[2] : task.priority === 1 ? PRIORITY_KEY[1] : null;
-  const priorityIcon =
-    task.priority === 2 ? PRIORITY_ICON[2] : task.priority === 1 ? PRIORITY_ICON[1] : null;
+  const priorityKey = task.priority === 'P4' ? null : PRIORITY_KEY[task.priority];
+  const priorityIcon = task.priority === 'P4' ? null : PRIORITY_ICON[task.priority];
   const tokens = highlight === undefined ? [] : queryTokens(highlight);
   const showNotesExcerpt = notesExcerptNeeded(task.title, task.notes, tokens);
 

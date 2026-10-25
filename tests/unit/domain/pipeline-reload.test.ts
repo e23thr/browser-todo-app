@@ -91,7 +91,7 @@ describe('load() wholesale replace (post-import refresh primitive)', () => {
       listId: 'L1',
       title: 'optimistic, not committed yet',
       notes: null,
-      priority: 0,
+      priority: 'P3',
       tags: [],
     });
     await flushMicrotasks();

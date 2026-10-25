@@ -35,7 +35,12 @@ import { msUntilNextLocalMidnight, todayStr } from '../../domain/dates';
 import { err, ok, type AppError, type Result } from '../../domain/kernel';
 import type { List, Priority, Settings, Task } from '../../domain/model';
 import { MutationRunner } from '../../domain/pipeline';
-import type { ListRemoveDisposition, ListPosition, TaskPosition } from '../../domain/ports';
+import type {
+  ListRemoveDisposition,
+  ListPosition,
+  TaskPosition,
+  TaskRemoveDisposition,
+} from '../../domain/ports';
 import { emptyState, type State } from '../../domain/state';
 import { classifyUnknown } from '../../storage/errors';
 import { defaultErrorLog } from '../../storage/errorLog';
@@ -73,6 +78,16 @@ export const today = signal<string>(todayStr(Date.now));
  * persisting it belongs to the domain `Settings` record, which is not this card's scope.
  */
 export const lastUsedListId = signal<string | null>(null);
+/**
+ * S1 tag filter for the task views (session-scoped): `null` = show everything.
+ * Lives here so the choice survives view switches (and resets with the store).
+ */
+export const tagFilter = signal<string | null>(null);
+/**
+ * S3 view sort mode (session-scoped): `'manual'` is the pinned per-view order,
+ * `'priority'` sorts every group `P1` first (and disables manual reorder).
+ */
+export const sortMode = signal<'manual' | 'priority'>('manual');
 
 const clock = (): number => Date.now();
 
@@ -95,6 +110,23 @@ export function liveLists(s: State = state.value): List[] {
       if (a.sortOrder !== b.sortOrder) return a.sortOrder < b.sortOrder ? -1 : 1;
       return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
     });
+}
+
+export type TagUsage = { readonly name: string; readonly count: number };
+
+/**
+ * Every tag in use on live tasks (excluding tombstoned rows), alphabetical,
+ * with usage counts — the S1 filter chips / manage dialog read this.
+ */
+export function allTags(s: State = state.value): TagUsage[] {
+  const counts = new Map<string, number>();
+  for (const task of s.tasks.values()) {
+    if (task.deletedAt !== null) continue;
+    for (const tag of task.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 }
 
 function mirror(next: State): void {
@@ -262,6 +294,8 @@ export function resetTaskStore(): void {
   state.value = emptyState();
   today.value = todayStr(Date.now);
   lastUsedListId.value = null;
+  tagFilter.value = null;
+  sortMode.value = 'manual';
   setListOptions([]);
 }
 
@@ -385,6 +419,10 @@ export interface TaskInput {
   readonly dueDate: string | null;
   readonly listId: string;
   readonly priority: Priority;
+  /** S1: attached tag names (denormalized model — creating a tag = attaching it). */
+  readonly tags: readonly string[];
+  /** S2: set for a subtask (single level — `PARENT_DEPTH_EXCEEDED` guards). */
+  readonly parentTaskId?: string;
   /**
    * `undefined` = leave the reminder unchanged (composer path), `null` = clear
    * it, a number = the `reminderAt` instant (S5 reminder field).
@@ -407,7 +445,8 @@ export function addTask(input: TaskInput): Promise<Result<Task, AppError>> {
       notes: input.notes,
       priority: input.priority,
       ...(input.dueDate !== null ? { dueDate: input.dueDate } : {}),
-      tags: [],
+      tags: [...input.tags],
+      ...(input.parentTaskId !== undefined ? { parentTaskId: input.parentTaskId } : {}),
     }),
   ).then((result) => {
     // E3 §5.5: the first successfully created task IS "first meaningful use" — request
@@ -445,6 +484,7 @@ export async function saveTask(id: string, input: TaskInput): Promise<Result<voi
       title: input.title,
       notes: input.notes,
       priority: input.priority,
+      tags: [...input.tags],
       ...(input.dueDate !== null ? { dueDate: input.dueDate } : { dueDateUnset: true }),
       ...(input.reminderAt === undefined
         ? {}
@@ -470,10 +510,29 @@ export async function saveTask(id: string, input: TaskInput): Promise<Result<voi
   return ok(undefined);
 }
 
-export function deleteTask(id: string): Promise<Result<void, AppError>> {
+export function deleteTask(
+  id: string,
+  disposition: TaskRemoveDisposition,
+): Promise<Result<undefined, AppError>> {
   const r = runner;
   if (r === null) return noRunner();
-  return guard(() => r.removeTask(id));
+  return guard(() => r.removeTask(id, disposition));
+}
+
+/**
+ * S1 tag rename/delete (one sweep transaction over the denormalized model).
+ * The UI owns the announcements; `guard` reports write failures as usual.
+ */
+export function renameTag(from: string, to: string): Promise<Result<Task[], AppError>> {
+  const r = runner;
+  if (r === null) return noRunner();
+  return guard(() => r.renameTag(from, to));
+}
+
+export function deleteTag(name: string): Promise<Result<Task[], AppError>> {
+  const r = runner;
+  if (r === null) return noRunner();
+  return guard(() => r.deleteTag(name));
 }
 
 /**

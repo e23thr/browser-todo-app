@@ -21,6 +21,8 @@ import type {
   MoveTarget,
   SettingsPort,
   TaskPort,
+  TaskRemoveDisposition,
+  TaskRemoveOutcome,
 } from '../../src/domain/ports';
 import type { AppError } from '../../src/domain/kernel';
 import { orderKeyBetween, orderKeyFirst } from '../../src/storage/orderKey';
@@ -52,8 +54,8 @@ export function makeTask(over: Partial<Task> = {}): Task {
     title: over.title ?? `Task ${String(seq)}`,
     notes: over.notes ?? null,
     status: over.status ?? 'open',
-    priority: over.priority ?? 0,
-    tags: [],
+    priority: over.priority ?? 'P4',
+    tags: over.tags ?? [],
     sortOrder: over.sortOrder ?? 'h',
     createdAt: over.createdAt ?? clock(),
     updatedAt: over.updatedAt ?? clock(),
@@ -61,6 +63,7 @@ export function makeTask(over: Partial<Task> = {}): Task {
     deviceId: 'TEST',
     ...(over.dueDate !== undefined ? { dueDate: over.dueDate } : {}),
     ...(over.completedAt !== undefined ? { completedAt: over.completedAt } : {}),
+    ...(over.parentTaskId !== undefined ? { parentTaskId: over.parentTaskId } : {}),
     // S5 (t_ee8ecb0b): reminder instants + recurrence seeding for notification tests.
     ...(over.reminderAt !== undefined ? { reminderAt: over.reminderAt } : {}),
     ...(over.recurrence !== undefined ? { recurrence: over.recurrence } : {}),
@@ -142,8 +145,10 @@ export function makeTestRunner(
         title: draft.title,
         notes: draft.notes,
         priority: draft.priority,
+        tags: [...draft.tags],
         sortOrder: orderKeyBetween(siblings.at(-1)?.sortOrder ?? null, null),
         ...(draft.dueDate !== undefined ? { dueDate: draft.dueDate } : {}),
+        ...(draft.parentTaskId !== undefined ? { parentTaskId: draft.parentTaskId } : {}),
       });
       tasks.set(task.id, task);
       return ok(task);
@@ -157,6 +162,7 @@ export function makeTestRunner(
         ...(patch.title !== undefined ? { title: patch.title } : {}),
         ...(patch.notes !== undefined ? { notes: patch.notes } : {}),
         ...(patch.priority !== undefined ? { priority: patch.priority } : {}),
+        ...(patch.tags !== undefined ? { tags: [...patch.tags] } : {}),
         ...(patch.dueDate !== undefined ? { dueDate: patch.dueDate } : {}),
         ...(patch.reminderAt !== undefined ? { reminderAt: patch.reminderAt } : {}),
         ...(patch.recurrence !== undefined ? { recurrence: patch.recurrence } : {}),
@@ -216,9 +222,54 @@ export function makeTestRunner(
       tasks.set(id, next);
       return ok({ row: next, rebalanced: false });
     },
-    async remove(id: string): Promise<Result<void, AppError>> {
-      tasks.delete(id);
-      return ok(undefined);
+    async remove(
+      id: string,
+      disposition: TaskRemoveDisposition,
+    ): Promise<Result<TaskRemoveOutcome, AppError>> {
+      const now = clock();
+      const current = tasks.get(id);
+      // Idempotent: removing an absent row resolves with an empty outcome.
+      if (current === undefined) return ok({ tombstoned: [], promoted: [] });
+      const children = [...tasks.values()].filter(
+        (task) => task.parentTaskId === id && task.deletedAt === null,
+      );
+      const tombstoned: Task[] = [];
+      const promoted: Task[] = [];
+      const tombstone = (task: Task): void => {
+        const row: Task = { ...task, deletedAt: now, updatedAt: now };
+        tasks.delete(task.id);
+        tombstoned.push(row);
+      };
+      tombstone(current);
+      if (disposition.mode === 'cascade') {
+        for (const child of children) tombstone(child);
+      } else {
+        for (const child of children) {
+          const row: Task = { ...child, updatedAt: now };
+          delete row.parentTaskId;
+          tasks.set(child.id, row);
+          promoted.push(row);
+        }
+      }
+      return ok({ tombstoned, promoted });
+    },
+    async sweepTag(from: string, to: string | null): Promise<Result<Task[], AppError>> {
+      const now = clock();
+      const rewritten: Task[] = [];
+      for (const task of tasks.values()) {
+        if (!task.tags.includes(from)) continue;
+        const row: Task = {
+          ...task,
+          tags:
+            to === null
+              ? task.tags.filter((tag) => tag !== from)
+              : [...new Set(task.tags.map((tag) => (tag === from ? to : tag)))],
+          updatedAt: now,
+        };
+        tasks.set(row.id, row);
+        rewritten.push(row);
+      }
+      return ok(rewritten);
     },
     async upsertImported(rows: Task[]): Promise<Result<void, AppError>> {
       for (const row of rows) tasks.set(row.id, row);

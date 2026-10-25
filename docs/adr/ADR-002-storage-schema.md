@@ -639,3 +639,51 @@ arrive as additive steps through Decision 8's chain.
 - Kanban: epic E1 decomposition t_1b9ee0e6; this card t_576c2376 (sole decider)
 - Related: ADR-001 (stack selection — owned by a sibling card; this ADR assumes the §7.2
   dependency policy and does not restate the stack)
+
+---
+
+## Amendment (E7, t_b5078638) — schemaVersion 3: organization schema
+
+**Status**: Accepted (implemented + tested in t_b5078638; migration numbering coordinated with
+t_00d7f17b). Chain map: v1 = baseline; v2 = the `sync_state` store (ADR-006 Decision 3 — its
+numbering is pinned by ADR-007 "after sync_state step 2; never renumbered"); **v3 = this
+amendment**. Decision 8's "exactly one step per version" enforced the split when E7 and E8 both
+claimed v2; any further step appends at `to: 4`+.
+
+### Decisions
+
+1. **S3 priority model: `Priority = 'P1' | 'P2' | 'P3' | 'P4'`** replaces the MVP `0 | 1 | 2`
+   (`2`=High, `1`=Medium, `0`=Low; evidence `src/features/tasks/fields.tsx` `PRIORITIES`,
+   `TaskRow.tsx` `PRIORITY_ICON`). `P1` is the most urgent level; `P4` = "no priority" and the
+   default for new tasks. Per-level sorting is `compareByPriority` (P1 first … P4 last).
+   **Migration mapping (meaning-preserving)**: legacy `2` → `P1`, `1` → `P2`, `0` → `P3`,
+   unset/unknown → `P4` (record kept, never dropped). The decomposition mapping row
+   ("0->P1, 1->P2, 2->P3, unset->P4") was written against the assumption that `0` is the TOP
+   level; applied literally it inverts every stored priority (a user's "High" would land one
+   level above "no priority"). The row's intent — three legacy levels → P1..P3 in priority
+   order, unset → P4 — is what `legacyPriorityToLevel` implements. **Deviation flagged for
+   review (t_d45b8cf7); reverting to the literal table is exactly that one switch.**
+2. **Recurrence field is RESERVED** as `{ freq: 'daily'|'weekly'|'monthly'|'weekdays',
+   interval: number >= 1, until?: 'YYYY-MM-DD' }` — no exceptions, NO end-count (PROJECT_ANALYSIS
+   R4). The migration strips a legacy `count`; a malformed recurrence is left untouched so boot
+   validation quarantines it to the recovery file (migration never silently deletes user data).
+   The recurrence card implements semantics only.
+3. **Tags stay denormalized** `tags: string[]` on tasks (layout unchanged; no `tags` store).
+   Justification (recorded per the E7 mandate): rename/delete is `TaskRepo.sweepTag` — ONE
+   transaction with batched writes — measured **31.2 ms for 10,000 tagged tasks** through the
+   real repo code (tests/unit/storage/repos-e7.test.ts; emulated-IDB data point 7.2 s / 2,000
+   rows — fake-indexeddb's quadratic update path, a test-substrate artifact, not the app).
+   Normalizing into a Tag store is NOT justified by measurement; revisit only with evidence.
+   Tombstoned rows are swept too so exports/sync never resurrect a renamed-away name; changed
+   rows are restamped like every other write (per-record LWW unchanged).
+4. **Task deletion gains a subtask disposition** (S2): `remove(id, { mode: 'cascade' | 'promote' })`
+   in ONE transaction — `cascade` tombstones the task and its direct subtasks (MVP behavior),
+   `promote` re-parents direct subtasks to the list's top level. Subtasks stay SINGLE level
+   (`PARENT_DEPTH_EXCEEDED`) and complete independently.
+
+### Consequences
+
+v1 data migrates forward at boot (automatic pre-migration snapshot first; rollback drill proven:
+restore the snapshot → exact v1 bytes → re-running the chain converges). Old exports upgrade
+through the same registry (`migrateRows` / `prepareImport`). The migration never restamps rows;
+LWW/tombstone semantics are unchanged (regression suite green).

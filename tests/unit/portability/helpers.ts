@@ -85,7 +85,7 @@ export function seedCorpus(): {
     listId: l2.id,
     title: 'Quarterly report',
     status: 'done',
-    priority: 2,
+    priority: 'P1',
     notes: 'Numbers',
     completedAt: T0 - 2,
     sortOrder: 'h',
@@ -113,6 +113,11 @@ export function fakeFile(name: string, text: string, sizeOverride?: number): Fil
     name,
     size: sizeOverride ?? new TextEncoder().encode(text).length,
     text: () => Promise.resolve(text),
+    // The S12 import flow sniffs the head via `slice(0, n).text()` — the fake
+    // implements the File surface it impersonates (node has no Blob subclass).
+    slice: (start = 0, end?: number) => ({
+      text: () => Promise.resolve(text.slice(start, end)),
+    }),
   } as unknown as File;
 }
 

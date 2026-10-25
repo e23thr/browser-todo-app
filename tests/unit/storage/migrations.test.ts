@@ -65,29 +65,32 @@ const chain: MigrationRegistry = [v2Step, v3Step];
 
 describe('migration chain (ADR-002 Decision 8)', () => {
   it('targetVersionOf tracks the registry max and the APP baseline', () => {
-    expect(targetVersionOf([])).toBe(1);
+    // The APP baseline is now 3 (v2 = `sync_state`, v3 = the E7 organization
+    // schema) — a registry below it still targets the baseline floor.
+    expect(targetVersionOf([])).toBe(3);
     expect(targetVersionOf(chain)).toBe(3);
-    expect(targetVersionOf([v2Step])).toBe(2);
+    expect(targetVersionOf([v2Step])).toBe(3);
   });
 
-  it('v1 -> v2 roundtrip: one atomic step per version, meta bumped in-step', async () => {
+  it('v1 -> v3 roundtrip: one atomic step per version, meta bumped in-step', async () => {
     const name = uniqueDbName('mig');
     const db = await openFixtureDb(name, makeMeta({ schemaVersion: 1 }));
     opened.push(db);
     const task = makeTask({ notes: undefined as never });
     await db.put('tasks', task);
 
-    const result = await runMigrations(db, { registry: [v2Step], now: fixedNow });
+    const result = await runMigrations(db, { registry: chain, now: fixedNow });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value).toMatchObject({ from: 1, to: 2 });
+    expect(result.value).toMatchObject({ from: 1, to: 3 });
 
-    expect(db.schemaVersion).toBe(2);
+    expect(db.schemaVersion).toBe(3);
     const meta = await db.get('meta', 'meta');
-    if (meta.ok) expect(meta.value?.schemaVersion).toBe(2);
+    if (meta.ok) expect(meta.value?.schemaVersion).toBe(3);
 
+    // v2 backfilled `notes: ''`; v3 then stamped it with '!'.
     const after = await db.get('tasks', task.id);
-    if (after.ok) expect((after.value as Task).notes).toBe('');
+    if (after.ok) expect((after.value as Task).notes).toBe('!');
 
     // Pre-migration snapshot exists and is an auto/pre-migration one.
     const snapshots = await db.getAll('snapshots');
@@ -111,7 +114,7 @@ describe('migration chain (ADR-002 Decision 8)', () => {
     const result = await runMigrations(db, { registry: [v2Step], now: fixedNow });
     expect(result.ok).toBe(false);
     if (!result.ok)
-      expect(result.error).toMatchObject({ code: 'NEWER_SCHEMA', found: 5, supported: 2 });
+      expect(result.error).toMatchObject({ code: 'NEWER_SCHEMA', found: 5, supported: 3 });
 
     const write = await db.put('tasks', makeTask());
     expect(write.ok).toBe(false);
@@ -198,6 +201,7 @@ describe('migrateRows — export-upgrade hook (ADR-002 §8, for ADR-004 imports)
       settings: [],
       snapshots: [],
       snapshot_payloads: [],
+      sync_state: [],
     };
     const result = await migrateRows(chain, rows, 1, 3);
     expect(result.ok).toBe(true);
@@ -216,6 +220,7 @@ describe('migrateRows — export-upgrade hook (ADR-002 §8, for ADR-004 imports)
       settings: [],
       snapshots: [],
       snapshot_payloads: [],
+      sync_state: [],
     };
     const gap = await migrateRows([v3Step], rows, 1, 3);
     expect(gap.ok).toBe(false);
@@ -236,6 +241,7 @@ describe('MemoryTx (in-memory Tx for export upgrades)', () => {
       settings: [],
       snapshots: [],
       snapshot_payloads: [],
+      sync_state: [],
     });
     const task = makeTask({ listId: '01ARZ3NDEKTSV4RRFFQ69G5FAV', updatedAt: 5 });
     await mem.put('tasks', task);
@@ -274,6 +280,7 @@ describe('MemoryTx (in-memory Tx for export upgrades)', () => {
       settings: [],
       snapshots: [],
       snapshot_payloads: [],
+      sync_state: [],
     });
     const upper = await mem.getAll('tasks', {
       index: 'by_updatedAt',

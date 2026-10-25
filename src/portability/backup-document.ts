@@ -81,7 +81,7 @@ const SNAPSHOT_KEYS = [
   'schemaVersion',
   'payloadRef',
 ] as const;
-const RECURRENCE_KEYS = ['freq', 'interval', 'until', 'count'] as const;
+const RECURRENCE_KEYS = ['freq', 'interval', 'until'] as const;
 
 /** Optional fields are omitted when `undefined` (never written as `null`). */
 const OPTIONAL_KEYS: readonly string[] = [

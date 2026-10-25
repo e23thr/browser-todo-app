@@ -16,6 +16,7 @@ import { err, migrationFailed, ok, unknownError, newerSchema } from './errors';
 import type { Result, StorageError } from './errors';
 import type { QuerySpec, Tx, AppDBImpl } from './db';
 import type { Priority, Recurrence, Task } from '../domain/model';
+import { isUlid } from './id';
 import { APP_SCHEMA_VERSION, META_KEY, SYNC_KEY } from './schema';
 import { fallbackRawCodec, restoreSnapshot, takeSnapshot } from './snapshots';
 import type { SnapshotCodec } from './snapshots';
@@ -105,7 +106,9 @@ export const toSchemaVersion3: MigrationStep = {
     // a per-row round trip) — same atomicity, no serial await.
     const puts: Promise<unknown>[] = [];
     for (const row of rows) {
-      puts.push(t.put('tasks', migrateTaskRowToV3(row as unknown as Record<string, unknown>) as Task));
+      puts.push(
+        t.put('tasks', migrateTaskRowToV3(row as unknown as Record<string, unknown>) as Task),
+      );
     }
     await Promise.all(puts);
     return ok(undefined);
@@ -130,7 +133,12 @@ export const toSchemaVersion2: MigrationStep = {
     const existing = await t.get('sync_state', SYNC_KEY);
     if (existing === undefined) {
       const meta = await t.get('meta', META_KEY);
-      await t.put('sync_state', defaultSyncStateRow(meta?.deviceId ?? ''));
+      // A corrupt (quarantined) `meta.deviceId` must not seed a corrupt
+      // `sync_state` row — the validator takes '' as the "not yet adopted"
+      // slot, and the engine fills the real id at setup (integration fix for
+      // the E1 P2 quarantine drills, t_b5078638).
+      const deviceId = meta?.deviceId ?? '';
+      await t.put('sync_state', defaultSyncStateRow(isUlid(deviceId) ? deviceId : ''));
     }
     return ok(undefined);
   },

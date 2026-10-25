@@ -62,7 +62,7 @@ function makeRunner(orderKeys: OrderKeyOps) {
   };
 }
 
-const draft = { listId: 'L1', title: 't', notes: null, priority: 0 as const, tags: [] };
+const draft = { listId: 'L1', title: 't', notes: null, priority: 'P3' as const, tags: [] };
 
 describe('pipeline: list ops beyond rename', () => {
   it('recolorList patches only color', async () => {

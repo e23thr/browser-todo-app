@@ -50,7 +50,7 @@ export function makeTask(over: Partial<Task> = {}): Task {
     title: 'Write tests',
     notes: null,
     status: 'open',
-    priority: 0,
+    priority: 'P3',
     tags: [],
     sortOrder: 'h',
     createdAt: T0,

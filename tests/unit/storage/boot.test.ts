@@ -52,6 +52,13 @@ const failingV3Step: MigrationStep = {
   },
 };
 
+/** Passing v3 companion so the toy registry spans the APP_SCHEMA_VERSION target. */
+const noopV3Step: MigrationStep = {
+  to: 3,
+  stores: ['tasks'],
+  run: () => ok(undefined),
+};
+
 describe('boot: fresh start', () => {
   it('seeds meta with a ULID deviceId and reports a clean boot', async () => {
     const name = uniqueDbName('boot-fresh');
@@ -59,7 +66,7 @@ describe('boot: fresh start', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     booted.push(result.value as AppDBImpl);
-    expect(result.value.schemaVersion).toBe(1);
+    expect(result.value.schemaVersion).toBe(3);
     expect(result.value.deviceId).toMatch(ULID_RE);
     expect(result.value.bootReport.quarantined).toBe(0);
     expect(result.value.bootReport.migrated).toBeNull();
@@ -67,7 +74,7 @@ describe('boot: fresh start', () => {
 
     const meta = await result.value.get('meta', 'meta');
     if (meta.ok) {
-      expect(meta.value?.schemaVersion).toBe(1);
+      expect(meta.value?.schemaVersion).toBe(3);
       expect(meta.value?.lastOpenedAt).toBe(fixedNow());
     }
   });
@@ -107,15 +114,15 @@ describe('boot: acceptance — v1 -> v2 migration roundtrip', () => {
 
     const result = await boot({
       dbName: name,
-      registry: [v2Step],
+      registry: [v2Step, noopV3Step],
       now: fixedNow,
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     booted.push(result.value as AppDBImpl);
 
-    expect(result.value.schemaVersion).toBe(2);
-    expect(result.value.bootReport.migrated).toEqual({ from: 1, to: 2 });
+    expect(result.value.schemaVersion).toBe(3);
+    expect(result.value.bootReport.migrated).toEqual({ from: 1, to: 3 });
     expect(result.value.bootReport.preMigrationSnapshotId).not.toBeNull();
 
     const tasks = await result.value.getAll('tasks');
@@ -133,12 +140,12 @@ describe('boot: acceptance — v1 -> v2 migration roundtrip', () => {
 
     // Reboot at the new version: no re-migration.
     resetBootSingleton(name);
-    const again = await boot({ dbName: name, registry: [v2Step], now: fixedNow });
+    const again = await boot({ dbName: name, registry: [v2Step, noopV3Step], now: fixedNow });
     expect(again.ok).toBe(true);
     if (again.ok) {
       booted.push(again.value as AppDBImpl);
       expect(again.value.bootReport.migrated).toBeNull();
-      expect(again.value.schemaVersion).toBe(2);
+      expect(again.value.schemaVersion).toBe(3);
     }
     resetBootSingleton(name);
   });
@@ -243,7 +250,7 @@ describe('boot: acceptance — corrupt records quarantine to a recovery file', (
     expect(parsed.source).toEqual({
       kind: 'boot-validation',
       fileName: null,
-      fileSchemaVersion: 1,
+      fileSchemaVersion: 3,
     });
     expect(parsed.entries).toHaveLength(2);
     const recoveredTitles = parsed.entries.map((e) => e.raw.title);
@@ -266,7 +273,7 @@ describe('boot: acceptance — corrupt records quarantine to a recovery file', (
 describe('boot: acceptance — QuotaExceededError propagation', () => {
   it('surfaces QUOTA_EXCEEDED as a typed boot warning, never swallowed', async () => {
     const name = uniqueDbName('boot-quota');
-    await seedDb(name, { meta: makeMeta({ schemaVersion: 1 }), tasks: [makeTask()] });
+    await seedDb(name, { meta: makeMeta({ schemaVersion: 3 }), tasks: [makeTask()] });
 
     const restore = injectQuotaOnPuts();
     const result = await boot({ dbName: name, now: fixedNow }).finally(() => {
@@ -306,7 +313,7 @@ describe('boot: newer schema write guard (Decision 2)', () => {
     if (!result.ok) return;
     booted.push(result.value as AppDBImpl);
 
-    expect(result.value.bootReport.newerSchema).toEqual({ found: 9, supported: 1 });
+    expect(result.value.bootReport.newerSchema).toEqual({ found: 9, supported: 3 });
     const read = await result.value.getAll('tasks');
     expect(read.ok).toBe(true);
     const write = await result.value.put('tasks', makeTask());

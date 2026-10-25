@@ -68,7 +68,7 @@ function makeTask(deviceId: string): Task {
     title: 'Buy milk',
     notes: null,
     status: 'open',
-    priority: 0,
+    priority: 'P3',
     tags: [],
     sortOrder: 'h',
     createdAt: T0,

@@ -151,7 +151,7 @@ async function seedRows(page: Page, spec: SeedSpec): Promise<{ tasks: number; de
         title: isDone ? `${title} zquestdone` : title,
         notes: hasNotes ? `note ${s.notesToken} ${String(i)}` : null,
         status: isDone ? 'done' : 'open',
-        priority: 0,
+        priority: 'P3',
         tags: [],
         sortOrder: `h${n.toString(36).padStart(6, '0')}z`,
         createdAt: now - (s.count - i),

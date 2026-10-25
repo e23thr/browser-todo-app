@@ -182,7 +182,7 @@ describe('QA-D1: tree-grouped views never drop a live row (import-created depth-
       listId: 'L1',
       title: 'grandchild',
       notes: null,
-      priority: 0,
+      priority: 'P3',
       tags: [],
       parentTaskId: 'S1',
     });

@@ -57,7 +57,7 @@ describe('prepareImport — accept path (stages 1–3)', () => {
       fileName: 'backup.json',
       formatVersion: 1,
       schemaVersion: 1,
-      upgradedTo: 1,
+      upgradedTo: 3,
       kind: 'export',
     });
     expect(plan.accepted).toEqual({ lists: 2, tasks: 3, settings: true });
@@ -266,10 +266,16 @@ describe('old exports upgrade through the migration chain (drill 3)', () => {
       return { ok: true, value: undefined };
     },
   };
-  const failing: MigrationStep = {
-    to: 2,
+  /** Completes the chain to the APP baseline (3) without touching rows. */
+  const toV3Noop: MigrationStep = {
+    to: 3,
     stores: ['tasks'],
-    run: () => ({ ok: false, error: { code: 'MIGRATION_FAILED' as const, from: 1, to: 2 } }),
+    run: () => ({ ok: true as const, value: undefined }),
+  };
+  const failing: MigrationStep = {
+    to: 3,
+    stores: ['tasks'],
+    run: () => ({ ok: false, error: { code: 'MIGRATION_FAILED' as const, from: 1, to: 3 } }),
   };
 
   it('upgrades a v1 document to the registry target before validating (zero side effects)', async () => {
@@ -279,10 +285,12 @@ describe('old exports upgrade through the migration chain (drill 3)', () => {
     const doc = makeDocObject({ schemaVersion: 1, lists: [l1], tasks: [v1Task] });
     const db = await openSeeded();
 
-    const prepared = await prepareImport(JSON.stringify(doc), { migrations: [notesBackfill] });
+    const prepared = await prepareImport(JSON.stringify(doc), {
+      migrations: [notesBackfill, toV3Noop],
+    });
     expect(prepared.ok).toBe(true);
     if (!prepared.ok) return;
-    expect(prepared.value.fileSummary).toMatchObject({ schemaVersion: 1, upgradedTo: 2 });
+    expect(prepared.value.fileSummary).toMatchObject({ schemaVersion: 1, upgradedTo: 3 });
     expect(prepared.value.records.tasks[0]?.notes).toBe(''); // migrated shape validates
     await expectUntouched(db);
   });
@@ -294,12 +302,12 @@ describe('old exports upgrade through the migration chain (drill 3)', () => {
     const prepared = await prepareImport(
       JSON.stringify(makeDocObject({ schemaVersion: 1, lists: [l1], tasks: [v1Task] })),
       {
-        migrations: [failing],
+        migrations: [notesBackfill, failing],
       },
     );
     expect(prepared).toMatchObject({
       ok: false,
-      error: { code: 'UPGRADE_FAILED', from: 1, to: 2 },
+      error: { code: 'UPGRADE_FAILED', from: 1, to: 3 },
     });
   });
 });

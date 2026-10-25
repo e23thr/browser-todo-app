@@ -259,3 +259,37 @@ sweep (`tabSync.test.ts`), search-index perf at 10k with measured numbers (`sear
 7. **Error log** — `src/storage/errorLog.ts` (JSON ring buffer, downloadable, no telemetry,
    ADR-002 §10.4) records every failure branch incl. the reorder rebalance hatch; wire it into
    the S11 storage dashboard.
+
+## 11. E7 additions (t_b5078638 — tags, subtasks, priority; schemaVersion 3)
+
+- **`Priority` is now `'P1' | 'P2' | 'P3' | 'P4'`** (`P1` most urgent, `P4` = no priority =
+  default; `PRIORITY_LEVELS`, `compareByPriority(a, b)` in `model.ts`). The MVP `0|1|2` values
+  are gone — the schemaVersion 3 migration mapped them by preserved meaning (2/High→P1,
+  1/Medium→P2, 0/Low→P3, unset→P4; ADR-002 amendment).
+- **`Recurrence` is the RESERVED format**: `{ freq, interval: number >= 1, until?: 'YYYY-MM-DD' }`
+  — **no `count`** (R4: end-count is out of V1). The recurrence card (t_354a153f) implements
+  semantics ONLY against this shape; `validateTask` rejects any other recurrence field.
+- **`TaskPort.remove(id, disposition)`** — `{ mode: 'cascade' } | { mode: 'promote' }`, one
+  transaction, resolves `TaskRemoveOutcome { tombstoned, promoted }` (rows the tx wrote).
+  `MutationRunner.removeTask(id, disposition)` matches. `TaskRemoveDisposition` =
+  "what happens to the direct subtasks" (S2; consistent with the list-deletion UX).
+- **`TaskPort.sweepTag(from, to)`** — ONE-transaction rename (`to: string`) / delete
+  (`to: null`) sweep over the denormalized `tags: string[]` (tombstoned rows included; rename
+  de-duplicates; changed rows restamped). `MutationRunner.renameTag(from, to)` /
+  `deleteTag(name)` wrap it: bulk optimistic rewrite (announces `'all'`), committed-baseline
+  rollback on failure, `RULE: TAG_INVALID` for names outside 1..100 chars. **Measured: 10,000
+  tagged tasks rename in 31.2 ms** through the real repo code (emulated-IDB 2k data point
+  7.2 s — fake-indexeddb quadratic update artifact). No Tag store (ADR-002 amendment §3).
+- **`ViewCtx`** gains `tag?: string` (exact-name filter on members; a matching subtask whose
+  parent is filtered out renders at depth 0 — never dropped) and `sortBy?: 'priority'`
+  (`P1` first … `P4` last as the PRIMARY key inside every group; absent = pinned per-view
+  order, golden tests untouched).
+- **Store additions** (`features/tasks/store.ts`): `tagFilter` / `sortMode` session signals,
+  `allTags()` usage counts, `renameTag`/`deleteTag` guards, `deleteTask(id, disposition)`,
+  `TaskInput.tags` (required) + `TaskInput.parentTaskId` (subtask create).
+- **UI**: `TagsField` (chips editor), `TagsManageDialog` (rename/delete with sweep),
+  `TaskDeleteDialog` (subtask disposition radio — default `promote`), the view toolbar
+  (tag filter + sort + manage tags), and the task editor's subtask list (create/navigate/
+  complete; depth guard hides the section on a subtask). i18n keys `priority.p1..p4`,
+  `tags.*`, `subtasks.*`, `sort.*`, `confirm.deleteTag.*`, `confirm.deleteTask.{subtaskBody,
+  promoteSubtasks,deleteSubtasks}`, `a11y.{subtaskAdded,tagRenamed,tagDeleted}` (en+th).

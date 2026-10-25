@@ -502,7 +502,7 @@ describe('QA benchmarks (§9.1: search < 50ms @10k; boot-to-first-data-paint < 5
       listId: 'L1',
       title: 'quick add',
       notes: null,
-      priority: 0,
+      priority: 'P3',
       tags: [],
     });
     const visibleMs = performance.now() - start;

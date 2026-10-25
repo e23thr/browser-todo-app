@@ -38,10 +38,15 @@ const FOCUS_TARGETS =
 /**
  * Where `Tab`/`Shift+Tab` must land after the menu closes: every focusable in the
  * document that sits AFTER (or BEFORE, for `Shift+Tab`) the whole `.row-menu` container,
- * never one inside it. Real tab stops come first — that is the sequential focus order a
- * closed menu would produce — then programmatically focusable neighbours such as the
- * next roving `li[tabindex="-1"]`, which promotes its own row when it receives focus.
- * Ordered nearest-first inside each tier.
+ * never one inside it — NEAREST FIRST in document order, across both real tab stops
+ * (`tabIndex >= 0`) and roving-programmatically-focusable neighbours (`tabindex="-1"`,
+ * e.g. the next row's `li`, which promotes its own row when it receives focus).
+ *
+ * Nearest-first is the binding part (E7 fix, pinned by core-ui-rows B3): an earlier
+ * two-tier ordering ("real tab stops first") made `Shift+Tab` out of a row menu leap
+ * PAST the row's own controls to distant page furniture (the E7 view toolbar) as soon
+ * as anything focusable preceded the list — the adjacent control of the same row is
+ * where every keyboard user expects focus to land.
  */
 function candidatesBeyond(anchor: HTMLElement, backward: boolean): HTMLElement[] {
   const bit = backward ? Node.DOCUMENT_POSITION_PRECEDING : Node.DOCUMENT_POSITION_FOLLOWING;
@@ -49,11 +54,7 @@ function candidatesBeyond(anchor: HTMLElement, backward: boolean): HTMLElement[]
     (el) =>
       el !== anchor && !anchor.contains(el) && (anchor.compareDocumentPosition(el) & bit) !== 0,
   );
-  if (backward) relative.reverse();
-  return [
-    ...relative.filter((el) => el.tabIndex >= 0),
-    ...relative.filter((el) => el.tabIndex < 0),
-  ];
+  return backward ? relative.reverse() : relative;
 }
 
 export function RowMenu({ label, items, class: className, tabIndex }: RowMenuProps): JSX.Element {

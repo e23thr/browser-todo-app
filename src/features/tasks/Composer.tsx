@@ -26,7 +26,7 @@ import type { FlushOutcome } from '../../app/update';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import type { List, Priority } from '../../domain/model';
 import { ListDialog } from '../lists/ListDialog';
-import { DateField, ListSelect, PriorityField } from './fields';
+import { DateField, ListSelect, PriorityField, TagsField } from './fields';
 import { useEditSession } from './editSession';
 import { addList, addTask, lastUsedListId, liveLists, state } from './store';
 import { Dialog } from '../../components/Dialog';
@@ -53,7 +53,8 @@ export function Composer({ variant, onClose }: ComposerProps): JSX.Element {
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [due, setDue] = useState<string | null>(null);
-  const [priority, setPriority] = useState<Priority>(0);
+  const [priority, setPriority] = useState<Priority>('P4');
+  const [tags, setTags] = useState<string[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [discarding, setDiscarding] = useState(false);
@@ -77,7 +78,12 @@ export function Composer({ variant, onClose }: ComposerProps): JSX.Element {
   const effectiveListId =
     listId !== null && lists.some((list) => list.id === listId) ? listId : fallbackListId;
 
-  const contentDirty = title.trim() !== '' || notes.trim() !== '' || due !== null || priority !== 0;
+  const contentDirty =
+    title.trim() !== '' ||
+    notes.trim() !== '' ||
+    due !== null ||
+    priority !== 'P4' ||
+    tags.length > 0;
   // A LIST-ONLY pick is a draft too (review N2): the S7.3 close paths must ask before
   // dropping it. It cannot be flushed (no title), so the discard confirm is its exit.
   const dirty = contentDirty || (listId !== null && listId !== fallbackListId);
@@ -98,7 +104,8 @@ export function Composer({ variant, onClose }: ComposerProps): JSX.Element {
     setTitle('');
     setNotes('');
     setDue(null);
-    setPriority(0);
+    setPriority('P4');
+    setTags([]);
   };
 
   const focusTitle = (): void => {
@@ -119,6 +126,7 @@ export function Composer({ variant, onClose }: ComposerProps): JSX.Element {
       dueDate: due,
       listId: effectiveListId,
       priority,
+      tags,
     };
     const typedTitle = trimmed;
     const typedNotes = input.notes;
@@ -161,6 +169,7 @@ export function Composer({ variant, onClose }: ComposerProps): JSX.Element {
       dueDate: due,
       listId: effectiveListId,
       priority,
+      tags,
     });
     if (!result.ok) return { ok: false };
     resetFields();
@@ -269,6 +278,8 @@ export function Composer({ variant, onClose }: ComposerProps): JSX.Element {
       />
 
       <PriorityField value={priority} onChange={setPriority} />
+
+      <TagsField value={tags} onChange={setTags} />
     </>
   ) : null;
 

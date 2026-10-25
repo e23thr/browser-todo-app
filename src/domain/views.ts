@@ -17,7 +17,7 @@
  */
 
 import { addDays, isOverdue } from './dates';
-import type { Task } from './model';
+import { compareByPriority, type Task } from './model';
 import { SearchIndex, type SearchHit } from './search';
 import type { State } from './state';
 
@@ -45,7 +45,27 @@ export type ViewCtx = {
   today: string;
   /** Search view: the maintained index; absent falls back to `SearchIndex.naive`. */
   index?: SearchIndex;
+  /**
+   * S1 tag filter: only tasks whose `tags` carry this exact name are members
+   * (subtask rule unchanged — a filtered-in subtask renders at depth 0 when its
+   * parent is filtered out, never dropped).
+   */
+  tag?: string;
+  /**
+   * S3 "sorting per level": `'priority'` makes the priority level (`P1` first,
+   * `P4` last) the PRIMARY sort key inside every group, with the view's own
+   * order as tie-break. Absent = the pinned per-view order (golden tests).
+   */
+  sortBy?: 'priority';
 };
+
+type TaskCompare = (a: Task, b: Task) => number;
+
+/** Lift a view comparator under the ctx's sort mode. */
+function orderOf(ctx: ViewCtx, base: TaskCompare): TaskCompare {
+  if (ctx.sortBy !== 'priority') return base;
+  return (a, b) => compareByPriority(a.priority, b.priority) || base(a, b);
+}
 
 /** Live tasks whose list is live (ADR-002 Decision 6: missing/tombstoned lists hide their tasks). */
 function visibleTasks(state: State): Task[] {
@@ -159,17 +179,18 @@ function countsOf(members: readonly Task[], today: string): ViewResult['counts']
 
 export function selectView(state: State, view: ViewId, ctx: ViewCtx): ViewResult {
   const { today } = ctx;
+  const all = filterByTag(visibleTasks(state), ctx.tag);
   switch (view.kind) {
     case 'today':
-      return todayView(visibleTasks(state), today);
+      return todayView(all, today, orderOf(ctx, byDueThenCreated));
     case 'week':
-      return weekView(visibleTasks(state), today);
+      return weekView(all, today, orderOf(ctx, byCreatedThenId));
     case 'allOpen':
-      return allOpenView(state, visibleTasks(state), today);
+      return allOpenView(state, all, today, orderOf(ctx, byOrder));
     case 'list':
-      return listView(visibleTasks(state), view.listId, today);
+      return listView(all, view.listId, today, orderOf(ctx, byOrder));
     case 'completed':
-      return completedView(visibleTasks(state), today);
+      return completedView(all, today, orderOf(ctx, byCompletedThenId));
     case 'search':
       // S5 keystroke path: resolve only the HITS against the store (O(hits)) —
       // the O(n) visible-task scan runs solely for the documented naive
@@ -178,23 +199,37 @@ export function selectView(state: State, view: ViewId, ctx: ViewCtx): ViewResult
   }
 }
 
-function todayView(all: Task[], today: string): ViewResult {
+/** S1 tag filter (exact name match) applied to the member set of every view. */
+function filterByTag(all: Task[], tag: string | undefined): Task[] {
+  if (tag === undefined) return all;
+  return all.filter((t) => t.tags.includes(tag));
+}
+
+/** Completed view order: `completedAt` desc, then `id` desc. */
+function byCompletedThenId(a: Task, b: Task): number {
+  const ca = a.completedAt ?? 0;
+  const cb = b.completedAt ?? 0;
+  if (ca !== cb) return cb - ca;
+  return a.id > b.id ? -1 : a.id < b.id ? 1 : 0;
+}
+
+function todayView(all: Task[], today: string, compare: TaskCompare): ViewResult {
   const open = all.filter((t) => t.status === 'open' && t.dueDate !== undefined);
   const overdue = open.filter((t) => (t.dueDate as string) < today);
   const dueToday = open.filter((t) => t.dueDate === today);
   const rows: ViewRow[] = [];
   if (overdue.length > 0) {
     rows.push(groupRow({ kind: 'overdue' }, 'group:overdue', overdue.length));
-    rows.push(...treeRows(overdue, byDueThenCreated, today));
+    rows.push(...treeRows(overdue, compare, today));
   }
   if (dueToday.length > 0) {
     rows.push(groupRow({ kind: 'day', date: today }, `group:day:${today}`, dueToday.length));
-    rows.push(...treeRows(dueToday, byDueThenCreated, today));
+    rows.push(...treeRows(dueToday, compare, today));
   }
   return { rows, counts: countsOf([...overdue, ...dueToday], today) };
 }
 
-function weekView(all: Task[], today: string): ViewResult {
+function weekView(all: Task[], today: string, compare: TaskCompare): ViewResult {
   const open = all.filter((t) => t.status === 'open' && t.dueDate !== undefined);
   const rows: ViewRow[] = [];
   const members: Task[] = [];
@@ -204,12 +239,12 @@ function weekView(all: Task[], today: string): ViewResult {
     if (dayMembers.length === 0) continue; // empty groups omitted (ux-foundation §4.4)
     members.push(...dayMembers);
     rows.push(groupRow({ kind: 'day', date }, `group:day:${date}`, dayMembers.length));
-    rows.push(...treeRows(dayMembers, byCreatedThenId, today));
+    rows.push(...treeRows(dayMembers, compare, today));
   }
   return { rows, counts: countsOf(members, today) };
 }
 
-function allOpenView(state: State, all: Task[], today: string): ViewResult {
+function allOpenView(state: State, all: Task[], today: string, compare: TaskCompare): ViewResult {
   const open = all.filter((t) => t.status === 'open');
   const listOrder = [...state.lists.values()].filter((l) => l.deletedAt === null).sort(byOrder);
   const rows: ViewRow[] = [];
@@ -219,24 +254,19 @@ function allOpenView(state: State, all: Task[], today: string): ViewResult {
     if (inList.length === 0) continue;
     members.push(...inList);
     rows.push(groupRow({ kind: 'list', listId: list.id }, `group:list:${list.id}`, inList.length));
-    rows.push(...treeRows(inList, byOrder, today));
+    rows.push(...treeRows(inList, compare, today));
   }
   return { rows, counts: countsOf(members, today) };
 }
 
-function listView(all: Task[], listId: string, today: string): ViewResult {
+function listView(all: Task[], listId: string, today: string, compare: TaskCompare): ViewResult {
   const members = all.filter((t) => t.listId === listId && t.status === 'open');
-  return { rows: treeRows(members, byOrder, today), counts: countsOf(members, today) };
+  return { rows: treeRows(members, compare, today), counts: countsOf(members, today) };
 }
 
-function completedView(all: Task[], today: string): ViewResult {
+function completedView(all: Task[], today: string, compare: TaskCompare): ViewResult {
   const members = all.filter((t) => t.status === 'done');
-  const sorted = [...members].sort((a, b) => {
-    const ca = a.completedAt ?? 0;
-    const cb = b.completedAt ?? 0;
-    if (ca !== cb) return cb - ca;
-    return a.id > b.id ? -1 : a.id < b.id ? 1 : 0;
-  });
+  const sorted = [...members].sort(compare);
   return {
     rows: sorted.map((t) => taskRow(t, 0, today)),
     counts: countsOf(members, today),
@@ -261,6 +291,7 @@ function searchView(state: State, query: string, ctx: ViewCtx, today: string): V
     if (task === undefined) continue;
     if (task.deletedAt !== null) continue;
     if (!state.lists.has(task.listId)) continue; // ADR-002 D6: hidden-list tasks stay hidden
+    if (ctx.tag !== undefined && !task.tags.includes(ctx.tag)) continue; // S1 filter
     members.push(task);
   }
   const sorted = [...members].sort((a, b) => {

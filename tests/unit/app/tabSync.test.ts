@@ -191,7 +191,7 @@ async function setup(prefix: string) {
 }
 
 function draft(listId: string, title: string) {
-  return { listId, title, notes: null, priority: 0 as const, tags: [] };
+  return { listId, title, notes: null, priority: 'P3' as const, tags: [] };
 }
 
 describe('two-tab concurrency (acceptance scenario)', () => {
@@ -230,7 +230,7 @@ describe('two-tab concurrency (acceptance scenario)', () => {
     if (!created.ok) throw new Error('create failed');
     expect(h.tabB.runner.getState().tasks.has(created.value.id)).toBe(true);
 
-    await h.tabA.runner.removeTask(created.value.id);
+    await h.tabA.runner.removeTask(created.value.id, { mode: 'cascade' });
     await flush();
     expect(h.tabB.runner.getState().tasks.has(created.value.id)).toBe(false);
   });

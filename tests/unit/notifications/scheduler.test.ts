@@ -25,7 +25,7 @@ function task(overrides: Partial<Task> = {}): Task {
     title: 'Water the plants',
     notes: null,
     status: 'open',
-    priority: 1,
+    priority: 'P2',
     tags: [],
     sortOrder: 'a0',
     createdAt: NOW - DAY,

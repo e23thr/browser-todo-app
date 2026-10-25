@@ -153,7 +153,7 @@ describe('migration substrate with uncarrable records (upgrade.ts passthrough)',
           title: 'added by migration',
           notes: '',
           status: 'open',
-          priority: 0,
+          priority: 'P3',
           tags: [],
           sortOrder: 'h',
           createdAt: T0,
@@ -164,6 +164,12 @@ describe('migration substrate with uncarrable records (upgrade.ts passthrough)',
         .then(() => ({ ok: true, value: undefined }));
     },
   };
+  /** Completes the chain to the APP baseline (3) without touching rows. */
+  const toV3Noop: MigrationStep = {
+    to: 3,
+    stores: ['tasks'],
+    run: () => ({ ok: true as const, value: undefined }),
+  };
 
   it('passes records without ids (and duplicate ids) through to quarantine verbatim', async () => {
     const l1 = makeList({ id: fixtureId(10) });
@@ -172,10 +178,12 @@ describe('migration substrate with uncarrable records (upgrade.ts passthrough)',
     const idless = { title: 'no id at all' };
     const doc = makeDocObject({ schemaVersion: 1, lists: [l1], tasks: [good, dupe, idless] });
 
-    const prepared = await prepareImport(JSON.stringify(doc), { migrations: [echoStep] });
+    const prepared = await prepareImport(JSON.stringify(doc), {
+      migrations: [echoStep, toV3Noop],
+    });
     expect(prepared.ok).toBe(true);
     if (!prepared.ok) return;
-    expect(prepared.value.fileSummary.upgradedTo).toBe(2);
+    expect(prepared.value.fileSummary.upgradedTo).toBe(3);
     // Migrated rows: the original + the migration-added one; the dupe and the
     // id-less record ride through as quarantined entries with raw provenance.
     expect(prepared.value.accepted.tasks).toBe(2);
