@@ -1,0 +1,41 @@
+{
+  "davUrl": "http://127.0.0.1:46323/dav/",
+  "fixed": {
+    "label": "FIXED (shipped policy)",
+    "appUrl": "http://127.0.0.1:42115/",
+    "control_sameOriginManifest": 200,
+    "externalHttps_noCors": "resolved:opaque",
+    "externalHttps_requestSeenByBrowser": true,
+    "plainHttp_external": "rejected",
+    "wizard": "SUCCESS (status surface: \"Sync now\" visible)",
+    "davHits": [
+      "OPTIONS / origin=http://127.0.0.1:42115 authorization=no",
+      "OPTIONS / origin=http://127.0.0.1:42115 authorization=yes"
+    ],
+    "davRequestsSeenByBrowser": [
+      "http://127.0.0.1:46323/"
+    ],
+    "cspViolations": [
+      "connect-src blocked=http://example.com/"
+    ]
+  },
+  "control": {
+    "label": "CONTROL (old connect-src self)",
+    "appUrl": "http://127.0.0.1:41547/",
+    "control_sameOriginManifest": 200,
+    "externalHttps_noCors": "rejected:TypeError: Failed to fetch",
+    "externalHttps_requestSeenByBrowser": false,
+    "plainHttp_external": "rejected",
+    "wizard": "FAILURE box: \"The browser blocked the requestThe storage server must allow this app's origin (Nextcloud: Access-Control-Allow-Origin). The address may also be unreachable or mistyped.Details: fetch rejected (TypeError): usually the WebDAV server missing Access-Control-Allow-Origin for the app origin (OPTIONS preflight); also DNS/TLS failure\"",
+    "davHits": [
+      "OPTIONS / origin=http://127.0.0.1:42115 authorization=no",
+      "OPTIONS / origin=http://127.0.0.1:42115 authorization=yes"
+    ],
+    "davRequestsSeenByBrowser": [],
+    "cspViolations": [
+      "connect-src blocked=https://example.com/",
+      "connect-src blocked=http://example.com/",
+      "connect-src blocked=http://127.0.0.1:46323/"
+    ]
+  }
+}
