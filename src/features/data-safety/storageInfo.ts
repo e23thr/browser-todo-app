@@ -42,6 +42,19 @@ export const persistenceError = signal<boolean>(false);
 /** `true` once this session called `persist()` (distinguishes denied from not-requested). */
 let requested = false;
 
+/**
+ * Settle bound for the `persist()` round trip (§9.4 best-effort discipline).
+ *
+ * Firefox resolves `navigator.storage.persist()` only when the user answers its permission
+ * prompt — in an unattended or automated window that answer may never arrive (measured: pending
+ * 25 s+ in Playwright firefox while chromium/webkit settle in ~0 ms). The first-write gate and
+ * the "Ask again" button both `await` this call, so without a bound a single hung promise hangs
+ * the whole data-safety surface forever (nightly failure t_e20c2adb: firefox `persist()` probe
+ * test timeout). After the bound the row reports the browser's REAL `persisted()` read and a
+ * late prompt answer is adopted as soon as it lands, so the row never stays a lie.
+ */
+export const PERSIST_SETTLE_TIMEOUT_MS = 3000;
+
 /** Test seam: forget session state (requested flag) without touching the DOM. */
 export function resetStorageInfo(): void {
   requested = false;
@@ -124,6 +137,11 @@ export async function refreshPersistence(): Promise<PersistenceState> {
 /**
  * Ask for persistent storage (the "Ask again" button, §4.3). Returns the resulting state and
  * records an error state when the call throws (§10.5).
+ *
+ * Bounded by `PERSIST_SETTLE_TIMEOUT_MS`: a `persist()` that never settles (Firefox's permission
+ * prompt left unanswered) must not hang the caller — see the constant's doc for the nightly
+ * evidence. On timeout the REAL `persisted()` read decides the state and a late prompt answer is
+ * adopted as soon as it lands.
  */
 export async function requestPersist(): Promise<PersistenceState> {
   const manager = storage();
@@ -134,13 +152,55 @@ export async function requestPersist(): Promise<PersistenceState> {
   requested = true;
   persistenceError.value = false;
   try {
-    const granted = await manager.persist();
-    persistenceState.value = granted ? 'granted' : 'denied';
+    const answer = manager.persist();
+    const outcome = await Promise.race([
+      answer.then((granted) => ({ status: 'answered' as const, granted })),
+      new Promise<{ status: 'timed-out' }>((resolve) => {
+        const timer = setTimeout(() => {
+          resolve({ status: 'timed-out' });
+        }, PERSIST_SETTLE_TIMEOUT_MS);
+        // When the answer wins the race the timer must not linger (test runners / timers).
+        void answer.then(
+          () => {
+            clearTimeout(timer);
+          },
+          () => {
+            clearTimeout(timer);
+          },
+        );
+      }),
+    ]);
+    if (outcome.status === 'answered') {
+      persistenceState.value = outcome.granted ? 'granted' : 'denied';
+      return persistenceState.value;
+    }
+
+    // Timed out: the browser hasn't said. Report the REAL persisted() read (that promise
+    // answers promptly — measured on firefox) and adopt the pending answer whenever it lands.
+    let persistedNow = false;
+    try {
+      persistedNow = typeof manager.persisted === 'function' ? await manager.persisted() : false;
+    } catch {
+      persistedNow = false;
+    }
+    persistenceState.value = persistedNow ? 'granted' : 'denied';
+    persistenceError.value = !persistedNow;
+    void answer.then(
+      (grantedLate) => {
+        persistenceState.value = grantedLate ? 'granted' : 'denied';
+        persistenceError.value = false;
+      },
+      () => {
+        persistenceState.value = 'denied';
+        persistenceError.value = true;
+      },
+    );
+    return persistenceState.value;
   } catch {
     persistenceError.value = true;
     persistenceState.value = 'denied';
+    return 'denied';
   }
-  return persistenceState.value;
 }
 
 /**

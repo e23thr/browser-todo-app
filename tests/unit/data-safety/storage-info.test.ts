@@ -6,6 +6,7 @@ import {
   persistSupported,
   persistenceError,
   persistenceState,
+  PERSIST_SETTLE_TIMEOUT_MS,
   refreshPersistence,
   refreshQuota,
   requestPersist,
@@ -115,6 +116,77 @@ describe('persistence grant states (§4.3, §10.3)', () => {
     });
     expect(await requestPersist()).toBe('denied');
     expect(persistenceError.value).toBe(true);
+  });
+});
+
+describe('never-settling persist() — the §9.4 best-effort bound (nightly t_e20c2adb)', () => {
+  // Firefox resolves persist() ONLY when the user answers its permission prompt, which in an
+  // unattended/automated window may be never (repro: Playwright firefox, 25 s+ pending). An
+  // unbounded await would hang the first-write gate forever — the exact nightly failure.
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('requestPersist() reports the persisted() truth after the settle bound instead of hanging', async () => {
+    vi.useFakeTimers();
+    installStorage({
+      persist: () => new Promise<boolean>(() => undefined), // never settles
+      persisted: async () => false,
+    });
+
+    const pending = requestPersist();
+    await vi.advanceTimersByTimeAsync(PERSIST_SETTLE_TIMEOUT_MS);
+
+    expect(await pending).toBe('denied');
+    expect(persistenceState.value).toBe('denied');
+    // The browser never answered — §10.5 "This browser wouldn't say." is the honest copy.
+    expect(persistenceError.value).toBe(true);
+  });
+
+  it('adopts a late answer once the prompt is finally answered (row never stays a lie)', async () => {
+    vi.useFakeTimers();
+    let grantLate: ((granted: boolean) => void) | undefined;
+    installStorage({
+      persist: () =>
+        new Promise<boolean>((resolve) => {
+          grantLate = resolve;
+        }),
+      persisted: async () => false,
+    });
+
+    const pending = requestPersist();
+    await vi.advanceTimersByTimeAsync(PERSIST_SETTLE_TIMEOUT_MS);
+    expect(await pending).toBe('denied');
+    expect(persistenceError.value).toBe(true);
+
+    grantLate?.(true);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(persistenceState.value).toBe('granted');
+    expect(persistenceError.value).toBe(false);
+  });
+
+  it('the first-write gate always completes and runs exactly once, even when persist() hangs', async () => {
+    vi.useFakeTimers();
+    const persist = vi.fn(() => new Promise<boolean>(() => undefined));
+    installStorage({
+      persist,
+      persisted: async () => false,
+      estimate: async () => ({ quota: 2 * 1024 * 1024 * 1024 }),
+    });
+    window.localStorage.clear();
+    resetFlags();
+
+    const gate = noteFirstMeaningfulWrite();
+    await vi.advanceTimersByTimeAsync(PERSIST_SETTLE_TIMEOUT_MS);
+    await gate;
+
+    expect(isPersistGateOpen()).toBe(true);
+    expect(persist).toHaveBeenCalledTimes(1);
+    expect(persistenceState.value).toBe('denied');
+    // Ordinary quota → no private-browsing dialog, and the durable prior-data mark still landed.
+    expect(currentDialog()).toBeNull();
+    expect(hasPriorData()).toBe(true);
   });
 });
 
