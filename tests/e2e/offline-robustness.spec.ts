@@ -205,29 +205,35 @@ test('cache lifecycle: activate purges old VERSIONS of this app only (Decision 3
   }
 });
 
-test('MVP install scope (PO Q12): no web manifest and no install prompt anywhere', async ({
+test('V1 install scope (ADR-008): exactly the S13 surface ships — one manifest, our handler, never precached', async ({
   page,
 }) => {
   await bootBuildA(page);
 
-  // 1. the shell document ships no manifest link…
+  // Scope note: PO Q12 kept installability OUT of MVP; S13 (ADR-008) is the first V1 item and
+  // supersedes that MVP-era scope floor. This guard now pins the V1 scope: the install surface
+  // ships EXACTLY as ADR-008 specifies — no more, no less.
+  //
+  // 1. the shell document carries exactly one manifest link…
   const manifestLinks = await page.evaluate(
     () => document.querySelectorAll('link[rel="manifest"]').length,
   );
-  expect(manifestLinks).toBe(0);
+  expect(manifestLinks).toBe(1);
 
-  // 2. …no manifest file is built, and no shipped script handles `beforeinstallprompt`…
+  // 2. …exactly one manifest file is built, and exactly one shipped script handles
+  //    `beforeinstallprompt` (the install feature itself — a second handler would mean an
+  //    accidental duplicate surface)…
   const files = shippedFiles(FIXTURES.vA);
-  expect(files.filter((rel) => rel.endsWith('.webmanifest'))).toEqual([]);
+  expect(files.filter((rel) => rel.endsWith('.webmanifest'))).toEqual(['manifest.webmanifest']);
   const installPromptRefs = files.filter(
     (rel) =>
       rel.endsWith('.js') &&
       readFileSync(join(FIXTURES.vA, rel), 'utf8').includes('beforeinstallprompt'),
   );
-  expect(installPromptRefs).toEqual([]);
+  expect(installPromptRefs.length).toBe(1);
 
-  // 3. …and nothing manifest-y was precached (ADR-005 Decision 2; Q12 supersedes M9's
-  //    older "icons/manifest" wording).
+  // 3. …and the manifest is still NOT precached (ADR-005 Decision 2, unchanged by ADR-008:
+  //    it is install-time metadata, not part of offline boot).
   const cacheName = await expectSingleVersionedCache(page);
   const entries = await cacheEntryUrls(page, cacheName);
   expect(entries.filter((url) => url.endsWith('.webmanifest'))).toEqual([]);
