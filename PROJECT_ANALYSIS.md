@@ -321,6 +321,17 @@ Snapshot  { id, takenAt, kind: auto|manual, sizeBytes, payloadRef }
   response headers, so CSP ships as a `<meta http-equiv>` tag; `frame-ancestors` is ignored in meta
   and is dropped as a documented exception (accepted: there are no cookies or sessions to protect;
   the app runs entirely client-side).
+  **Amendment (2026-10-26 — V1 WebDAV sync, ADR-006 Addendum A):** the "MVP can tighten
+  `connect-src` to `'none'`" note predates sync and no longer holds as written — S9/Q2 (DECIDED)
+  syncs to a **user-provided** WebDAV origin, so `connect-src` is instead **widened** to
+  `'self' https: http://localhost:* http://127.0.0.1:*`. The source list is exactly the sync
+  engine's allow-list (`assertSecureRemote`: any https host + plain-HTTP loopback for development)
+  — never narrower, so the CSP can never silently block what the app offers the user (the shipped
+  `connect-src 'self'` provably broke every cross-origin sync attempt; see ADR-006 Addendum A) and
+  never wider: plain-HTTP egress to non-loopback hosts, and every other directive, stay as
+  prespecified above. `upgrade-insecure-requests` is deliberately not set (the engine refuses
+  insecure URLs with an explicit error rather than rewriting them). This is the second documented
+  meta-CSP exception alongside `frame-ancestors` (README "CSP and the documented exceptions").
 - **Dependency policy:** minimal dependencies (storage wrapper, router if any), lockfile committed,
   bundled output, license review, routine audit; user content rendered as text (no
   `dangerouslySetInnerHTML`; markdown only with sanitization, C9).

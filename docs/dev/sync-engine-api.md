@@ -76,6 +76,15 @@ dispose()                                          // teardown (schedulers/liste
 
 Every code is also written to the local error log (ADR-002 §10.4) — no telemetry (§7.2).
 
+**CSP precondition (ADR-006 Addendum A, 2026-10-26).** The `CORS`/`NETWORK` guidance above is
+only honest if the shipped CSP lets these requests leave the browser at all. It now does:
+`connect-src 'self' https: http://localhost:* http://127.0.0.1:*` — exactly the engine's own
+allow-list (`assertSecureRemote`: any https host; plain-HTTP loopback, "localhost excepted" as in
+the `CONFIG` row). Before this widening, `connect-src 'self'` blocked every cross-origin attempt
+at the policy layer and every failure surfaced as `CORS`/`NETWORK` blaming the user's server
+(defect B2). If `connect-src` is ever narrowed again, this table silently becomes misleading —
+the smoke e2e pins the policy value exactly to prevent that.
+
 ## 4. What the engine does on its own (Decision 9.1 — do not duplicate in the UI)
 
 - With `enabled && autoSync` (default **on**): every 15 min while online+visible, immediately on

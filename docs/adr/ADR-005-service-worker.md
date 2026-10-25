@@ -171,7 +171,7 @@ old code has its old hashed chunks neither in any cache nor on the server (the d
 | In-scope `GET` static assets (hashed JS/CSS/locales/icons) | **cache-first**, write-through on miss | miss (should not happen — whole artifact set is precached) → network fetch → `cache.put` into the *current* versioned cache; same-origin, in-scope, `GET` only |
 | `sw.js` | **not in the fetch handler** | browser-managed update fetch; `updateViaCache: 'none'` keeps it off the HTTP cache |
 | Update check (`registration.update()`) | **network only** | the one intentional network path; same-origin (§7.2) |
-| Everything else (non-`GET`, out of scope, any future endpoint) | **pass-through network** | MVP has no such traffic — app data is IDB only (§6.1); CSP `connect-src 'self'` is the runtime backstop |
+| Everything else (non-`GET`, out of scope, any future endpoint) | **pass-through network** | MVP has no such traffic — app data is IDB only (§6.1); since V1 sync (E8) the page's WebDAV fetches (cross-origin PROPFIND/GET/PUT) pass through here untouched; the CSP `connect-src` backstop is `'self' https: <plain-HTTP loopback>` (ADR-006 Addendum A — was `'self'`, which silently blocked all sync egress) |
 
 No `stale-while-revalidate` anywhere: assets are content-hashed, so revalidation costs network
 chatter for zero freshness value. No `version.json` (Alternatives).
@@ -418,7 +418,7 @@ machine reducer (every transition in Decision 5, incl. apply-during-edit failure
 | Broken partial install | `cache.addAll` atomicity (Decision 2): failure leaves the previous version serving |
 | Cross-app cache collision on shared origin (`*.github.io`) | `baseSlug` in cache names (Decision 3/8) |
 | Scope drift with base path | `BASE_URL`-derived URLs only + non-root-base e2e run in CI (Decision 8/9) |
-| SW oversteps CSP (`connect-src 'self'`) | same-origin only; update check is same-origin; CSP-violation listener runs in the SW-era specs (Decision 9, test 9) |
+| SW oversteps CSP (`connect-src` — `'self' https: <plain-HTTP loopback>` since ADR-006 Addendum A) | same-origin only; update check is same-origin; WebDAV sync fetches cross-origin by design (user-provided origin) and pass through the SW untouched; CSP-violation listener runs in the SW-era specs (Decision 9, test 9) |
 
 **Migration path**
 

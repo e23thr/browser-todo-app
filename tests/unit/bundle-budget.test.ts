@@ -189,6 +189,33 @@ describe('bundle budget gate — deliberate violations', () => {
     expect(report.ok).toBe(true);
   });
 
+  it('allows the CSP meta plain-HTTP loopback sources (ADR-006 Addendum A: not fetches)', () => {
+    // The V1 WebDAV sync policy ships `http://localhost:*` / `http://127.0.0.1:*` source
+    // expressions inside the CSP meta tag. They are policy text, not network references —
+    // exactly like the XML namespaces above — and loopback is not third-party.
+    const cspHtml = ENTRY_HTML.replace(
+      'content="default-src \'self\'"',
+      "content=\"default-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*\"",
+    );
+    const report = run({ ...baseFiles(), 'index.html': cspHtml });
+
+    expect(statusOf(report, 'no-external-refs')).toBe('PASS');
+    expect(report.ok).toBe(true);
+  });
+
+  it('still FAILS on a plain-HTTP external reference (the loopback allowlist is not a hole)', () => {
+    const report = run(
+      baseFiles({
+        'assets/index-entry.js': 'fetch("http://cdn.example.com/lib.js");',
+      }),
+    );
+
+    expect(statusOf(report, 'no-external-refs')).toBe('FAIL');
+    expect(report.results.find((result) => result.name === 'no-external-refs')?.detail).toContain(
+      'cdn.example.com',
+    );
+  });
+
   it('FAILS when locale packs exceed 20 KB gzip combined', () => {
     const manifest = {
       ...BASE_MANIFEST,

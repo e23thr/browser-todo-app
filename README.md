@@ -168,20 +168,41 @@ build.
 
 ---
 
-## CSP and the `frame-ancestors` exception
+## CSP and the documented exceptions
 
 GitHub Pages cannot set custom response headers (§7.2, PO Q11), so the policy ships as a
 `<meta http-equiv>` tag in `index.html`:
 
 ```
 default-src 'self'; script-src 'self' 'sha256-…'; style-src 'self'; img-src 'self' data: blob:;
-connect-src 'self'; object-src 'none'; base-uri 'none'
+connect-src 'self' https: http://localhost:* http://127.0.0.1:*; object-src 'none'; base-uri 'none'
 ```
 
-**Documented exception — `frame-ancestors` is dropped.** It is ignored inside a `meta` CSP (only
+**Documented exception 1 — `frame-ancestors` is dropped.** It is ignored inside a `meta` CSP (only
 HTTP response headers honour it), and the exception is accepted because the app has no cookies or
 sessions to protect: it is entirely client-side and stores nothing server-side. Clickjacking risk
 is therefore limited to rendering a static, script-locked page in a frame.
+
+**Documented exception 2 — `connect-src` is widened for V1 WebDAV sync** (ADR-006 Addendum A).
+Sync talks to a **user-provided** WebDAV origin, which cannot be enumerated in a static policy, so
+the source list is exactly as wide as the sync engine's own allow-list
+(`assertSecureRemote`: any **https** host, plus plain-HTTP `localhost`/`127.0.0.1` at any port,
+which the engine permits for development) and never narrower. The invariant: **the shipped CSP
+never blocks a request the app itself is willing to make** — otherwise every sync failure is
+silently misattributed to the user's server (this was defect B2: `connect-src 'self'` made the
+wizard's "Test connection & enable" impossible against any real server while the error copy blamed
+CORS on the server side).
+
+What stays blocked: plain-HTTP egress to any non-loopback host (`https:` scheme source, plus
+mixed-content blocking), every origin for every other directive, and all inline script except the
+hashed theme-boot snippet. `upgrade-insecure-requests` is deliberately **not** set — the engine
+refuses insecure URLs with an explicit error instead of silently rewriting them, and the wizard
+tells the user so ("a valid HTTPS WebDAV URL (plain HTTP only for localhost)").
+
+The `no-external-refs` bundle gate (ADR-001 §8) keeps the "zero third-party bytes" promise
+unchanged: its allow-list covers the loopback CSP source expressions as _policy text_ (like the
+XML namespace constants), and any other external `http(s)://` reference in shipped JS/CSS/HTML
+still fails the build.
 
 Other notes:
 

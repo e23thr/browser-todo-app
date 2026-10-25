@@ -685,6 +685,86 @@ See "Offline-first test plan" above — it is normative for the impl/test cards 
 property convergence tests, codec/torn-file fixtures, tombstone-purge interplay, failure
 injection with byte-identity evidence, fake WebDAV fixture, two-device Playwright E2E).
 
+---
+
+## Addendum A (2026-10-26) — CSP `connect-src` policy for user-provided WebDAV origins
+
+**Status**: Accepted (sole decider: h_senior_coder; raised as epic blocker B2 by the sync-UI
+review, t_7567495e / fix card t_11670709).
+
+**Context**: The app ships its CSP as a `<meta>` tag (§7.2, PO Q11 — GitHub Pages cannot set
+response headers). The scaffold policy carried `connect-src 'self'`, and §7.2 as originally
+written even suggested tightening it to `'none'` later. V1 sync (S9/Q2 DECIDED) fetches
+PROPFIND/GET/PUT to a **user-provided** WebDAV origin. First-hand Chromium evidence against the
+built artifact: same-origin fetch → 200, external fetch → `securitypolicyviolation`
+`{connect-src, https://example.com/}` + `TypeError`. So the shipped policy blocked the feature
+**before the request left the browser**, and the wizard's `CORS`/`NETWORK` copy misattributed the
+failure to the user's server ("fix your `Access-Control-Allow-Origin`") — the real blocker was
+this app's own policy. Nobody caught it earlier because jsdom (unit/component tests) does not
+enforce CSP, no e2e drove sync in a real browser, and no ADR discussed the collision.
+
+**Decision** (Option A — the feature is V1-required, so the policy yields to it; Option B would
+contradict the PO-decided V1 goal): widen `connect-src` to
+
+```
+connect-src 'self' https: http://localhost:* http://127.0.0.1:*
+```
+
+with the invariant **"the shipped CSP must never block a request the engine is willing to make"**:
+the source list is derived from `assertSecureRemote`'s allow-list (any https host; plain-HTTP
+`localhost`/`127.0.0.1`, which the engine permits for development — the wizard copy
+`sync.error.config.body` already promises exactly this). Never narrower — that is what produced
+B2; never wider — plain-HTTP egress to non-loopback hosts stays blocked (`https:` scheme source +
+mixed-content blocking), and no other directive changes. The loopback HTTP sources also keep a
+genuine use case working (a local WebDAV server such as `rclone serve webdav` on loopback) and are
+what a real-browser wizard probe can exercise without an external network.
+
+The `no-external-refs` bundle gate (ADR-001 §8) is extended with a documented allow-list entry
+for the loopback CSP source expressions (`scripts/bundle-budgets.json` + unit tests) — they are
+policy *text*, not network references (same category as the XML namespace constants), and
+loopback is not third-party. Any other external `http(s)://` reference in shipped files still
+fails the build.
+
+Documented in the same style as `frame-ancestors`: `index.html` comment + README "CSP and the
+documented exceptions" + §7.2 amendment note.
+
+**Alternatives considered**
+
+| Option | Pros | Cons | Why not |
+|---|---|---|---|
+| Keep `connect-src 'self'` and re-scope sync as non-shippable (Option B) | Tightest egress | Kills the PO-decided V1 feature (S9/Q2 DECIDED); contradicts ADR-006 as implemented and reviewed | Product decision already made; B2 is a policy bug, not a product constraint |
+| `https:` only (drop the loopback sources) | Slightly tighter against loopback probing | CSP would block URLs the engine accepts and the shipped copy promises (`sync.error.config.body`: "plain HTTP only for localhost") — a fresh misattribution class (B2's exact failure mode); breaks local-WebDAV use; natural wizard probes (loopback fake host) would fail | Violates the invariant |
+| `https:` + `upgrade-insecure-requests` | Belt-and-braces http→https rewriting | The engine already refuses insecure URLs with an explicit CONFIG error the user can act on; UIR would silently rewrite behind that UX; adds nothing over the `https:` scheme source + mixed-content blocking; meta-tag support is uneven | Evaluated per the card; rejected as redundant and actively confusing |
+| Enumerate origins (e.g. `connect-src 'self' https://nextcloud.example`) | Tightest possible | Impossible: the destination is user-provided at runtime and the artifact is static | Not expressible in CSP |
+| `connect-src *` | Trivial | Wildcard also admits plain-HTTP egress to arbitrary hosts | Too wide |
+| Ship `https:` only + relax connect-src for localhost in the dev server | Prod policy marginally tighter | Engine/copy/policy inconsistency persists in PRODUCTION for loopback users (the case users hit); extra dev-only transform | Complexity for a hole that barely exists (see Consequences) |
+
+**Consequences**
+
+- Positive: the sync wizard's "Test connection & enable" can reach real Nextcloud/WebDAV servers;
+  failures the user sees are again honestly the server's (CORS) or the network's, so the
+  `CORS`/`NETWORK` copy and Decision 1's "CORS is a real setup requirement" statement become true
+  again; one real-browser regression guard now covers the policy (smoke e2e: exact directive pin +
+  cross-origin loopback PROPFIND with preflight + plain-HTTP negative control).
+- Negative / accepted costs: egress from the app's origin is no longer same-origin-only — any
+  future XSS could fetch arbitrary https URLs (exfiltration) and probe loopback services. The
+  marginal risk of the loopback sources is small *given* `https:` is already required by V1
+  (arbitrary remote exfiltration supersedes it); the remaining controls are unchanged
+  (no third-party bytes at build time, no `unsafe-inline` in production, hashed inline script,
+  user content rendered as text).
+- Risks & mitigations: *policy drift* → the smoke e2e pins the `connect-src` value EXACTLY (a
+  widening or narrowing fails CI) and asserts the runtime behavior; *gate false-positives* →
+  `no-external-refs` allow-list is prefix-scoped to loopback and unit-tested both ways (CSP meta
+  passes, `http://cdn.example.com/` still fails); *GitHub Pages meta-only channel* → no response
+  header CSP exists to contradict the meta tag.
+
+**Verification** (t_11670709): real Chromium against the built artifact — control same-origin
+fetch 200; cross-origin PROPFIND (Basic auth + Depth, i.e. preflighted) to a fake WebDAV host on
+loopback reaches the host with zero `connect-src` violations; the full wizard "Test connection &
+enable" completes against the same fake host; external https fetch no longer violation-blocked;
+plain-HTTP external fetch still fires exactly one `connect-src` violation. Evidence:
+`docs/qa/e8-csp-connect-src.md`.
+
 ## Links
 - PROJECT_ANALYSIS.md §6.2 (binding sync/conflict policy + guarantees), §5.2 (storage strategy),
   §11 R3 (scope-creep risk), §2 + §4 WON'T (no server we operate), §12 Q1/Q2 (PO decisions),
@@ -693,3 +773,8 @@ injection with byte-identity evidence, fake WebDAV fixture, two-device Playwrigh
   ADR-001 (UI stack: Preact + signals, Vitest/Playwright)
 - Kanban: epic E8 decomposition t_1b9ee0e6; this card t_6e4bb440 (sole decider);
   child decisions: t_00d7f17b (engine impl), t_55accc9c (ADR-007 encryption)
+- Addendum A: PROJECT_ANALYSIS §7.2 amendment note (2026-10-26), README "CSP and the documented
+  exceptions", `index.html` CSP comment, `scripts/bundle-budgets.json` (`no-external-refs`
+  allow-list), `tests/e2e/smoke.spec.ts` (connect-src regression guard),
+  `docs/qa/e8-csp-connect-src.md` (real-browser evidence); review chain t_7567495e (B2) →
+  t_11670709 (this decision) → t_9114bd20 (R2 re-review)

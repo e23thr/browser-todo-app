@@ -7,15 +7,27 @@
       Content-Security-Policy per PROJECT_ANALYSIS.md section 7.2, shipped as a <meta> tag
       because GitHub Pages cannot set custom response headers (section 7.2 / 9.5, PO Q11).
 
-      Documented exception: `frame-ancestors` is dropped — it is ignored inside meta CSP and the
+      Documented exception 1: `frame-ancestors` is dropped — it is ignored inside meta CSP and the
       app has no cookies or sessions to protect (see README, "CSP exception").
+
+      Documented exception 2 (V1 WebDAV sync, ADR-006 Addendum A): `connect-src` is widened from
+      `'self'` to `'self' https: <plain-HTTP loopback>`. Sync runs against a USER-PROVIDED WebDAV
+      origin, which cannot be enumerated in a static policy, so the source list is exactly as wide
+      as the engine's own allow-list (`assertSecureRemote`: any https host, plus plain-HTTP
+      localhost/127.0.0.1 for development) and never narrower — otherwise this policy silently
+      blocks what the app itself offers the user (defect B2: failures surfaced as CORS/server
+      errors when the real blocker was this line). Plain-HTTP egress to any non-loopback host
+      stays blocked (https: scheme source + mixed-content blocking); `upgrade-insecure-requests`
+      is deliberately NOT set — the engine refuses insecure URLs with an explicit error instead of
+      silently rewriting them. The no-external-refs bundle gate allow-lists the loopback source
+      expressions as policy text (scripts/bundle-budgets.json).
 
       The `sha256-…` source in `script-src` below is computed at build time from the SHA-256 of
       the inline theme-boot snippet — the only inline script this policy permits.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-__THEME_BOOT_SHA256__'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-__THEME_BOOT_SHA256__'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; object-src 'none'; base-uri 'none'"
     />
     <meta name="color-scheme" content="light dark" />
     <!--

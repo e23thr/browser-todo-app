@@ -198,7 +198,7 @@ Measurement method (fixed to prevent gate drift): production build via `npm run 
 | Initial JS (gzip) | ≤ 100 KB (target 80 KB) | `initial-js` | sum of all JS chunks in the entry's static import closure (framework + app core + always-loaded UI); **FAIL > 100 KB**, warn ≥ 80 KB |
 | CSS (gzip) | ≤ 20 KB | `css` | sum of all CSS in `dist/`; **FAIL > 20 KB** |
 | Total app shell (gzip, excl. icons/manifest) | ≤ 200 KB | `app-shell` | HTML + initial JS + CSS + service worker + initial locale chunk; lazy route/locale chunks excluded; **FAIL > 200 KB** |
-| Runtime third-party bytes | 0 | `no-external-refs` | **FAIL** on any `http(s)://` external-origin reference in shipped JS/CSS/HTML (CSP `connect-src 'self'` is the runtime backstop) |
+| Runtime third-party bytes | 0 | `no-external-refs` | **FAIL** on any `http(s)://` external-origin reference in shipped JS/CSS/HTML (runtime backstop: the CSP `connect-src` list — widened once for V1 WebDAV sync to `'self' https: <plain-HTTP loopback>`, see ADR-006 Addendum A; its loopback source expressions are allow-listed as policy text, not fetches) |
 | WASM | 0 in MVP | `no-wasm` | **FAIL** on any `.wasm` asset in `dist/` (any future WASM payload requires its own ADR first) |
 | Locale strings (en + th) | ≤ 20 KB gzip total | `locales` | **FAIL** > 20 KB combined; **FAIL** if any locale pack is found inside the initial JS closure (each locale must be a lazy chunk) |
 

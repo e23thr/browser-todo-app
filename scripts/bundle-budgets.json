@@ -31,8 +31,13 @@
       "description": "en+th locale packs: FAIL > 20 KB gz combined, FAIL if a locale pack is inside the initial JS closure (they must be lazy)"
     },
     "no-external-refs": {
-      "allowedUrlPrefixes": ["http://www.w3.org/", "https://www.w3.org/"],
-      "description": "Runtime third-party bytes = 0: FAIL on any external http(s):// reference in shipped JS/CSS/HTML/SVG (XML namespaces are not network fetches)"
+      "allowedUrlPrefixes": [
+        "http://www.w3.org/",
+        "https://www.w3.org/",
+        "http://localhost:",
+        "http://127.0.0.1:"
+      ],
+      "description": "Runtime third-party bytes = 0: FAIL on any external http(s):// reference in shipped JS/CSS/HTML/SVG (XML namespaces are not network fetches; the CSP meta's plain-HTTP LOOPBACK source expressions for V1 WebDAV sync are not fetches either — ADR-006 Addendum A — and loopback is not third-party)"
     },
     "no-wasm": {
       "description": "WASM = 0 in MVP: FAIL on any .wasm in dist/ (a WASM payload requires its own ADR first)"
