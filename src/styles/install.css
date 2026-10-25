@@ -3,18 +3,41 @@
  * targets (§8 WCAG 2.2 AA), plain fade only (prefers-reduced-motion safe), zero external bytes
  * (§7.2). Shares the update toast's composition, but every value is a REAL tokens.css variable
  * (`--color-bg`/`--color-text-muted`/`--radius-1` in update.css resolve to nothing — those are
- * undefined; this file does not copy that).
+ * undefined; this file does not copy that). The only non-token literal below is the 56 px FAB
+ * band, which is a shell dimension (shell.css `.fab`, not a token) — documented inline and
+ * pinned by tests/e2e/install-placement.spec.ts.
  */
 
 .install-notice-stack {
   position: fixed;
   right: var(--space-4);
-  bottom: var(--space-4);
-  z-index: 100;
+  /*
+   * Base = compact (as shell.css does): the shell renders the fixed .tabbar and .fab at every
+   * width below the §3.6 1024 px split, and both own this corner (§6.10 "above tab bar/FAB").
+   * Lift clear of them: tab bar + space-4 + the FAB band (shell.css `.fab` — 56 px tall, its
+   * bottom offset is tabbar-h + space-4) + space-4 gutter, plus the iOS home-indicator inset —
+   * so a shown install notice can never cover the FAB (focused or not) or the nav. The old plain
+   * `bottom: var(--space-4)` painted over both at equal z-index (appended later than #app):
+   * the focused FAB's centre and all four corners resolved inside the notice at 360 px —
+   * WCAG 2.2 SC 2.4.11 failure (E6 review t_6e9e4f81 §3/B1). The 56 px FAB band is pinned by
+   * tests/e2e/install-placement.spec.ts, which fails if the stack ever re-enters it.
+   */
+  bottom: calc(
+    var(--tabbar-h) + var(--space-4) + 56px + var(--space-4) + env(safe-area-inset-bottom)
+  );
+  z-index: var(--z-sticky);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  max-width: min(24rem, calc(100vw - 2 * var(--space-4)));
+  /* §6.10: toast width ≤ 360 px; never full-bleed — clamp to the viewport minus its gutters. */
+  max-width: min(360px, calc(100vw - 2 * var(--space-4)));
+}
+
+/* §3.6 wide split (the shell's WIDE_QUERY): no .tabbar/.fab above 1024 px — plain corner inset. */
+@media (min-width: 1024px) {
+  .install-notice-stack {
+    bottom: var(--space-4);
+  }
 }
 
 .install-notice {
@@ -23,7 +46,7 @@
   border-radius: var(--radius-md);
   background: var(--color-surface);
   color: var(--color-text);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 18%);
+  box-shadow: var(--shadow-md);
 }
 
 .install-notice-title {
@@ -65,8 +88,17 @@
   cursor: pointer;
 }
 
+.install-action:hover {
+  background: var(--color-surface-hover);
+}
+
 .install-action-primary {
   border-color: var(--color-accent);
   background: var(--color-accent);
   color: var(--color-on-accent);
+}
+
+.install-action-primary:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
 }
