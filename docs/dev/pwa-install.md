@@ -46,7 +46,10 @@ Discipline (acceptance criteria): the offer never appears before the first task 
 "No thanks" — or declining the native install dialog — is a permanent, cross-session dismissal
 (`install-prompt` in the ADR-002 Decision 7 `dismissedBanners` key); there is no snooze and no
 re-prompt loop; the card is non-modal, announced in one polite live region and never steals
-focus (WCAG 2.2 AA).
+focus (WCAG 2.2 AA). Placement: below the 1024 px shell split the fixed card is lifted clear
+of the bottom tab bar and the FAB (design §6.10 "above tab bar/FAB", WCAG 2.2 SC 2.4.11 —
+pinned by `tests/e2e/install-placement.spec.ts`); above the split it returns to a plain
+corner inset.
 
 ## 4. Post-install behaviour
 
