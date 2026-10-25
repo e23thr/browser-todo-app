@@ -1,0 +1,26 @@
+
+Running 1 test using 1 worker
+
+TRAVERSAL: [
+ "A.skip-link(\"Skip to main content\")",
+ "BUTTON.icon-button",
+ "A.icon-button appbar-search",
+ "BUTTON.button button-primary(\"Ask again\")",
+ "BUTTON.button button-primary(\"Back up now\")",
+ "BUTTON.icon-button nudge-close",
+ "LI.task-row(\"Tab traversal taskTab Li\")",
+ "INPUT.task-check",
+ "BUTTON.task-title(\"Tab traversal task\")",
+ "BUTTON.icon-button row-menu-trigger",
+ "A.tab(\"Today\")",
+ "A.tab(\"Next 7 days\")",
+ "A.tab(\"All open\")",
+ "A.tab(\"Completed\")",
+ "BUTTON.tab(\"More\")",
+ "BUTTON.fab [HIDDEN-BEHIND-NOTICE]",
+ "BUTTON.install-action install-action-primary(\"Install\")"
+]
+FAB_IN_TAB_ORDER: {"hiddenBehindNotice":true}
+  ✓  1 [chromium] › tests/e2e/install-review-tabtraversal.spec.ts:24:1 › real Tab traversal: FAB focus state while the install notice is up (15.5s)
+
+  1 passed (19.5s)

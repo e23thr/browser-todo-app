@@ -1,0 +1,18 @@
+
+Running 3 tests using 3 workers
+
+AXE[manual] violations: NONE
+TARGETS[manual]: [{"text":"Got it","w":75.171875,"h":44}]
+AXE[light] violations: NONE
+AXE[dark] violations: NONE
+TARGETS[light]: [{"text":"Install","w":79.984375,"h":44},{"text":"No thanks","w":110.75,"h":44}]
+TARGETS[dark]: [{"text":"Install","w":79.984375,"h":44},{"text":"No thanks","w":110.75,"h":44}]
+ACTIVE_ON_MOUNT[light]: INPUT
+ACTIVE_ON_MOUNT[dark]: INPUT
+  ✓  1 [chromium] › tests/e2e/install-review-axe.spec.ts:113:1 › install notice (iOS manual tier): axe scan, steps copy, no dead Install button (1.0s)
+TAB_REACH[light]: OK
+TAB_REACH[dark]: OK
+  ✓  3 [chromium] › tests/e2e/install-review-axe.spec.ts:52:3 › install notice axe scan (light) + 44px targets + keyboard reachability (1.1s)
+  ✓  2 [chromium] › tests/e2e/install-review-axe.spec.ts:52:3 › install notice axe scan (dark) + 44px targets + keyboard reachability (1.1s)
+
+  3 passed (5.4s)

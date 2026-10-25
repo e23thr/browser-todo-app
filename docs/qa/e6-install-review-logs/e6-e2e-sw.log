@@ -1,0 +1,65 @@
+
+> browser-todo-app@0.1.0 e2e:sw
+> playwright test --config playwright.sw.config.ts
+
+
+Running 21 tests using 6 workers
+
+  ✓   1 [chromium] › tests/e2e/install.spec.ts:183:1 › post-install launch (display-mode standalone): the app boots and never offers install (2.1s)
+  ✓   5 [chromium] › tests/e2e/install.spec.ts:127:1 › manifest and apple-touch icon also line up under the root base (1.1s)
+  ✓   4 [chromium] › tests/e2e/install.spec.ts:93:1 › manifest scope/start_url agree with the service-worker scope under the /<repo>/ base (1.3s)
+  ✓   3 [chromium] › tests/e2e/install.spec.ts:169:1 › install button hands the captured event to the browser (2.5s)
+  ✓   2 [chromium] › tests/e2e/offline-data-journey.spec.ts:51:1 › offline data journey: an offline write survives an offline reload (2.9s)
+  ✓  11 [chromium] › tests/e2e/offline-robustness.spec.ts:208:1 › V1 install scope (ADR-008): exactly the S13 surface ships — one manifest, our handler, never precached (1.1s)
+  ✘   8 [chromium] › tests/e2e/offline-robustness.spec.ts:102:1 › degraded network (2 s per response): local writes stay optimistic and durable (§6.1) (1.9s)
+  ✓   7 [chromium] › tests/e2e/offline-data-journey.spec.ts:72:1 › offline task journey: add -> complete -> reload -> data present (E2 core UI) (3.1s)
+  ✓  10 [chromium] › tests/e2e/offline-robustness.spec.ts:170:1 › cache lifecycle: activate purges old VERSIONS of this app only (Decision 3) (2.5s)
+  ✓  12 [chromium] › tests/e2e/offline.spec.ts:62:1 › cold load online, then offline boot keeps the whole app working (M9) (1.2s)
+  ✓   9 [chromium] › tests/e2e/offline-robustness.spec.ts:141:1 › degraded network (every response 500): writes persist and the update check is silent (Decision 6) (3.3s)
+  ✓  15 [chromium] › tests/e2e/offline.spec.ts:182:1 › the non-root base path yields the scoped registration and cache namespace (259ms)
+  ✓  14 [chromium] › tests/e2e/offline.spec.ts:155:1 › scope and cache naming are correct under a root base path (Decision 8) (472ms)
+  ✓  16 [chromium] › tests/e2e/offline.spec.ts:204:1 › no CSP violations fire across offline boot and lazy navigation (Decision 9, test 9) (490ms)
+  ✓  18 [chromium] › tests/e2e/offline.spec.ts:98:1 › warm and offline start-to-interactive stay inside the boot budget (§9.1) (536ms)
+  ✓  13 [chromium] › tests/e2e/offline.spec.ts:130:1 › a failing update check is completely silent (Decision 6) (2.2s)
+  ✓  17 [chromium] › tests/e2e/update.spec.ts:56:1 › update flow: detect -> toast -> apply on user action -> exactly one reload (2.5s)
+  ✓  19 [chromium] › tests/e2e/update.spec.ts:88:1 › E9: a mid-edit session is never force-reloaded; Apply flushes the draft first (2.7s)
+  ✓  20 [chromium] › tests/e2e/update.spec.ts:126:1 › E9 multi-tab: applying in one tab never reloads another (2.6s)
+  ✓  21 [chromium] › tests/e2e/update.spec.ts:152:1 › stale-tab guard: a vanished lazy chunk is explained, never auto-fixed (Decision 3) (2.4s)
+  ✓   6 [chromium] › tests/e2e/install.spec.ts:140:1 › install offer: nothing before the first task, offered after it, dismissal survives reload (17.8s)
+
+
+  1) [chromium] › tests/e2e/offline-robustness.spec.ts:102:1 › degraded network (2 s per response): local writes stay optimistic and durable (§6.1) 
+
+    Error: expect(received).toBeLessThan(expected)
+
+    Expected: < 100
+    Received:   108.19999999925494
+
+      123 |     });
+      124 |     expect(feedbackMs).toBeGreaterThan(0);
+    > 125 |     expect(feedbackMs).toBeLessThan(100);
+          |                        ^
+      126 |
+      127 |     // …and the write is durable offline of the network's health: a reload (served cache-first
+      128 |     // by the SW) and a fresh boot of the settings view both show the value.
+        at /tmp/e6-review-wt/tests/e2e/offline-robustness.spec.ts:125:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/offline-robustness-degrade-77165-ptimistic-and-durable-§6-1--chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/offline-robustness-degrade-77165-ptimistic-and-durable-§6-1--chromium/error-context.md
+
+    Error Context: test-results/offline-robustness-degrade-77165-ptimistic-and-durable-§6-1--chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/offline-robustness-degrade-77165-ptimistic-and-durable-§6-1--chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/offline-robustness-degrade-77165-ptimistic-and-durable-§6-1--chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/e2e/offline-robustness.spec.ts:102:1 › degraded network (2 s per response): local writes stay optimistic and durable (§6.1) 
+  20 passed (35.5s)

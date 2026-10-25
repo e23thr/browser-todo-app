@@ -1,0 +1,97 @@
+
+> browser-todo-app@0.1.0 e2e
+> playwright test --project=chromium
+
+
+Running 66 tests using 6 workers
+
+  ✓   1 [chromium] › tests/e2e/data-safety-journey.spec.ts:182:1 › drill 1 (acceptance): export -> wipe -> import -> restored byte-equivalent, offline (312ms)
+  ✓   5 [chromium] › tests/e2e/data-safety-journey.spec.ts:272:1 › drill 3: old exports upgrade through the migration chain (failing step = zero side effects) (273ms)
+  ✓   7 [chromium] › tests/e2e/data-safety-journey.spec.ts:254:1 › drill 2: two exports with no data change differ only in exportedAt/lastBackupAt (177ms)
+  ✓   8 [chromium] › tests/e2e/data-safety-journey.spec.ts:292:1 › drills 4/7: hostile and malformed files are rejected with zero side effects (283ms)
+  ✓   3 [chromium] › tests/e2e/core-ui-keyboard.spec.ts:549:1 › touch targets are at least 44×44 CSS px on a compact viewport (1.8s)
+  ✓   9 [chromium] › tests/e2e/data-safety-journey.spec.ts:383:1 › drill 14: the real recovery file is a report — not importable, never persisted (166ms)
+  ✓  12 [chromium] › tests/e2e/data-safety-journey.spec.ts:420:1 › drills 5/6/8: corrupt records quarantine to the recovery file, valid ones apply (176ms)
+  ✓  10 [chromium] › tests/e2e/data-safety-journey.spec.ts:455:1 › drill 9: auto snapshots rotate to the newest 3, manual ones never evict (238ms)
+  ✓  11 [chromium] › tests/e2e/data-safety-journey.spec.ts:528:1 › drill 11: a failing pre-import snapshot aborts the apply (opt-in proceeds) (210ms)
+  ✓  14 [chromium] › tests/e2e/data-safety-journey.spec.ts:490:1 › drill 10: the pre-import snapshot undoes an import byte-equivalently (207ms)
+  ✓  15 [chromium] › tests/e2e/data-safety-journey.spec.ts:552:1 › drill 12: QuotaExceededError aborts the apply atomically; export survives its stamp failure (202ms)
+  ✓  13 [chromium] › tests/e2e/data-safety-journey.spec.ts:593:1 › drill 13: imported snapshot metadata is ignored (payloads are device-local) (210ms)
+  ✓  16 [chromium] › tests/e2e/data-safety-ux.spec.ts:80:1 › the quota meter quotes the browser OWN estimate() numbers (no mock drift) (265ms)
+  ✓  17 [chromium] › tests/e2e/data-safety-ux.spec.ts:103:1 › the persistence row tells the truth about the REAL persisted() state (197ms)
+  ✓   4 [chromium] › tests/e2e/a11y.spec.ts:24:3 › core views have no serious or critical axe violations (dark theme) (4.7s)
+  ✓   6 [chromium] › tests/e2e/a11y.spec.ts:24:3 › core views have no serious or critical axe violations (light theme) (4.7s)
+  ✓   2 [chromium] › tests/e2e/core-ui-keyboard.spec.ts:290:1 › keyboard-only: F1 capture → F2 edit → F3 complete → F4 delete → F6 delete list (5.1s)
+  ✓  18 [chromium] › tests/e2e/data-safety-ux.spec.ts:123:1 › persist() is requested exactly once at the first meaningful write (real API) (479ms)
+  ✓  24 [chromium] › tests/e2e/install.spec.ts:93:1 › manifest scope/start_url agree with the service-worker scope under the /<repo>/ base (249ms)
+  ✓  19 [chromium] › tests/e2e/data-safety-ux.spec.ts:156:1 › REAL keyboard: Tab traps in the quota dialog, Escape takes the safe path, focus returns (419ms)
+  ✓  20 [chromium] › tests/e2e/data-safety-ux.spec.ts:197:1 › the backup nudge follows the REAL clock: fires beyond 14 days, quiet below (292ms)
+  ✓  25 [chromium] › tests/e2e/install.spec.ts:127:1 › manifest and apple-touch icon also line up under the root base (332ms)
+AXE[light] violations: NONE
+TARGETS[light]: [{"text":"Install","w":79.984375,"h":44},{"text":"No thanks","w":110.75,"h":44}]
+ACTIVE_ON_MOUNT[light]: INPUT
+TAB_REACH[light]: OK
+  ✓  21 [chromium] › tests/e2e/install-review-axe.spec.ts:52:3 › install notice axe scan (light) + 44px targets + keyboard reachability (2.0s)
+AXE[dark] violations: NONE
+TARGETS[dark]: [{"text":"Install","w":79.984375,"h":44},{"text":"No thanks","w":110.75,"h":44}]
+ACTIVE_ON_MOUNT[dark]: INPUT
+  ✓  27 [chromium] › tests/e2e/install.spec.ts:169:1 › install button hands the captured event to the browser (1.1s)
+TAB_REACH[dark]: OK
+AXE[manual] violations: NONE
+TARGETS[manual]: [{"text":"Got it","w":75.171875,"h":44}]
+  ✓  22 [chromium] › tests/e2e/install-review-axe.spec.ts:52:3 › install notice axe scan (dark) + 44px targets + keyboard reachability (2.5s)
+  ✓  28 [chromium] › tests/e2e/install.spec.ts:183:1 › post-install launch (display-mode standalone): the app boots and never offers install (1.3s)
+  ✓  23 [chromium] › tests/e2e/install-review-axe.spec.ts:113:1 › install notice (iOS manual tier): axe scan, steps copy, no dead Install button (2.4s)
+  ✓  29 [chromium] › tests/e2e/offline-data-journey.spec.ts:51:1 › offline data journey: an offline write survives an offline reload (1.3s)
+  ✓  31 [chromium] › tests/e2e/offline-robustness.spec.ts:102:1 › degraded network (2 s per response): local writes stay optimistic and durable (§6.1) (930ms)
+  ✓  34 [chromium] › tests/e2e/offline-robustness.spec.ts:208:1 › V1 install scope (ADR-008): exactly the S13 surface ships — one manifest, our handler, never precached (320ms)
+  ✓  35 [chromium] › tests/e2e/offline.spec.ts:62:1 › cold load online, then offline boot keeps the whole app working (M9) (452ms)
+  ✓  36 [chromium] › tests/e2e/offline.spec.ts:98:1 › warm and offline start-to-interactive stay inside the boot budget (§9.1) (344ms)
+  ✓  38 [chromium] › tests/e2e/offline.spec.ts:155:1 › scope and cache naming are correct under a root base path (Decision 8) (273ms)
+  ✓  33 [chromium] › tests/e2e/offline-robustness.spec.ts:170:1 › cache lifecycle: activate purges old VERSIONS of this app only (Decision 3) (1.8s)
+  ✓  39 [chromium] › tests/e2e/offline.spec.ts:182:1 › the non-root base path yields the scoped registration and cache namespace (166ms)
+  ✓  30 [chromium] › tests/e2e/offline-data-journey.spec.ts:72:1 › offline task journey: add -> complete -> reload -> data present (E2 core UI) (2.7s)
+  ✓  40 [chromium] › tests/e2e/offline.spec.ts:204:1 › no CSP violations fire across offline boot and lazy navigation (Decision 9, test 9) (377ms)
+  ✓  32 [chromium] › tests/e2e/offline-robustness.spec.ts:141:1 › degraded network (every response 500): writes persist and the update check is silent (Decision 6) (2.4s)
+F2-REMEASURE [".task-check-hit: 44×44",".task-check: 24×24",".task-check + *: (absent)"]
+  ✓  42 [chromium] › tests/e2e/qa-f2-remeasure.spec.ts:11:1 › effective .task-check target is the label wrapper — measure both (461ms)
+QA[virtual] initial {"virtualized":"true","domRows":23,"setSize":"1200","posFirst":"1","padTop":true,"padBottom":1}
+  ✓  37 [chromium] › tests/e2e/offline.spec.ts:130:1 › a failing update check is completely silent (Decision 6) (1.9s)
+QA[virtual-bottom] {"before":23,"after":33,"firstPos":"1","lastPos":"1191","focusedPos":"1","scrollY":51578,"maxScroll":53440}
+  ✓  46 [chromium] › tests/e2e/qa-search-reorder.spec.ts:1097:3 › M5/M6 virtualization › V1: scrolling far from the pinned cursor materialises the whole list (1.8s)
+QA[touch:375] [{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"}]
+QA[search] [{"query":"x","frameMs":74.40000000037253,"domMs":74.09999999962747,"label":"10000 results","rows":21,"first":"Fixture 10000 xpr","marks":42},{"query":"x0","frameMs":6.700000001117587,"domMs":6.600000001490116,"label":"288 results","rows":21,"first":"Fixture 09108 x0z","marks":21},{"query":"x0a","frameMs":2.400000000372529,"domMs":1.5,"label":"8 results","rows":8,"first":"Fixture 09083 x0a","marks":8},{"query":"x0ab","frameMs":16.300000000745058,"domMs":0.7000000011175871,"label":"(no list)","rows":0,"first":"","marks":0},{"query":"apple","frameMs":9.300000000745058,"domMs":7,"label":"1250 results","rows":21,"first":"Fixture 09993 xpk apple","marks":21},{"query":"xylophonememo","frameMs":20.5,"domMs":9.800000000745058,"label":"100 results","rows":100,"first":"Fixture 09901 xn0","marks":100}]
+  ✓  47 [chromium] › tests/e2e/qa-search-reorder.spec.ts:1159:5 › M6 touch targets @375px › reorder handle is ≥44×44 and visible on touch (532ms)
+QA[touch:320] [{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"},{"w":44,"h":44,"opacity":"1","visibility":"visible","display":"grid","touchAction":"none"}]
+QA[reorder] identical=true final=["Reorder 08","Reorder 01","Reorder 03","Reorder 02","Reorder 04","Reorder 06","Reorder 07","Reorder 05","Reorder 09","Reorder 10","Reorder 11","Reorder 12"]
+  ✓  48 [chromium] › tests/e2e/qa-search-reorder.spec.ts:1159:5 › M6 touch targets @320px › reorder handle is ≥44×44 and visible on touch (510ms)
+  ✓  44 [chromium] › tests/e2e/qa-search-reorder.spec.ts:624:3 › M6 reorder › keyboard and drag paths persist identical results (3.9s)
+QA[virtual-scroll:unthrottled] {"frames":122,"medianMs":16.699999999999818,"p95Ms":16.700000000000273,"maxMs":16.800000000000182,"fps":60,"droppedFrames":0,"scrolledPx":4272,"maxDomRows":33,"scrollSource":"window innerHeight=800","firstPos":"31","lastPos":"132"}
+  ✓  49 [chromium] › tests/e2e/smoke.spec.ts:33:1 › boots under a non-root base path with no failed asset requests (227ms)
+  ✓  50 [chromium] › tests/e2e/smoke.spec.ts:51:1 › hash deep links resolve without a server rewrite (276ms)
+AXE-REAL-VIEWS
+(none)
+  ✓  51 [chromium] › tests/e2e/smoke.spec.ts:66:1 › an unknown hash renders the not-found view instead of a broken page (171ms)
+  ✓  41 [chromium] › tests/e2e/qa-axe-nonvacuous.spec.ts:14:1 › axe scan of the real core views (onboarding pre-dismissed) — violation report (4.7s)
+  ✓  52 [chromium] › tests/e2e/smoke.spec.ts:74:1 › the skip link is the first focusable element (295ms)
+  ✓  54 [chromium] › tests/e2e/smoke.spec.ts:113:1 › makes zero third-party requests at runtime (308ms)
+  ✓  53 [chromium] › tests/e2e/smoke.spec.ts:89:1 › no CSP violation fires while the app boots and navigates (362ms)
+  ✓  55 [chromium] › tests/e2e/smoke.spec.ts:127:1 › the document ships the section 7.2 CSP meta tag without frame-ancestors (177ms)
+  ✓  57 [chromium] › tests/e2e/theme-boot.spec.ts:137:1 › explicit light preference paints light even when the OS is dark (234ms)
+  ✓  58 [chromium] › tests/e2e/theme-boot.spec.ts:143:1 › explicit dark preference paints dark even when the OS is light (230ms)
+  ✓  56 [chromium] › tests/e2e/smoke.spec.ts:146:1 › first-run onboarding shows once and never again (345ms)
+QA[search-bottom] {"before":21,"after":26,"firstPos":"1","lastPos":"288","scrollY":12842,"maxScroll":13116}
+  ✓  59 [chromium] › tests/e2e/theme-boot.spec.ts:149:1 › system preference follows a dark OS colour scheme (225ms)
+  ✓  60 [chromium] › tests/e2e/theme-boot.spec.ts:155:1 › system preference follows a light OS colour scheme (216ms)
+  ✓  43 [chromium] › tests/e2e/qa-search-reorder.spec.ts:421:1 › M5 search @10k fixtures — latency, title+notes coverage, instant filter (5.2s)
+  ✓  61 [chromium] › tests/e2e/theme-boot.spec.ts:161:1 › an absent preference behaves like system (234ms)
+  ✓  62 [chromium] › tests/e2e/theme-boot.spec.ts:167:1 › a first-run profile boots flash-free on the onboarding screen (316ms)
+QA[virtual-scroll:cpu4x] {"frames":102,"medianMs":16.699999999999818,"p95Ms":33.399999999999636,"maxMs":33.400000000000546,"fps":60,"droppedFrames":1,"scrolledPx":3560,"maxDomRows":33,"scrollSource":"window innerHeight=800","firstPos":"31","lastPos":"198"}
+  ✓  45 [chromium] › tests/e2e/qa-search-reorder.spec.ts:878:3 › M5/M6 virtualization › window, keyboard navigation across boundaries, aria positions, scroll frames (5.7s)
+  ✓  63 [chromium] › tests/e2e/update.spec.ts:56:1 › update flow: detect -> toast -> apply on user action -> exactly one reload (2.5s)
+  ✓  64 [chromium] › tests/e2e/update.spec.ts:88:1 › E9: a mid-edit session is never force-reloaded; Apply flushes the draft first (2.7s)
+  ✓  65 [chromium] › tests/e2e/update.spec.ts:126:1 › E9 multi-tab: applying in one tab never reloads another (2.6s)
+  ✓  66 [chromium] › tests/e2e/update.spec.ts:152:1 › stale-tab guard: a vanished lazy chunk is explained, never auto-fixed (Decision 3) (2.5s)
+  ✓  26 [chromium] › tests/e2e/install.spec.ts:140:1 › install offer: nothing before the first task, offered after it, dismissal survives reload (16.8s)
+
+  66 passed (34.3s)

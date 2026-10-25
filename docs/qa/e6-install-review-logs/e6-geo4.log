@@ -1,0 +1,36 @@
+
+Running 1 test using 1 worker
+
+GEOMETRY: {
+ "notice": {
+  "top": 421.25,
+  "bottom": 724,
+  "left": 16,
+  "right": 344,
+  "width": 328
+ },
+ "tabbar": {
+  "sel": ".tabbar",
+  "top": 683,
+  "bottom": 740,
+  "left": 0,
+  "right": 360
+ },
+ "fab": {
+  "sel": ".fab",
+  "top": 612,
+  "bottom": 668,
+  "left": 288,
+  "right": 344
+ },
+ "composer": null,
+ "viewport": {
+  "w": 360,
+  "h": 740
+ }
+}
+OVERLAP tabbar: x=328.0px y=41.0px -> OVERLAPS
+OVERLAP fab: x=56.0px y=56.0px -> OVERLAPS
+  ✓  1 [chromium] › tests/e2e/install-review-geometry.spec.ts:51:1 › mobile overlap probe: notice vs tabbar/FAB geometry (1.7s)
+
+  1 passed (15.1s)
