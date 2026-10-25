@@ -87,13 +87,7 @@ export type Settings = {
  * arrived with the ADR-006 Decision 3 migration step (schemaVersion 2).
  */
 export type StoreName =
-  | 'meta'
-  | 'lists'
-  | 'tasks'
-  | 'settings'
-  | 'snapshots'
-  | 'snapshot_payloads'
-  | 'sync_state';
+  'meta' | 'lists' | 'tasks' | 'settings' | 'snapshots' | 'snapshot_payloads' | 'sync_state';
 
 /** Field-scoped create input — repos stamp ids/timestamps (ADR-002 Decision 5). */
 export type TaskDraft = {

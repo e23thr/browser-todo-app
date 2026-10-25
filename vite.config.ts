@@ -131,7 +131,12 @@ export default defineConfig({
         // modules carry the PRE-DECIDED policy — the >=80% gate is strict on
         // them. The rest of the engine gets regression floors (error-injection
         // and API suites keep them well above).
-        './src/sync/{merge,shadow,batchCodec}.ts': { lines: 80, branches: 80, functions: 80, statements: 80 },
+        './src/sync/{merge,shadow,batchCodec}.ts': {
+          lines: 80,
+          branches: 80,
+          functions: 80,
+          statements: 80,
+        },
         './src/sync/**/*.ts': { lines: 80, branches: 70, functions: 80, statements: 80 },
       },
     },
