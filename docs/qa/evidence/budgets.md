@@ -2,8 +2,9 @@
 
 **Card:** t_6f8accdc (MVP DoD Q15 item 5: "budgets green in CI — bundle section 9.2 + measured perf section 9.1")
 **Verified by:** h_senior_coder · **Date:** 2026-10-25
+**Updated:** 2026-10-25 by h_junior_coder (t_7c1b251b) — the §0 CI-coverage finding is closed and §4 added (CI `perf-budget` gate + Nightly dispatch evidence, numbers extracted from CI artifacts).
 **Subject:** `main` @ `6a3f5ab` — CI run [40211837248](https://github.com/e23thr/browser-todo-app/actions/runs/40211837248) (all 12 jobs green), whose `dist` artifact is the build deployed to GitHub Pages at 2026-10-25 16:30:07Z.
-**Budgets of record:** PROJECT_ANALYSIS.md §9.1 (perf) and §9.2 (bundle), restated as CI thresholds in `scripts/bundle-budgets.json` (ADR-001 §8).
+**Budgets of record:** PROJECT_ANALYSIS.md §9.1 (perf) and §9.2 (bundle), restated as CI thresholds in `scripts/bundle-budgets.json` (ADR-001 §8) and — since t_7c1b251b — `scripts/perf-budgets.json` for the §9.1 half.
 
 ## 0. Verdict summary
 
@@ -31,12 +32,15 @@ measurement condition (and 2.436 s at throttled 3G). §9.1's header marks that t
 "RECOMMENDED"; the task's DoD threshold is LCP ≤ 2.5 s, which is met on every profile. Exact
 failing values are captured in §2.2 below so the DoD compiler can rule on which line governs.
 
-**CI-coverage finding (affects the DoD wording "budgets green in CI"):** the §9.2 bundle half is
-enforced in CI and green there; the §9.1 measured-perf half has **no CI enforcement** — there is
-no Lighthouse/web-vitals job in `ci.yml` or `nightly.yml`, and the Nightly workflow (whose
-`e2e-full` job holds the 300 ms §9.1 boot line via `E2E_BOOT_BUDGET_MS`) has **zero runs** since
-it was added. The LCP/TBT/CLS numbers below were therefore produced by this verification run
-(Lighthouse 12.8.2) against the deployed production build, not extracted from CI artifacts.
+**CI-coverage finding — CLOSED by t_7c1b251b (see §4).** At the time of this verification the
+§9.2 bundle half was enforced in CI and green there, while the §9.1 measured-perf half had **no CI
+enforcement** — there was no Lighthouse/web-vitals job in `ci.yml` or `nightly.yml`, and the
+Nightly workflow (whose `e2e-full` job holds the 300 ms §9.1 boot line via `E2E_BOOT_BUDGET_MS`)
+had **zero runs** since it was added. The LCP/TBT/CLS numbers below were therefore produced by
+this verification run (Lighthouse 12.8.2) against the deployed production build, not extracted
+from CI artifacts. §4 records the CI `perf-budget` job that now enforces them (Lighthouse 12.6.1
+via `@lhci/cli`, numbers extracted from the CI artifact) and the Nightly dispatch that proved the
+`e2e-full` pipeline runnable.
 
 ## 1. Bundle budget (§9.2) — extracted from CI
 
@@ -93,8 +97,9 @@ Measured with the gate's own method (node `zlib.gzipSync` level 9), full data in
 
 ### 2.0 Method and provenance
 
-No Lighthouse CI / web-vitals CI output exists to extract (see the CI-coverage finding in §0), so
-the metrics below were measured directly:
+At the time of this verification no Lighthouse CI / web-vitals CI output existed to extract (see
+the CI-coverage finding in §0 — CI-extracted numbers now exist in §4), so the metrics below were
+measured directly:
 
 - **Tool:** Lighthouse 12.8.2, performance category, headless Chrome (Playwright Chromium 1248).
 - **Target:** `https://e23thr.github.io/browser-todo-app/` — the Pages deploy of the very `dist`
@@ -155,6 +160,87 @@ Already evidenced by prior QA cards, listed for the DoD compiler's §9.1 table:
 | CI run (subject) | https://github.com/e23thr/browser-todo-app/actions/runs/40211837248 (HEAD `6a3f5ab`) |
 | CI `bundle-budget` job log | https://github.com/e23thr/browser-todo-app/actions/runs/40211837248/job/121224642977 |
 | CI `dist` artifact (inputs to §1) | run page → Artifacts → `dist` (7-day retention, uploaded 2026-10-25 16:29Z) |
-| Nightly workflow (the only §9.1 boot-line enforcement) | https://github.com/e23thr/browser-todo-app/actions/workflows/nightly.yml — **0 runs to date** |
+| Nightly workflow (the only §9.1 boot-line enforcement) | https://github.com/e23thr/browser-todo-app/actions/workflows/nightly.yml — 0 *scheduled* runs (repo + workflow created 2026-10-25T12:46Z, so no `17 3 * * *` slot had elapsed; next 2026-10-26T03:17Z). First run was the manual dispatch of §4.2 |
 | Deployed build under test | https://e23thr.github.io/browser-todo-app/ |
 | Report JSONs (this folder) | `bundle-budget-report.json`, `bundle-per-chunk.json`, `lighthouse-summary.json`, `lighthouse-desktop.json`, `lighthouse-mobile-slow4g.json`, `lighthouse-mobile-3g.json` |
+| CI `perf-budget` job (§4.1) | https://github.com/e23thr/browser-todo-app/actions/runs/40216294729/job/121238163358 — PASS, 3 m35 s |
+| CI `lighthouse-reports` artifact (§4.1) | run 40216294729 → Artifacts → `lighthouse-reports` (7-day retention): 6 LHRs + 2 `assertion-results.json` + `perf-budget-summary.json` |
+| CI perf-budget summary (committed copy of that artifact) | [`lighthouse-ci-perf-budget-summary.json`](./lighthouse-ci-perf-budget-summary.json) |
+| Nightly dispatch run (§4.2) | https://github.com/e23thr/browser-todo-app/actions/runs/40216306668 (`workflow_dispatch`, 2026-10-25T17:24Z) |
+
+## 4. CI enforcement added (t_7c1b251b) — numbers extracted from CI
+
+**Card:** t_7c1b251b · **Commit:** `0a8702a` on `main` · **CI run:**
+[40216294729](https://github.com/e23thr/browser-todo-app/actions/runs/40216294729) · **Verified:**
+2026-10-25 (h_junior_coder). This closes the §0 CI-coverage finding: the §9.1 measured-perf half
+of "budgets green in CI" is now enforced by CI itself.
+
+### 4.1 The `perf-budget` job
+
+| Piece | Detail |
+|-------|--------|
+| Job | `perf-budget` in `.github/workflows/ci.yml` — `needs: build`, added to `deploy.needs` (a perf breach blocks the Pages deploy) |
+| Command | `npm run perf:budget` → `scripts/check-perf-budget.mjs`, which drives `lhci collect` + `lhci assert` once per preset (`@lhci/cli` 0.15.1 / Lighthouse 12.6.1) |
+| Subject | the CI `dist` artifact, served by `vite preview` under `BASE_PATH=/browser-todo-app/` — the deployed base path is measured, not bypassed |
+| Presets | `mobile` — the §9.1 condition (Lighthouse mobile preset: Moto G class emulation, simulated slow 4G, 4× CPU); `desktop` — Lighthouse desktop preset |
+| Runs / aggregation | 3 runs per preset, `median` (one outlier neither fails the build nor hides a warning) |
+| Hard gates (fail the job) | LCP ≤ 2500 ms, TBT ≤ 200 ms, CLS ≤ 0.1 — thresholds in `scripts/perf-budgets.json`, the single source read by the assertion config (`lighthouserc.cjs`) and the summary script |
+| Non-blocking line | §9.1's recommended LCP < 1500 ms → `WARN` + GitHub annotation only; LHCI allows one level per audit, so the recommended level cannot ride in the `error` assertions |
+| Evidence artifact | `lighthouse-reports`, retention 7 days: 6 × `lhr-*.json`, 2 × `assertion-results.json`, `perf-budget-summary.json` |
+| Result | **PASS in 3 m35 s** — job [121238163358](https://github.com/e23thr/browser-todo-app/actions/runs/40216294729/job/121238163358) |
+
+#### §9.1 thresholds as CI enforced them (median of 3 runs, from the run's own `perf-budget-summary.json`)
+
+| Preset | Metric | DoD limit | CI measured | Verdict | §9.1 recommended line |
+|--------|--------|-----------|-------------|---------|----------------------|
+| mobile (slow-4G, 4× CPU) | LCP | ≤ 2500 ms | **1822.8 ms** | **PASS** | **WARN** (over by 322.8 ms) |
+| mobile | TBT | ≤ 200 ms | **0 ms** | **PASS** | — |
+| mobile | CLS | ≤ 0.1 | **0** | **PASS** | — |
+| desktop | LCP | ≤ 2500 ms | **368.3 ms** | **PASS** | PASS |
+| desktop | TBT | ≤ 200 ms | **0 ms** | **PASS** | — |
+| desktop | CLS | ≤ 0.1 | **0** | **PASS** | — |
+
+`ok: true`, `assertFailed: false`; the run carries the annotation
+`mobile LCP 1822.8 ms >= 1500 ms — §9.1 recommended line (non-blocking)`.
+
+Comparability with §2: those numbers were measured on this workstation against the deployed Pages
+build (mobile 1623.6 ms), the CI gate measures on a GitHub-hosted runner with `--no-sandbox`
+(1822.8 ms). Different hosts, same verdict — well inside the DoD line, over the recommended line.
+Changing a threshold is a one-file diff in `scripts/perf-budgets.json`.
+
+The fail path is proven as well: with `lcp.limit` temporarily set to 100 ms,
+`node scripts/check-perf-budget.mjs --budgets <tight> --preset desktop` prints
+`✘ largest-contentful-paint failure for maxNumericValue assertion … expected: <=100 / found:
+367.6` → `Assertion failed. Exiting with status code 1.` and the script exits **1**.
+`tests/unit/perf-budget.test.ts` (10 cases) covers the summary half: over-limit `FAIL`, exact-limit
+`PASS`, missing-metric `FAIL`, median-not-best/worst aggregation, WARN-only on the recommended line.
+
+### 4.2 Nightly `e2e-full` (the 300 ms boot line) — runnable, green on 2 of 4 jobs
+
+- **Why zero runs:** the repository and its `Nightly` workflow came into existence
+  2026-10-25T12:46Z (`gh api …/actions/workflows/395976868` → `state: active`, `Total runs 0`),
+  which is after that day's `17 3 * * *` UTC slot — so the schedule trigger is *untested yet*, not
+  proven broken. Next scheduled fire: 2026-10-26T03:17Z (workflow file is on the default branch).
+- **Manual dispatch — accepted alternative in the task:**
+  [run 40216306668](https://github.com/e23thr/browser-todo-app/actions/runs/40216306668)
+  (`workflow_dispatch`, 2026-10-25T17:24Z, HEAD `0a8702a`, `E2E_BOOT_BUDGET_MS=300`):
+
+| Job | Result |
+|-----|--------|
+| `e2e-full (chromium)` | **PASS** — 56 passed, 0 failed |
+| `e2e-full (th-TH locale)` | **PASS** — 50 passed |
+| `full-audit` | **PASS** |
+| `e2e-full (firefox)` | **FAIL** — 48 passed, **2 failed** (`core-ui-keyboard.spec.ts:290` `tabTo(a[href="#/all"]): no focusable match within 80 presses`; `data-safety-ux.spec.ts:123` `page.evaluate` 30 s timeout on `persistCalls()`), 2 flaky |
+| `e2e-full (webkit)` | **FAIL** — 48 passed, **2 failed** (`offline.spec.ts:204` and `smoke.spec.ts:89` — `expect(violations).toEqual([])` received 3 CSP violations, attempt + retry), 2 flaky |
+| flaky on both browsers | `update.spec.ts:88` and `:152` (`deployBAndWaitForToast` — 'Update available' toast not visible within the first attempt, pass on retry) |
+
+So the nightly pipeline runs and holds the §9.1 300 ms boot line green inside it
+(`offline.spec.ts:98` "warm and offline start-to-interactive stay inside the boot budget (§9.1)"
+passes on chromium and webkit; chromium and th-TH are fully green) — but cross-browser E2E, which
+had never run in CI (the PR gate runs chromium only), is red. Filed as follow-up **`t_e20c2adb`**.
+
+Unrelated to the §4.1 gate: the same CI run's `precache-freshness` job is red because commit
+`64c0ee4` (announce() fix) changed `src/app/announce.ts` without regenerating the committed
+`src/sw/precache-manifest.ts` (`index-Gguj8gcL.js` → `index-1BQEVDbO.js`,
+`SHELL_VERSION c6bef87e0491796c` → `192bfe8e4c30d6e5`; `vite` 8.3.5 in both the old and the new
+lockfile, so it is not toolchain drift). `deploy` was therefore skipped. Filed as **`t_27c2b0e8`**.

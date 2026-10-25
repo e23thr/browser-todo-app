@@ -1,0 +1,124 @@
+{
+  "generatedAt": "2026-10-25T17:28:19.208Z",
+  "tool": {
+    "lighthouseCi": "@lhci/cli",
+    "lighthouse": "12.6.1",
+    "aggregation": "median"
+  },
+  "subject": "dist served by `vite preview` under BASE_PATH /browser-todo-app/",
+  "thresholds": {
+    "lcp": {
+      "auditId": "largest-contentful-paint",
+      "unit": "ms",
+      "limit": 2500,
+      "recommended": 1500,
+      "description": "First-load LCP: FAIL above 2500 ms (task DoD threshold, both presets). WARN at >= 1500 ms against section 9.1's RECOMMENDED '< 1.5 s first load' line — non-blocking until the measured mobile LCP (1624 ms) is brought under 1.5 s."
+    },
+    "tbt": {
+      "auditId": "total-blocking-time",
+      "unit": "ms",
+      "limit": 200,
+      "description": "Total blocking time: FAIL above 200 ms (task DoD threshold)."
+    },
+    "cls": {
+      "auditId": "cumulative-layout-shift",
+      "unit": "score",
+      "limit": 0.1,
+      "description": "Cumulative layout shift: FAIL above 0.1 (task DoD threshold)."
+    }
+  },
+  "presets": [
+    "mobile",
+    "desktop"
+  ],
+  "runsPerPreset": {
+    "mobile": 3,
+    "desktop": 3
+  },
+  "results": [
+    {
+      "preset": "mobile",
+      "gate": "lcp",
+      "auditId": "largest-contentful-paint",
+      "unit": "ms",
+      "measured": 1822.7649000000001,
+      "limit": 2500,
+      "status": "PASS",
+      "recommended": 1500,
+      "recommendedStatus": "WARN",
+      "runs": 3,
+      "detail": "median of 3 run(s)"
+    },
+    {
+      "preset": "mobile",
+      "gate": "tbt",
+      "auditId": "total-blocking-time",
+      "unit": "ms",
+      "measured": 0,
+      "limit": 200,
+      "status": "PASS",
+      "recommended": null,
+      "recommendedStatus": null,
+      "runs": 3,
+      "detail": "median of 3 run(s)"
+    },
+    {
+      "preset": "mobile",
+      "gate": "cls",
+      "auditId": "cumulative-layout-shift",
+      "unit": "score",
+      "measured": 0,
+      "limit": 0.1,
+      "status": "PASS",
+      "recommended": null,
+      "recommendedStatus": null,
+      "runs": 3,
+      "detail": "median of 3 run(s)"
+    },
+    {
+      "preset": "desktop",
+      "gate": "lcp",
+      "auditId": "largest-contentful-paint",
+      "unit": "ms",
+      "measured": 368.29994999999997,
+      "limit": 2500,
+      "status": "PASS",
+      "recommended": 1500,
+      "recommendedStatus": "PASS",
+      "runs": 3,
+      "detail": "median of 3 run(s)"
+    },
+    {
+      "preset": "desktop",
+      "gate": "tbt",
+      "auditId": "total-blocking-time",
+      "unit": "ms",
+      "measured": 0,
+      "limit": 200,
+      "status": "PASS",
+      "recommended": null,
+      "recommendedStatus": null,
+      "runs": 3,
+      "detail": "median of 3 run(s)"
+    },
+    {
+      "preset": "desktop",
+      "gate": "cls",
+      "auditId": "cumulative-layout-shift",
+      "unit": "score",
+      "measured": 0,
+      "limit": 0.1,
+      "status": "PASS",
+      "recommended": null,
+      "recommendedStatus": null,
+      "runs": 3,
+      "detail": "median of 3 run(s)"
+    }
+  ],
+  "warnings": [
+    "mobile LCP 1822.8 ms >= 1500 ms — §9.1 recommended line (non-blocking)"
+  ],
+  "collectFailed": false,
+  "assertFailed": false,
+  "ok": true
+}
