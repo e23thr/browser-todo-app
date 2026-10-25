@@ -201,16 +201,16 @@ At completion (04:57) a concurrent worker's in-flight edits (`src/features/searc
 `npm run ci` ran **exit 0 at 04:31 on the `5b1fdbb` tree**, and lint + typecheck still pass
 on the current tree (re-checked at completion).
 
-### 5.2 Human AT pass (O1) — **EXECUTED 2026-10-25 (PARTIAL) — results recorded below**
+### 5.2 Human AT pass (O1) — **EXECUTED 2026-10-25 — full record below (pass + explicit PO waivers)**
 
 > **Status: HUMAN PASS EXECUTED 2026-10-25 by the PO (Praphan), with a scope correction.**
 > The pass ran under **Orca (Linux screen reader) in Firefox on Ubuntu 26.04** — the tester's
 > available hardware — **NOT NVDA (Windows)** (tester clarification 2026-10-25; the submitted
 > matrix's first column was labelled "NVDA (Win)" but was executed with Orca, and the results
 > are recorded below under the correct AT identity). All 10 flows **PASS** under Orca.
-> **VoiceOver (macOS) and VoiceOver (iOS): NOT EXECUTED — explicit PO waiver** (no Mac/iPhone
-> available to the tester; see sign-off row). **NVDA (Windows): NOT RUN** — pending PO decision
-> (waive or schedule). Tracked by card `t_2ce8fc1f`.
+> **VoiceOver (macOS), VoiceOver (iOS) and NVDA (Windows): NOT EXECUTED — explicit PO waiver**
+> (no Mac/iPhone/Windows hardware available to the tester; the NVDA waiver was extended by the
+> PO on 2026-10-25 after the Orca results were recorded). Tracked by card `t_2ce8fc1f`.
 
 **Tester handoff — what to run:**
 
@@ -230,16 +230,16 @@ re-keyed from the submitted "NVDA (Win)" label to the AT actually used, per test
 
 | # | Surface (AT pass scope from §2-O1) | Orca (Linux / Firefox) — RUN | NVDA (Windows) | VoiceOver (macOS) | VoiceOver (iOS) |
 |---|---|---|---|---|---|
-| 1 | Task capture — "Task added: …" announced; composer keeps focus | PASS | NOT RUN | WAIVED (PO) | WAIVED (PO) |
-| 2 | Task complete / uncomplete — state change announced | PASS | NOT RUN | WAIVED (PO) | WAIVED (PO) |
-| 3 | Task delete — confirm dialog announced, result announced, focus lands sanely | PASS | NOT RUN | WAIVED (PO) | WAIVED (PO) |
-| 4 | Dialogs — focus trap holds inside the dialog | PASS | NOT RUN | WAIVED (PO) | WAIVED (PO) |
-| 5 | Dialogs — `Esc` closes | PASS | NOT RUN | WAIVED (PO) | WAIVED (PO) |
-| 6 | Dialogs — focus returns to the trigger on close | PASS | NOT RUN | WAIVED (PO) | WAIVED (PO) |
-| 7 | Search — result changes announced politely (count/updates) | PASS | NOT RUN | WAIVED (PO) | WAIVED (PO) |
-| 8 | Language switch en→th — SR voice follows `html lang="th"` | PASS | NOT RUN | WAIVED (PO) | WAIVED (PO) |
-| 9 | Language switch th→en — SR voice follows `html lang="en"` | PASS | NOT RUN | WAIVED (PO) | WAIVED (PO) |
-| 10 | Thai-voice fallback (design §11.4) — `lang="th"` correct + English-voice fallback where no Thai voice | PASS | NOT RUN | WAIVED (PO) | WAIVED (PO) |
+| 1 | Task capture — "Task added: …" announced; composer keeps focus | PASS | WAIVED (PO) | WAIVED (PO) | WAIVED (PO) |
+| 2 | Task complete / uncomplete — state change announced | PASS | WAIVED (PO) | WAIVED (PO) | WAIVED (PO) |
+| 3 | Task delete — confirm dialog announced, result announced, focus lands sanely | PASS | WAIVED (PO) | WAIVED (PO) | WAIVED (PO) |
+| 4 | Dialogs — focus trap holds inside the dialog | PASS | WAIVED (PO) | WAIVED (PO) | WAIVED (PO) |
+| 5 | Dialogs — `Esc` closes | PASS | WAIVED (PO) | WAIVED (PO) | WAIVED (PO) |
+| 6 | Dialogs — focus returns to the trigger on close | PASS | WAIVED (PO) | WAIVED (PO) | WAIVED (PO) |
+| 7 | Search — result changes announced politely (count/updates) | PASS | WAIVED (PO) | WAIVED (PO) | WAIVED (PO) |
+| 8 | Language switch en→th — SR voice follows `html lang="th"` | PASS | WAIVED (PO) | WAIVED (PO) | WAIVED (PO) |
+| 9 | Language switch th→en — SR voice follows `html lang="en"` | PASS | WAIVED (PO) | WAIVED (PO) | WAIVED (PO) |
+| 10 | Thai-voice fallback (design §11.4) — `lang="th"` correct + English-voice fallback where no Thai voice | PASS | WAIVED (PO) | WAIVED (PO) | WAIVED (PO) |
 
 **Sign-off fields:**
 
@@ -247,11 +247,11 @@ re-keyed from the submitted "NVDA (Win)" label to the AT actually used, per test
 |---|---|
 | Tester | Praphan (PO) |
 | Platform(s) | Ubuntu 26.04, Firefox (as submitted by tester) |
-| AT version(s) | Orca (Linux screen reader; version not recorded); NVDA not run; VoiceOver not run |
+| AT version(s) | Orca (Linux screen reader; version not recorded); NVDA waived (PO); VoiceOver waived (PO) |
 | Date | 25 Oct 2026 |
-| Overall result | **PARTIAL PASS** — 10/10 flows PASS under Orca (Firefox/Ubuntu); VoiceOver waived (PO); NVDA outstanding |
+| Overall result | **PASS with explicit PO waivers** — 10/10 flows PASS under Orca (Firefox/Ubuntu); NVDA + VoiceOver waived (PO) |
 | Flows script | `docs/qa/keyboard-script.md` — 10/10 flows: **PASS** (Orca, Firefox) |
-| Waiver (only if a part is not executed) | **PO-accepted explicit waiver, 2026-10-25 (card `t_2ce8fc1f`):** VoiceOver (macOS) and VoiceOver (iOS) not executed — no Mac/iPhone available to the tester. Thai-voice rows: §11.4 constraint handled per row 10 (`lang="th"` correctness + English-voice fallback). NVDA (Windows): **NOT waived** — pending PO decision (waive or schedule). |
+| Waiver (only if a part is not executed) | **PO-accepted explicit waiver, 2026-10-25 (card `t_2ce8fc1f`):** VoiceOver (macOS), VoiceOver (iOS) and NVDA (Windows) not executed — no Mac/iPhone/Windows hardware available to the tester. The submitted matrix's "NVDA (Win)" column was executed with Orca (Linux) and is recorded as such above. Thai-voice rows: §11.4 constraint handled per row 10 (`lang="th"` correctness + English-voice fallback). |
 
 **Gate verdict — original run (t_b788bacf, `9689037`):** FAIL — B1 + B2 blocking, O1 outstanding.
 
@@ -264,13 +264,14 @@ PASS-with-O1-pending**. The **release gate remains FAIL** solely because O1 — 
 NVDA/VoiceOver pass — is still PENDING in §5.2 with no PO waiver recorded. Per h_pm
 (`t_2ce8fc1f`): a green re-run clears **B1 + B2 only**; M13's epic acceptance criterion may be cleared once §5.2 carries the manual-pass record or a PO-accepted waiver.
 
-**Gate verdict — human AT pass recorded (t_2ce8fc1f, 2026-10-25): PARTIAL PASS — O1 substantially cleared.**
+**Gate verdict — human AT pass recorded (t_2ce8fc1f, 2026-10-25): FULL PASS with explicit PO waivers — O1 cleared.**
 The human pass is now executed and recorded in §5.2: **10/10 flows PASS under Orca (Firefox / Ubuntu
-26.04, PO as tester)**, plus an **explicit PO waiver for VoiceOver (macOS) and VoiceOver (iOS)**
-(no Mac/iPhone available). This satisfies §5.2's "manual-pass record or a PO-accepted waiver" for
-those platforms. The release gate moves from FAIL to **CONDITIONAL PASS**. One open item remains:
-**NVDA (Windows) was never run** (the tester's environment is Ubuntu; the submitted matrix's
-"NVDA (Win)" column was actually Orca — corrected above). M13 reaches full PASS when either an
-NVDA (Windows) pass is recorded or the PO extends the waiver to NVDA explicitly. Per h_pm
-(`t_2ce8fc1f`): a green re-run clears **B1 + B2 only**; M13's epic acceptance criterion may be
-cleared once §5.2 carries the manual-pass record or a PO-accepted waiver.
+26.04, PO as tester)**. NVDA (Windows) and VoiceOver (macOS/iOS) were **not executed** and are
+covered by an **explicit, PO-accepted waiver** (no Windows/Mac/iPhone hardware available to the
+tester; NVDA waiver extended by the PO the same day after the Orca results were recorded). The
+submitted matrix's "NVDA (Win)" column was in fact executed with Orca — corrected above. §5.2 now
+carries the manual-pass record and explicit PO waivers for every part not executed, which satisfies
+this section's sign-off condition: **the release gate for M13 O1 reads PASS (with waivers)**, and
+the M13 accessibility epic criterion may be cleared on that basis. Re-run note: if a future tester
+gains NVDA (Windows) or VoiceOver (macOS/iOS) hardware, replace the corresponding WAIVED cells with
+executed results and drop the waiver for that platform.
