@@ -1,0 +1,21 @@
+
+Running 16 tests using 6 workers
+
+  ✓   3 [chromium] › tests/e2e/data-safety-journey.spec.ts:593:1 › drill 13: imported snapshot metadata is ignored (payloads are device-local) (382ms)
+  ✓   2 [chromium] › tests/e2e/data-safety-journey.spec.ts:528:1 › drill 11: a failing pre-import snapshot aborts the apply (opt-in proceeds) (424ms)
+  ✓   4 [chromium] › tests/e2e/data-safety-journey.spec.ts:272:1 › drill 3: old exports upgrade through the migration chain (failing step = zero side effects) (354ms)
+  ✓   6 [chromium] › tests/e2e/data-safety-journey.spec.ts:182:1 › drill 1 (acceptance): export -> wipe -> import -> restored byte-equivalent, offline (392ms)
+  ✓   5 [chromium] › tests/e2e/data-safety-journey.spec.ts:383:1 › drill 14: the real recovery file is a report — not importable, never persisted (371ms)
+  ✓   1 [chromium] › tests/e2e/data-safety-journey.spec.ts:455:1 › drill 9: auto snapshots rotate to the newest 3, manual ones never evict (482ms)
+  ✓   8 [chromium] › tests/e2e/data-safety-journey.spec.ts:552:1 › drill 12: QuotaExceededError aborts the apply atomically; export survives its stamp failure (319ms)
+  ✓  10 [chromium] › tests/e2e/data-safety-journey.spec.ts:254:1 › drill 2: two exports with no data change differ only in exportedAt/lastBackupAt (248ms)
+  ✓  11 [chromium] › tests/e2e/data-safety-journey.spec.ts:420:1 › drills 5/6/8: corrupt records quarantine to the recovery file, valid ones apply (210ms)
+  ✓  12 [chromium] › tests/e2e/data-safety-journey.spec.ts:490:1 › drill 10: the pre-import snapshot undoes an import byte-equivalently (213ms)
+  ✓   9 [chromium] › tests/e2e/data-safety-journey.spec.ts:292:1 › drills 4/7: hostile and malformed files are rejected with zero side effects (412ms)
+  ✓   7 [chromium] › tests/e2e/data-safety-ux.spec.ts:80:1 › the quota meter quotes the browser OWN estimate() numbers (no mock drift) (226ms)
+  ✓  13 [chromium] › tests/e2e/data-safety-ux.spec.ts:103:1 › the persistence row tells the truth about the REAL persisted() state (211ms)
+  ✓  15 [chromium] › tests/e2e/data-safety-ux.spec.ts:156:1 › REAL keyboard: Tab traps in the quota dialog, Escape takes the safe path, focus returns (286ms)
+  ✓  14 [chromium] › tests/e2e/data-safety-ux.spec.ts:123:1 › persist() is requested exactly once at the first meaningful write (real API) (331ms)
+  ✓  16 [chromium] › tests/e2e/data-safety-ux.spec.ts:197:1 › the backup nudge follows the REAL clock: fires beyond 14 days, quiet below (241ms)
+
+  16 passed (3.8s)

@@ -1,0 +1,93 @@
+{
+  "explanation": {
+    "$.exportedAt": "per-export timestamp (Document Decision 9)",
+    "$.deviceId": "device identity is per-browser-profile; a full site-data wipe is a fresh profile (ADR-002 §3.1 — identity is never imported across devices)",
+    "$.counts.snapshots / $.data.snapshots": "snapshot metadata + payloads are device-local and never restored from a file (ADR-004 drill 13); the post-import export carries the pre-import undo snapshot instead",
+    "$.data.settings.lastBackupAt": "best-effort export stamp (ADR-004 Decision 9.2)"
+  },
+  "recordFidelity": {
+    "tasks": {
+      "differences": [],
+      "identical": true
+    },
+    "lists": {
+      "differences": [],
+      "identical": true
+    },
+    "settings": {
+      "differences": [],
+      "shapes": {
+        "exportDocument": {
+          "id": "settings",
+          "theme": "dark",
+          "locale": "th",
+          "weekStart": 1,
+          "defaultListId": null,
+          "notificationsEnabled": false,
+          "lastBackupAt": 1792948461311
+        },
+        "idbRow": {
+          "id": "settings",
+          "theme": "dark",
+          "locale": "th",
+          "weekStart": 1,
+          "defaultListId": null,
+          "notificationsEnabled": false,
+          "lastBackupAt": 1792948461311
+        }
+      }
+    }
+  },
+  "exportEnvelope": {
+    "allDifferences": [
+      {
+        "path": "$.exportedAt",
+        "before": 1792948461311,
+        "after": 1792948471824
+      },
+      {
+        "path": "$.deviceId",
+        "before": "01M5T0W58XH5Y62JFXRR9P3BV4",
+        "after": "01M5T0WT8V43M8Q85A6F22Z6EX"
+      },
+      {
+        "path": "$.counts.snapshots",
+        "before": 1,
+        "after": 2
+      },
+      {
+        "path": "$.data.settings.lastBackupAt",
+        "before": 1792948461311,
+        "after": 1792948471824
+      },
+      {
+        "path": "$.data.snapshots.0.id",
+        "before": "01M5T0W59KNE824V0AFXXXPB91",
+        "after": "01M5T0WTAPSPRT49BFCATP89PY"
+      },
+      {
+        "path": "$.data.snapshots.0.takenAt",
+        "before": 1792948442419,
+        "after": 1792948463958
+      },
+      {
+        "path": "$.data.snapshots.0.payloadRef",
+        "before": "01M5T0W59KNE824V0AFXXXPB91",
+        "after": "01M5T0WTAPSPRT49BFCATP89PY"
+      },
+      {
+        "path": "$.data.snapshots.1",
+        "after": {
+          "id": "01M5T0WWX2WTGWZ1TJD2SBAFXQ",
+          "takenAt": 1792948466594,
+          "kind": "auto",
+          "reason": "pre-import",
+          "sizeBytes": 865,
+          "schemaVersion": 1,
+          "payloadRef": "01M5T0WWX2WTGWZ1TJD2SBAFXQ"
+        }
+      }
+    ],
+    "unexpectedDifferences": []
+  }
+}

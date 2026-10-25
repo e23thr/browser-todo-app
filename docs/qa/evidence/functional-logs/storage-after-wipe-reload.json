@@ -1,0 +1,14 @@
+{
+  "freshBoot": {
+    "hasOnboarding": true
+  },
+  "storeRowCounts": {
+    "lists": 0,
+    "meta": 1,
+    "settings": 1,
+    "snapshot_payloads": 1,
+    "snapshots": 1,
+    "tasks": 0
+  },
+  "note": "the app re-creates an EMPTY database and its own SW shell cache on boot — offline feature, not user data"
+}

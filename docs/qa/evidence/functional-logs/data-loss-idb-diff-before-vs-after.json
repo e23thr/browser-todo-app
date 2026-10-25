@@ -1,0 +1,13 @@
+{
+  "userDataIdentical": true,
+  "userDataDifferences": [],
+  "wholeDbIdentical": false,
+  "wholeDbDifferenceCount": 1,
+  "wholeDbDifferences": [
+    {
+      "path": "$.local-first-todo.stores.meta.0.lastOpenedAt",
+      "before": 1792947220647,
+      "after": 1792947293124
+    }
+  ]
+}

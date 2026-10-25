@@ -1,0 +1,13 @@
+[
+  {
+    "id": "F1",
+    "title": "restored data is not visible in the running UI after a successful import — a manual reload is required",
+    "observed": {
+      "taskRowsVisibleOnAllBeforeReload": 0,
+      "listRowsVisibleBeforeReload": 0
+    },
+    "dataIntactElsewhere": "the same records are present in IndexedDB (4a) and re-export through the app export path (4c); they appear in the UI after page.reload()",
+    "mechanism": "src/features/data-safety/importFlow.ts applyPlan() refreshes only counts/snapshots/lastBackupAt — the tasks/lists store is never reloaded after applyImport(); tabSync.sweep() only picks up rows with updatedAt > watermark and imported rows keep their original updatedAt",
+    "severity": "moderate (UX/visibility — no data loss)"
+  }
+]

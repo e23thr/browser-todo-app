@@ -1,0 +1,27 @@
+{
+  "probe": "functional loop (capture→plan→complete) OFFLINE — desktop 1920x1080 + iPhone 14 Pro 393x852",
+  "task": "t_eff4b9fa (functional verification)",
+  "appUrl": "http://127.0.0.1:4291/browser-todo-app/",
+  "buildSha": "b820ad723e7c66317cb1e741b21891ada6de60b4",
+  "buildDir": "scratch-fn-build-1792946845",
+  "ranAt": "2026-10-25T16:48:33.806Z",
+  "chromiumVersion": "156.0.8078.4",
+  "node": "v22.22.1",
+  "viewports": [
+    {
+      "viewport": "desktop-1920x1080",
+      "verdict": "PASS",
+      "consoleErrors": 0,
+      "video": "docs/qa/evidence/functional-logs/videos/desktop-1920x1080.webm",
+      "screenshots": 8
+    },
+    {
+      "viewport": "mobile-iphone14pro-393x852",
+      "verdict": "PASS",
+      "consoleErrors": 0,
+      "video": "docs/qa/evidence/functional-logs/videos/mobile-iphone14pro-393x852.webm",
+      "screenshots": 8
+    }
+  ],
+  "verdict": "PASS"
+}

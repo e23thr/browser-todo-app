@@ -1,0 +1,29 @@
+{
+  "expectedStrings": {
+    "thai": [
+      "ซื้อนม",
+      "ซื้อนมสด 2 กล่อง จากตลาด",
+      "อ่านหนังสือ",
+      "อ่านให้จบบทที่ 3",
+      "นัดพบแพทย์",
+      "ล้างจาน",
+      "ซื้อผัก",
+      "ผักกาด หอม มะเขือเทศ"
+    ],
+    "english": [
+      "Buy milk",
+      "Fresh, 2 bottles",
+      "Write report",
+      "Quarterly numbers",
+      "Plan trip",
+      "Chiang Mai, November",
+      "Delete me",
+      "tombstone probe"
+    ]
+  },
+  "missingFromRestoredData": [],
+  "missingFromUiRows": [],
+  "deletedTombstoneStillVisibleInUi": false,
+  "uiRowCountOpen": 6,
+  "uiRowCountCompleted": 2
+}

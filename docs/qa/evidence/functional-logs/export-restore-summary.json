@@ -1,0 +1,84 @@
+{
+  "task": "t_eff4b9fa sub-criterion 4 (export→wipe→import→restored)",
+  "steps": [
+    {
+      "step": "seed-corpus",
+      "ok": true,
+      "detail": "9 records seeded through the real UI (incl. 1 tombstone)",
+      "at": "2026-10-25T17:14:18.208Z"
+    },
+    {
+      "step": "seed-settings-metadata",
+      "ok": true,
+      "detail": "theme=dark + language=th set through the Settings UI (html lang=th)",
+      "at": "2026-10-25T17:14:19.823Z"
+    },
+    {
+      "step": "export-via-ui",
+      "ok": true,
+      "detail": "download local-first-todo-backup-2026-10-25T171421Z.json captured byte-exact (5640 bytes)",
+      "at": "2026-10-25T17:14:21.516Z"
+    },
+    {
+      "step": "app-delete-all",
+      "ok": true,
+      "detail": "Settings → Delete all data → confirm dialog → wiped",
+      "at": "2026-10-25T17:14:23.274Z"
+    },
+    {
+      "step": "all-storage-cleared",
+      "ok": true,
+      "detail": "at the instant of the wipe: IndexedDB=[] localStorage=0 caches=[] swRegs=0",
+      "at": "2026-10-25T17:14:23.807Z"
+    },
+    {
+      "step": "fresh-install-after-wipe",
+      "ok": true,
+      "detail": "first-run onboarding=true, store rows={\"lists\":0,\"meta\":1,\"settings\":1,\"snapshot_payloads\":1,\"snapshots\":1,\"tasks\":0}",
+      "at": "2026-10-25T17:14:25.307Z"
+    },
+    {
+      "step": "import-via-ui",
+      "ok": true,
+      "detail": "import confirm dialog → \"Replace and import\" → import-complete toast",
+      "at": "2026-10-25T17:14:26.793Z"
+    },
+    {
+      "step": "record-fidelity-100-percent",
+      "ok": true,
+      "detail": "tasks diff=0, lists diff=0, settings diff=0, unexpected envelope diffs=0",
+      "at": "2026-10-25T17:14:31.836Z"
+    },
+    {
+      "step": "thai-english-content-fidelity",
+      "ok": true,
+      "detail": "byte-exact strings checked=16; missing data=0, missing UI=0; UI rows after reload: open=6 (6), completed=2 (2), tombstone hidden=true",
+      "at": "2026-10-25T17:14:31.836Z"
+    },
+    {
+      "step": "settings-metadata-roundtrip",
+      "ok": true,
+      "detail": "locale in file=th, restored=th, html lang=th; theme restored=true",
+      "at": "2026-10-25T17:14:32.345Z"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "title": "restored data is not visible in the running UI after a successful import — a manual reload is required",
+      "observed": {
+        "taskRowsVisibleOnAllBeforeReload": 0,
+        "listRowsVisibleBeforeReload": 0
+      },
+      "dataIntactElsewhere": "the same records are present in IndexedDB (4a) and re-export through the app export path (4c); they appear in the UI after page.reload()",
+      "mechanism": "src/features/data-safety/importFlow.ts applyPlan() refreshes only counts/snapshots/lastBackupAt — the tasks/lists store is never reloaded after applyImport(); tabSync.sweep() only picks up rows with updatedAt > watermark and imported rows keep their original updatedAt",
+      "severity": "moderate (UX/visibility — no data loss)"
+    }
+  ],
+  "verdict": "PASS",
+  "consoleErrors": [],
+  "appUrl": "http://127.0.0.1:4291/browser-todo-app/",
+  "buildSha": "b820ad723e7c66317cb1e741b21891ada6de60b4",
+  "ranAt": "2026-10-25T17:14:32.345Z",
+  "chromiumVersion": "156.0.8078.4"
+}

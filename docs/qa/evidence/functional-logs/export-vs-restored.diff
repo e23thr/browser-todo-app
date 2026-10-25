@@ -1,0 +1,57 @@
+--- export-pre-wipe.json	2026-10-26 00:14:21.330268248 +0700
++++ export-post-import.json	2026-10-26 00:14:31.834759658 +0700
+@@ -3,8 +3,8 @@
+   "formatVersion": 1,
+   "schemaVersion": 1,
+   "kind": "export",
+-  "exportedAt": 1792948461311,
+-  "deviceId": "01M5T0W58XH5Y62JFXRR9P3BV4",
++  "exportedAt": 1792948471824,
++  "deviceId": "01M5T0WT8V43M8Q85A6F22Z6EX",
+   "app": {
+     "name": "local-first-todo",
+     "version": "0.1.0"
+@@ -12,7 +12,7 @@
+   "counts": {
+     "lists": 2,
+     "tasks": 9,
+-    "snapshots": 1
++    "snapshots": 2
+   },
+   "data": {
+     "settings": {
+@@ -22,7 +22,7 @@
+       "weekStart": 1,
+       "defaultListId": null,
+       "notificationsEnabled": false,
+-      "lastBackupAt": 1792948461311
++      "lastBackupAt": 1792948471824
+     },
+     "lists": [
+       {
+@@ -181,13 +181,22 @@
+     ],
+     "snapshots": [
+       {
+-        "id": "01M5T0W59KNE824V0AFXXXPB91",
+-        "takenAt": 1792948442419,
++        "id": "01M5T0WTAPSPRT49BFCATP89PY",
++        "takenAt": 1792948463958,
+         "kind": "auto",
+         "reason": "scheduled",
+         "sizeBytes": 606,
+         "schemaVersion": 1,
+-        "payloadRef": "01M5T0W59KNE824V0AFXXXPB91"
++        "payloadRef": "01M5T0WTAPSPRT49BFCATP89PY"
++      },
++      {
++        "id": "01M5T0WWX2WTGWZ1TJD2SBAFXQ",
++        "takenAt": 1792948466594,
++        "kind": "auto",
++        "reason": "pre-import",
++        "sizeBytes": 865,
++        "schemaVersion": 1,
++        "payloadRef": "01M5T0WWX2WTGWZ1TJD2SBAFXQ"
+       }
+     ]
+   }

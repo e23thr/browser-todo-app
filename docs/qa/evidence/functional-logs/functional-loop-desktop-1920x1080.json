@@ -1,0 +1,107 @@
+{
+  "viewport": "desktop-1920x1080",
+  "viewportSpec": {
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "deviceScaleFactor": 1
+  },
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36",
+  "steps": [
+    {
+      "step": "sw-controls-page",
+      "ok": true,
+      "detail": "service worker controls the page before the network is cut",
+      "at": "2026-10-25T16:48:34.340Z"
+    },
+    {
+      "step": "list-created",
+      "ok": true,
+      "detail": "list \"QA Loop List\" created through the Lists screen",
+      "at": "2026-10-25T16:48:35.457Z"
+    },
+    {
+      "step": "offline-engaged",
+      "ok": true,
+      "detail": "context.setOffline(true)",
+      "at": "2026-10-25T16:48:35.458Z"
+    },
+    {
+      "step": "capture-offline",
+      "ok": true,
+      "detail": "task captured and visible on #/all while offline",
+      "at": "2026-10-25T16:48:36.605Z"
+    },
+    {
+      "step": "plan-offline",
+      "ok": true,
+      "detail": "due-today task is a member of the Today view while offline",
+      "at": "2026-10-25T16:48:37.229Z"
+    },
+    {
+      "step": "complete-offline",
+      "ok": true,
+      "detail": "task completed and collapsed out of the open view",
+      "at": "2026-10-25T16:48:38.638Z"
+    },
+    {
+      "step": "offline-reload-boots",
+      "ok": true,
+      "detail": "shell booted offline, h1=\"Today\"",
+      "at": "2026-10-25T16:48:38.737Z"
+    },
+    {
+      "step": "data-present-after-offline-reload",
+      "ok": true,
+      "detail": "completed task present and checked after the offline reload",
+      "at": "2026-10-25T16:48:38.785Z"
+    }
+  ],
+  "verdict": "PASS",
+  "consoleLog": [],
+  "consoleErrors": [],
+  "timeline": [
+    {
+      "step": "01-boot-onboarding-dismissed",
+      "at": "2026-10-25T16:48:34.272Z",
+      "screenshot": "docs/qa/evidence/functional-logs/screens/2026-10-25T16-48-34-272Z-01-boot-onboarding-dismissed.png"
+    },
+    {
+      "step": "02-list-created",
+      "at": "2026-10-25T16:48:35.400Z",
+      "screenshot": "docs/qa/evidence/functional-logs/screens/2026-10-25T16-48-35-400Z-02-list-created.png"
+    },
+    {
+      "step": "03-capture-offline",
+      "at": "2026-10-25T16:48:36.547Z",
+      "screenshot": "docs/qa/evidence/functional-logs/screens/2026-10-25T16-48-36-547Z-03-capture-offline.png"
+    },
+    {
+      "step": "04-plan-editor-due-today",
+      "at": "2026-10-25T16:48:36.672Z",
+      "screenshot": "docs/qa/evidence/functional-logs/screens/2026-10-25T16-48-36-672Z-04-plan-editor-due-today.png"
+    },
+    {
+      "step": "05-plan-today-view",
+      "at": "2026-10-25T16:48:37.177Z",
+      "screenshot": "docs/qa/evidence/functional-logs/screens/2026-10-25T16-48-37-177Z-05-plan-today-view.png"
+    },
+    {
+      "step": "06-complete-offline",
+      "at": "2026-10-25T16:48:38.579Z",
+      "screenshot": "docs/qa/evidence/functional-logs/screens/2026-10-25T16-48-38-579Z-06-complete-offline.png"
+    },
+    {
+      "step": "07-offline-reload-boot",
+      "at": "2026-10-25T16:48:38.692Z",
+      "screenshot": "docs/qa/evidence/functional-logs/screens/2026-10-25T16-48-38-692Z-07-offline-reload-boot.png"
+    },
+    {
+      "step": "08-data-present-after-reload",
+      "at": "2026-10-25T16:48:38.745Z",
+      "screenshot": "docs/qa/evidence/functional-logs/screens/2026-10-25T16-48-38-745Z-08-data-present-after-reload.png"
+    }
+  ],
+  "video": "docs/qa/evidence/functional-logs/videos/desktop-1920x1080.webm"
+}

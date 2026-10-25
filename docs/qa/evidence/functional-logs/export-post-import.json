@@ -1,0 +1,203 @@
+{
+  "format": "local-first-todo-backup",
+  "formatVersion": 1,
+  "schemaVersion": 1,
+  "kind": "export",
+  "exportedAt": 1792948471824,
+  "deviceId": "01M5T0WT8V43M8Q85A6F22Z6EX",
+  "app": {
+    "name": "local-first-todo",
+    "version": "0.1.0"
+  },
+  "counts": {
+    "lists": 2,
+    "tasks": 9,
+    "snapshots": 2
+  },
+  "data": {
+    "settings": {
+      "id": "settings",
+      "theme": "dark",
+      "locale": "th",
+      "weekStart": 1,
+      "defaultListId": null,
+      "notificationsEnabled": false,
+      "lastBackupAt": 1792948471824
+    },
+    "lists": [
+      {
+        "id": "01M5T0W68J7VEJX0M6995YHGTS",
+        "name": "รายการของฉัน",
+        "color": "#2e6fd9",
+        "sortOrder": "h",
+        "createdAt": 1792948443423,
+        "updatedAt": 1792948443423,
+        "deletedAt": null,
+        "deviceId": "01M5T0W58XH5Y62JFXRR9P3BV4"
+      },
+      {
+        "id": "01M5T0W7785NZ3E6HK9N5B48CJ",
+        "name": "Errands",
+        "color": "#2e6fd9",
+        "sortOrder": "hh",
+        "createdAt": 1792948444407,
+        "updatedAt": 1792948444407,
+        "deletedAt": null,
+        "deviceId": "01M5T0W58XH5Y62JFXRR9P3BV4"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "01M5T0W7ZF76Q2X0EJYWNQY60F",
+        "listId": "01M5T0W68J7VEJX0M6995YHGTS",
+        "title": "ซื้อนม",
+        "notes": "ซื้อนมสด 2 กล่อง จากตลาด",
+        "status": "open",
+        "priority": 2,
+        "dueDate": "2026-10-26",
+        "tags": [],
+        "sortOrder": "h",
+        "createdAt": 1792948445175,
+        "updatedAt": 1792948449728,
+        "deletedAt": null,
+        "deviceId": "01M5T0W58XH5Y62JFXRR9P3BV4"
+      },
+      {
+        "id": "01M5T0W8WJ3008AMKQSEHVWWS1",
+        "listId": "01M5T0W68J7VEJX0M6995YHGTS",
+        "title": "อ่านหนังสือ",
+        "notes": "อ่านให้จบบทที่ 3",
+        "status": "open",
+        "priority": 0,
+        "tags": [],
+        "sortOrder": "hhh",
+        "createdAt": 1792948446101,
+        "updatedAt": 1792948450973,
+        "deletedAt": null,
+        "deviceId": "01M5T0W58XH5Y62JFXRR9P3BV4"
+      },
+      {
+        "id": "01M5T0W9SPAVWJ5AM1K36WS6EG",
+        "listId": "01M5T0W68J7VEJX0M6995YHGTS",
+        "title": "นัดพบแพทย์",
+        "notes": null,
+        "status": "open",
+        "priority": 0,
+        "dueDate": "2026-10-26",
+        "tags": [],
+        "sortOrder": "hhhhh",
+        "createdAt": 1792948447034,
+        "updatedAt": 1792948452173,
+        "deletedAt": null,
+        "deviceId": "01M5T0W58XH5Y62JFXRR9P3BV4"
+      },
+      {
+        "id": "01M5T0WAP949PKATW4C2T7RB9V",
+        "listId": "01M5T0W68J7VEJX0M6995YHGTS",
+        "title": "ล้างจาน",
+        "notes": null,
+        "status": "done",
+        "priority": 0,
+        "tags": [],
+        "sortOrder": "hhhhhhh",
+        "createdAt": 1792948447947,
+        "updatedAt": 1792948454711,
+        "completedAt": 1792948454711,
+        "deletedAt": null,
+        "deviceId": "01M5T0W58XH5Y62JFXRR9P3BV4"
+      },
+      {
+        "id": "01M5T0WB4B3FTZ1ZAZXT6GGKF5",
+        "listId": "01M5T0W68J7VEJX0M6995YHGTS",
+        "title": "ซื้อผัก",
+        "notes": "ผักกาด หอม มะเขือเทศ",
+        "status": "open",
+        "priority": 0,
+        "tags": [],
+        "sortOrder": "hhhhhhhh",
+        "createdAt": 1792948448398,
+        "updatedAt": 1792948456157,
+        "deletedAt": null,
+        "deviceId": "01M5T0W58XH5Y62JFXRR9P3BV4"
+      },
+      {
+        "id": "01M5T0W8E0QQ3WJTS29F6K5X2K",
+        "listId": "01M5T0W7785NZ3E6HK9N5B48CJ",
+        "title": "Buy milk",
+        "notes": "Fresh, 2 bottles",
+        "status": "open",
+        "priority": 1,
+        "dueDate": "2026-10-26",
+        "tags": [],
+        "sortOrder": "h",
+        "createdAt": 1792948445634,
+        "updatedAt": 1792948450392,
+        "deletedAt": null,
+        "deviceId": "01M5T0W58XH5Y62JFXRR9P3BV4"
+      },
+      {
+        "id": "01M5T0W9B6T96MZ42Y1WWCCTAS",
+        "listId": "01M5T0W7785NZ3E6HK9N5B48CJ",
+        "title": "Write report",
+        "notes": "Quarterly numbers",
+        "status": "open",
+        "priority": 0,
+        "tags": [],
+        "sortOrder": "hh",
+        "createdAt": 1792948446569,
+        "updatedAt": 1792948451582,
+        "deletedAt": null,
+        "deviceId": "01M5T0W58XH5Y62JFXRR9P3BV4"
+      },
+      {
+        "id": "01M5T0WA8AQ3T1MPBZJW6C264G",
+        "listId": "01M5T0W7785NZ3E6HK9N5B48CJ",
+        "title": "Plan trip",
+        "notes": "Chiang Mai, November",
+        "status": "done",
+        "priority": 0,
+        "tags": [],
+        "sortOrder": "hhh",
+        "createdAt": 1792948447500,
+        "updatedAt": 1792948453351,
+        "completedAt": 1792948453351,
+        "deletedAt": null,
+        "deviceId": "01M5T0W58XH5Y62JFXRR9P3BV4"
+      },
+      {
+        "id": "01M5T0WBKGT4BV29WG5G4ZQX7T",
+        "listId": "01M5T0W7785NZ3E6HK9N5B48CJ",
+        "title": "Delete me",
+        "notes": "tombstone probe",
+        "status": "open",
+        "priority": 0,
+        "tags": [],
+        "sortOrder": "hhhh",
+        "createdAt": 1792948448888,
+        "updatedAt": 1792948457580,
+        "deletedAt": 1792948457580,
+        "deviceId": "01M5T0W58XH5Y62JFXRR9P3BV4"
+      }
+    ],
+    "snapshots": [
+      {
+        "id": "01M5T0WTAPSPRT49BFCATP89PY",
+        "takenAt": 1792948463958,
+        "kind": "auto",
+        "reason": "scheduled",
+        "sizeBytes": 606,
+        "schemaVersion": 1,
+        "payloadRef": "01M5T0WTAPSPRT49BFCATP89PY"
+      },
+      {
+        "id": "01M5T0WWX2WTGWZ1TJD2SBAFXQ",
+        "takenAt": 1792948466594,
+        "kind": "auto",
+        "reason": "pre-import",
+        "sizeBytes": 865,
+        "schemaVersion": 1,
+        "payloadRef": "01M5T0WWX2WTGWZ1TJD2SBAFXQ"
+      }
+    ]
+  }
+}

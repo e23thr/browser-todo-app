@@ -1,0 +1,53 @@
+{
+  "task": "t_eff4b9fa sub-criterion 3 (zero data loss)",
+  "steps": [
+    {
+      "step": "create-50-items",
+      "ok": true,
+      "detail": "50 items created through the real composer; 50 rows visible on #/all",
+      "at": "2026-10-25T16:54:07.295Z"
+    },
+    {
+      "step": "complete-30-items",
+      "ok": true,
+      "detail": "Item 01..30 completed through the row checkboxes (F3 collapse each)",
+      "at": "2026-10-25T16:54:48.010Z"
+    },
+    {
+      "step": "delete-10-items",
+      "ok": true,
+      "detail": "Item 41..50 deleted through the editor → confirm dialog",
+      "at": "2026-10-25T16:54:51.056Z"
+    },
+    {
+      "step": "before-refresh-state",
+      "ok": true,
+      "detail": "10 open rows before the refresh (expected 10)",
+      "at": "2026-10-25T16:54:53.094Z"
+    },
+    {
+      "step": "idb-identical-across-refresh",
+      "ok": true,
+      "detail": "user-data stores (tasks/lists/settings) before the refresh are canonically identical to those after",
+      "at": "2026-10-25T16:54:55.166Z"
+    },
+    {
+      "step": "zero-data-loss-40-items-correct-state",
+      "ok": true,
+      "detail": "live=40 completed=30 open=10 tombstoned=10; missing=0 wrongState=0 deletedStillLive=0",
+      "at": "2026-10-25T16:54:55.167Z"
+    },
+    {
+      "step": "ui-state-after-refresh",
+      "ok": true,
+      "detail": "UI after refresh: open rows on #/all=10 (10), rows on #/completed=30 (30), checked=30 (30)",
+      "at": "2026-10-25T16:54:55.838Z"
+    }
+  ],
+  "verdict": "PASS",
+  "consoleErrors": [],
+  "appUrl": "http://127.0.0.1:4291/browser-todo-app/",
+  "buildSha": "b820ad723e7c66317cb1e741b21891ada6de60b4",
+  "ranAt": "2026-10-25T16:54:55.838Z",
+  "chromiumVersion": "156.0.8078.4"
+}

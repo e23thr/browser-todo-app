@@ -1,0 +1,17 @@
+[
+  {
+    "step": "01-created-50-items",
+    "at": "2026-10-25T16:54:07.211Z",
+    "screenshot": "docs/qa/evidence/functional-logs/screens/2026-10-25T16-54-07-211Z-01-created-50-items.png"
+  },
+  {
+    "step": "02-completed-30-items",
+    "at": "2026-10-25T16:54:47.932Z",
+    "screenshot": "docs/qa/evidence/functional-logs/screens/2026-10-25T16-54-47-932Z-02-completed-30-items.png"
+  },
+  {
+    "step": "03-deleted-10-items",
+    "at": "2026-10-25T16:54:50.984Z",
+    "screenshot": "docs/qa/evidence/functional-logs/screens/2026-10-25T16-54-50-984Z-03-deleted-10-items.png"
+  }
+]
