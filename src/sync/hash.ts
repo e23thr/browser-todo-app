@@ -4,7 +4,7 @@
  * `stateHash` over exact string bytes) and the shadow's `contentHash`.
  */
 
-import type { List, Task } from '../domain/model';
+import type { RowLike } from '../domain/model';
 
 function subtle(): SubtleCrypto {
   // Some embedded hosts lack WebCrypto; typed as optional so the guard is real.
@@ -50,8 +50,14 @@ export function stableStringify(value: unknown): string {
  * content EXCLUDING `updatedAt`/`deviceId` (the LWW key) — so two versions with
  * identical content but different stamps demote to "Same change". `deletedAt` IS
  * included: tombstoning is a content change for the three-way test.
+ *
+ * Encrypted rows (ADR-007 Decision 8.1): the same computation over the AT-REST
+ * row — `payloadHash` is the content stand-in (no decrypted content is ever
+ * compared; identical-edit detection degrades exactly as Decision 8.5 records),
+ * and `deletedAt` staying in the hash is what keeps tombstoning-while-locked a
+ * content change for the three-way test.
  */
-export async function contentHashOf(record: List | Task): Promise<string> {
+export async function contentHashOf(record: RowLike): Promise<string> {
   const content: Record<string, unknown> = { ...(record as unknown as Record<string, unknown>) };
   delete content['updatedAt'];
   delete content['deviceId'];

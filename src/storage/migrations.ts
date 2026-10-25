@@ -17,11 +17,11 @@ import type { Result, StorageError } from './errors';
 import type { QuerySpec, Tx, AppDBImpl } from './db';
 import type { Priority, Recurrence, Task } from '../domain/model';
 import { isUlid } from './id';
-import { APP_SCHEMA_VERSION, META_KEY, SYNC_KEY } from './schema';
+import { APP_SCHEMA_VERSION, CRYPTO_KEY, META_KEY, SYNC_KEY } from './schema';
 import { fallbackRawCodec, restoreSnapshot, takeSnapshot } from './snapshots';
 import type { SnapshotCodec } from './snapshots';
 import { defaultSyncStateRow } from './syncState';
-import { type Row, type StoreName, type StoreRows } from './types';
+import { type Row, type RowMap, type StoreName, type StoreRows } from './types';
 
 export type MigrationStep = {
   /** The version this step upgrades TO (key semantics of ADR-002 §8 registry). */
@@ -145,13 +145,51 @@ export const toSchemaVersion2: MigrationStep = {
 };
 
 /**
+ * Step 4 registers the additive `crypto_state` store (ADR-007 Decision 2.4 —
+ * owned by t_db67a322; numbering pinned by "any further migration appends at
+ * to: 4+"). The STRUCTURAL store creation runs in `onupgradeneeded` (idbVersion
+ * 3, schema.ts); this step seeds the singleton default row (`status: 'off'`)
+ * so old databases arrive at the same state fresh installs get. Idempotent: an
+ * existing row is never touched. Local-only like `meta`/`sync_state`.
+ */
+export const toSchemaVersion4: MigrationStep = {
+  to: 4,
+  stores: ['crypto_state'],
+  run: async (t) => {
+    const existing = await t.get('crypto_state', CRYPTO_KEY);
+    if (existing === undefined) {
+      await t.put('crypto_state', defaultCryptoStateRow());
+    }
+    return ok(undefined);
+  },
+};
+
+/** `crypto_state` default row — C1 off, 15-minute idle re-lock (Decision 5.2). */
+export function defaultCryptoStateRow(): RowMap['crypto_state'] {
+  return {
+    id: 'crypto',
+    status: 'off',
+    enabledAt: null,
+    migration: null,
+    keys: [],
+    recoveryOfferedAt: null,
+    lockAfterMinutes: 15,
+  };
+}
+
+/**
  * Production chain: v1 baseline (ADR-002), v2 = the `sync_state` store
  * (ADR-006 Decision 3 — owned by t_00d7f17b; numbering pinned there and echoed
- * on t_b5078638), v3 = E7 organization schema. ADR-002 requires exactly one
- * step per version — any further migration appends at `to: 4`+ (two steps at
- * one version make `runMigrations` refuse to boot).
+ * on t_b5078638), v3 = E7 organization schema, v4 = the `crypto_state` store
+ * (ADR-007 Decision 2.4). ADR-002 requires exactly one step per version — any
+ * further migration appends at `to: 5`+ (two steps at one version make
+ * `runMigrations` refuse to boot).
  */
-export const productionMigrations: MigrationRegistry = [toSchemaVersion2, toSchemaVersion3];
+export const productionMigrations: MigrationRegistry = [
+  toSchemaVersion2,
+  toSchemaVersion3,
+  toSchemaVersion4,
+];
 
 export function targetVersionOf(registry: MigrationRegistry): number {
   return registry.reduce((max, s) => Math.max(max, s.to), APP_SCHEMA_VERSION);
@@ -297,6 +335,7 @@ export class MemoryTx implements Tx {
       'snapshots',
       'snapshot_payloads',
       'sync_state',
+      'crypto_state',
     ] as const) {
       if (!this.#stores.has(name)) this.#stores.set(name, new Map<string, unknown>());
     }

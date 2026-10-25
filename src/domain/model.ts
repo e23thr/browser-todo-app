@@ -87,7 +87,14 @@ export type Settings = {
  * arrived with the ADR-006 Decision 3 migration step (schemaVersion 2).
  */
 export type StoreName =
-  'meta' | 'lists' | 'tasks' | 'settings' | 'snapshots' | 'snapshot_payloads' | 'sync_state';
+  | 'meta'
+  | 'lists'
+  | 'tasks'
+  | 'settings'
+  | 'snapshots'
+  | 'snapshot_payloads'
+  | 'sync_state'
+  | 'crypto_state';
 
 /** Field-scoped create input — repos stamp ids/timestamps (ADR-002 Decision 5). */
 export type TaskDraft = {
@@ -113,7 +120,7 @@ export type TaskDraft = {
  */
 export type TaskPatch = Partial<
   Pick<Task, 'title' | 'notes' | 'priority' | 'dueDate' | 'tags' | 'reminderAt' | 'recurrence'>
-> & { dueDateUnset?: true; reminderAtUnset?: true };
+> & { dueDateUnset?: true; reminderAtUnset?: true; recurrenceUnset?: true };
 
 /** Settings used before the first `update()` persists the singleton row. */
 export const DEFAULT_SETTINGS: Settings = {
@@ -125,3 +132,89 @@ export const DEFAULT_SETTINGS: Settings = {
   notificationsEnabled: false,
   lastBackupAt: null,
 };
+
+/* --------------------- C1 encrypted record shapes (ADR-007 Decision 4.1) --------------------- */
+
+/**
+ * The plaintext crypto envelope carried on encrypted records (ADR-006
+ * Decision 10 — binding wire slots: `payloadHash` is change detection for the
+ * shadow test; `enc` + `payload` are opaque to the sync engine).
+ */
+export type EncEnvelope = { alg: 'AES-GCM'; v: 1; iv: string };
+
+/** Decrypted task content — the ciphertext plaintext (Decision 4.1). */
+export type TaskPayload = { title: string; notes: string | null; tags: string[] };
+
+/** Decrypted list content. */
+export type ListPayload = { name: string };
+
+/**
+ * The at-rest `tasks` row when C1 is on (Decision 4.1): plaintext merge
+ * envelope + plaintext structural fields + one ciphertext payload. The record
+ * is SELF-DESCRIBING — `enc` present = encrypted; a mixed store (some rows
+ * plaintext) is legal and required for crash-safe migration (Decision 7.1).
+ *
+ * NOTE (recorded for review): `RowMap['tasks']` stays typed as `Task` — the
+ * decrypted view — so the whole domain/UI layer compiles unchanged. The
+ * encrypted variant is a RUNTIME shape enforced by `validate.ts` and by the
+ * crypto read/write seam (the one boundary where both shapes coexist); raw
+ * consumers (sync engine, snapshot/backup paths) treat rows as opaque records
+ * whose envelope fields are all they may read.
+ */
+export type EncryptedTaskRecord = {
+  id: string;
+  kind: 'task';
+  updatedAt: number;
+  deviceId: string;
+  deletedAt: number | null;
+  payloadHash: string;
+  enc: EncEnvelope;
+  payload: string;
+  // — plaintext structural fields (query/merge/schedule) —
+  listId: string;
+  status: TaskStatus;
+  priority: Priority;
+  dueDate?: string;
+  reminderAt?: number;
+  recurrence?: Recurrence;
+  parentTaskId?: string;
+  sortOrder: string;
+  createdAt: number;
+  completedAt?: number;
+};
+
+/** The at-rest `lists` row when C1 is on. */
+export type EncryptedListRecord = {
+  id: string;
+  kind: 'list';
+  updatedAt: number;
+  deviceId: string;
+  deletedAt: number | null;
+  payloadHash: string;
+  enc: EncEnvelope;
+  payload: string;
+  color: string;
+  sortOrder: string;
+  createdAt: number;
+};
+
+/** Either at-rest row shape (raw consumers — sync engine, snapshots). */
+export type TaskRowLike = Task | EncryptedTaskRecord;
+export type ListRowLike = List | EncryptedListRecord;
+export type RowLike = TaskRowLike | ListRowLike;
+
+/** `enc` present = the encrypted at-rest shape (the record is self-describing). */
+export function isEncryptedRecord(row: unknown): row is EncryptedTaskRecord | EncryptedListRecord {
+  return (
+    typeof row === 'object' &&
+    row !== null &&
+    typeof (row as { enc?: unknown }).enc === 'object' &&
+    (row as { enc?: unknown }).enc !== null
+  );
+}
+
+/** Row kind from the row itself (`kind` on encrypted rows; field presence on plaintext ones). */
+export function rowKindOf(row: RowLike): 'task' | 'list' {
+  if (isEncryptedRecord(row)) return row.kind;
+  return 'title' in row ? 'task' : 'list';
+}

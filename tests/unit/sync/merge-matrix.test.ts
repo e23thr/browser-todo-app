@@ -84,8 +84,8 @@ describe('merge matrix (recorded — ADR-006 test plan item 1)', () => {
     expect(winner.deviceId).toBe(DEVICE_A);
     expect(result.value.copies).toHaveLength(1);
     const copy = result.value.copies[0]!;
-    expect(copy.row.title).toBe('Conflict copy of Buy milk');
-    expect(copy.row.notes).toBe('soy'); // carrying B's notes
+    expect((copy.row as Task).title).toBe('Conflict copy of Buy milk');
+    expect((copy.row as Task).notes).toBe('soy'); // carrying B's notes
     expect(copy.row.deletedAt).toBeNull();
     expect(copy.row.deviceId).toBe(DEVICE_B); // stamped with the copying device
     expect(copy.summary.lostTo).toEqual({ updatedAt: 2000, deviceId: DEVICE_A });
@@ -133,7 +133,7 @@ describe('merge matrix (recorded — ADR-006 test plan item 1)', () => {
     const winner = result.value.puts[0] as Task;
     expect(winner.deviceId).toBe(DEVICE_B);
     expect(result.value.copies).toHaveLength(1);
-    expect(result.value.copies[0]!.row.title).toBe(conflictCopyTitle('Buy oat milk'));
+    expect((result.value.copies[0]!.row as Task).title).toBe(conflictCopyTitle('Buy oat milk'));
   });
 
   it('M4: delete-vs-edit (worked example 3) — tombstone wins the id; the edit survives as a copy', async () => {
@@ -168,7 +168,7 @@ describe('merge matrix (recorded — ADR-006 test plan item 1)', () => {
     const winner = result.value.puts[0] as Task;
     expect(winner.deletedAt).toBe(2500); // tombstone outcome follows LWW on the id
     expect(result.value.copies).toHaveLength(1);
-    const copy = result.value.copies[0]!.row;
+    const copy = result.value.copies[0]!.row as Task;
     expect(copy.title).toBe(conflictCopyTitle('Buy oat milk'));
     expect(copy.notes).toBe('soy'); // the edit is never lost
     expect(copy.deletedAt).toBeNull();
@@ -401,7 +401,7 @@ describe('merge matrix (recorded — ADR-006 test plan item 1)', () => {
     // The copy carries the loser's content minus the LWW key, with fresh identity.
     expect(copy.row.id).toBe(copy.copyId);
     expect(copy.row.id).not.toBe(TASK_ID);
-    expect(copy.row.notes).toBe('b');
+    expect((copy.row as Task).notes).toBe('b');
     expect(copy.row.updatedAt).toBe(9000);
   });
 });

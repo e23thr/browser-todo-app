@@ -33,6 +33,8 @@ import { liveLists, moveTaskTo, startTaskStore, state as taskState } from '../fe
 import { ToastHost } from '../features/tasks/ToastHost';
 import { TodayView } from '../features/today/TodayView';
 import { WeekView } from '../features/week/WeekView';
+import { lockState } from '../crypto/lock';
+import { PreLockToast } from '../features/crypto/PreLockToast';
 
 /** Props every route view receives; `ListView` reads `params.id`, the rest ignore them. */
 export interface ViewProps {
@@ -95,6 +97,19 @@ export function App(): JSX.Element {
   const [reminderTask, setReminderTask] = useState<Task | null>(null);
   const mounted = useRef(true);
   const firstPaint = useRef(true);
+
+  // ADR-007 lock gate: the locked screen chunk loads lazily so the crypto core
+  // stays out of the app-shell closure (§9.2). Until it arrives, a bare status
+  // line is the WHOLE screen — task content never paints while locked (D4.3).
+  const locked = lockState.value.status === 'locked';
+  const [LockedScreenLazy, setLockedScreen] = useState<ComponentType | null>(null);
+  useEffect(() => {
+    if (locked && LockedScreenLazy === null) {
+      void import('../features/crypto/LockedScreen').then((m) => {
+        setLockedScreen(() => m.LockedScreen);
+      });
+    }
+  }, [locked, LockedScreenLazy]);
 
   const safety = dataSafetyState.value;
   // S1 first run (§7 "shown before task UI") and S5 recovery (§6.5) replace the
@@ -258,6 +273,16 @@ export function App(): JSX.Element {
     }
   })();
 
+  // ADR-007 Decision 4.3: a locked store shows a DEDICATED locked screen (never
+  // blurred lists).
+  if (locked) {
+    return LockedScreenLazy === null ? (
+      <p role="status">{t('crypto.locked.title')}</p>
+    ) : (
+      <LockedScreenLazy />
+    );
+  }
+
   // S1 first run (§7 "shown before task UI") and S5 recovery (§6.5) replace the WHOLE shell:
   // there is no background content for focus or a screen reader to land on.
   if (safety.onboarding) {
@@ -298,6 +323,7 @@ export function App(): JSX.Element {
   return (
     <Shell pattern={currentPattern}>
       <DataSafetyHost />
+      <PreLockToast />
       <ToastHost />
       {currentView}
       {composerSheet ? (

@@ -162,6 +162,10 @@ function invalidFrom(
       return { reason: 'schema-unknown', message: t('dataSafety.import.failed.snapshotFirst') };
     case 'QUOTA_EXCEEDED':
       return { reason: 'schema-unknown', message: t('dataSafety.import.error.quota') };
+    case 'LOCKED':
+      // ADR-007 Decision 4.5: import into an encrypted store while locked —
+      // unlock first, nothing was touched.
+      return { reason: 'schema-unknown', message: t('dataSafety.import.error.locked') };
     case 'TX_ABORTED':
     case 'UNAVAILABLE':
     case 'UNKNOWN':

@@ -85,6 +85,7 @@ describe('snapshot payloads are importable backup documents (Decision 8.1)', () 
         snapshots: [],
         snapshot_payloads: [],
         sync_state: [],
+        crypto_state: [],
       },
     });
     const back = codec.deserialize(text);
@@ -220,6 +221,7 @@ describe('rollback validates stored rows (review finding 4)', () => {
         snapshots: corpus.snapshots,
         snapshot_payloads: [],
         sync_state: [],
+        crypto_state: [],
       },
     });
 

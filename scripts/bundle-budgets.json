@@ -24,11 +24,11 @@
       "description": "Total app shell: FAIL > 200 KB gz (excl. icons/ manifest/ maps and lazy route+locale chunks; the service worker sw.js IS counted per ADR-001 section 8 / ADR-005 Decision 1)"
     },
     "locales": {
-      "limitBytes": 20480,
+      "limitBytes": 24576,
       "bootLocale": "en",
       "manifestKeyPattern": "^src/i18n/",
       "fileNamePattern": "(^|/)locale-",
-      "description": "en+th locale packs: FAIL > 20 KB gz combined, FAIL if a locale pack is inside the initial JS closure (they must be lazy)"
+      "description": "en+th locale packs: FAIL > 24 KB gz combined, FAIL if a locale pack is inside the initial JS closure (they must be lazy). 24 KB (was 20): ADR-007 §7.3 mandates the C1 copy catalog (59 keys × 2 locales) — the E10 budget predates the binding ADR; packs stay lazy (locales-lazy gate unchanged)."
     },
     "no-external-refs": {
       "allowedUrlPrefixes": [

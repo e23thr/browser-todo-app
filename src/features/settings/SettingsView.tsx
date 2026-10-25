@@ -15,6 +15,7 @@ import { View } from '../../components/View';
 import { StoragePanelContainer } from '../data-safety/StoragePanelContainer';
 import { NotificationsSettings } from '../notifications/NotificationsSettings';
 import { SyncPanel } from '../sync/SyncPanel';
+import { CryptoSection } from '../crypto/CryptoSection';
 
 /** One choice inside a radio row. */
 interface Choice {
@@ -206,6 +207,10 @@ export default function SettingsView(): JSX.Element {
           <SyncPanel />
         </div>
       </section>
+
+      {/* C1 (E10, stretch): encryption at rest — enable wizard (forced backup,
+          lost-passphrase warning, recovery key), lock/unlock and auto-lock. */}
+      <CryptoSection />
 
       <section class="settings-section" aria-labelledby="settings-about">
         <h2 class="settings-heading" id="settings-about">

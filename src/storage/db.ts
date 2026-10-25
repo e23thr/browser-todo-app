@@ -23,6 +23,7 @@ import type { Result, StorageError } from './errors';
 import { isUlid } from './id';
 import {
   APP_SCHEMA_VERSION,
+  CRYPTO_KEY,
   IDB_VERSION,
   META_KEY,
   SETTINGS_KEY,
@@ -33,6 +34,7 @@ import {
 import type { QuarantineApi, QuarantineEntry } from './quarantine';
 import { makeQuarantineApi } from './quarantine';
 import type { Row, RowMap, StoreName } from './types';
+import { rowCryptoSeam } from './cryptoSeam';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // `idb`'s dynamic-store generics cannot be expressed without `any` at exactly
@@ -97,11 +99,36 @@ export interface AppDB {
   readonly bootReport: BootReport;
   readonly quarantine: QuarantineApi;
 
+  /**
+   * App-surface transaction (ADR-007 Decision 4 seam): `tasks`/`lists` rows
+   * cross the crypto read/write boundary here — reads return decrypted domain
+   * views, writes land encrypted when C1 is on. Every other store is untouched.
+   * Raw consumers (sync engine, migrations, snapshot restore) use `txRaw`.
+   */
   tx<T>(
     stores: StoreName[],
     mode: 'readonly' | 'readwrite',
     fn: (t: Tx) => Promise<Result<T, StorageError>>,
   ): Promise<Result<T, StorageError>>;
+
+  /**
+   * AT-REST transaction (ADR-007): no row transform — bytes in, bytes out.
+   * Optional on the interface (`AppDBImpl` implements it; test doubles may
+   * omit it — callers fall back to `tx`, which is raw for a non-transforming
+   * double). Sync engine apply, migration steps and snapshot-restore rollback
+   * use this so remote rows travel and land byte-identical.
+   */
+  txRaw?: <T>(
+    stores: StoreName[],
+    mode: 'readonly' | 'readwrite',
+    fn: (t: Tx) => Promise<Result<T, StorageError>>,
+  ) => Promise<Result<T, StorageError>>;
+
+  /** AT-REST reads (optional — same fallback rule as `txRaw`). */
+  getAllRaw?: <K extends StoreName>(
+    store: K,
+    spec?: QuerySpec,
+  ) => Promise<Result<Row<K>[], StorageError>>;
 
   get<K extends StoreName>(
     store: K,
@@ -157,6 +184,9 @@ function primaryKeyOk(store: StoreName, row: unknown): boolean {
   }
   if (store === 'sync_state') {
     return typeof row === 'object' && row !== null && (row as { id?: unknown }).id === SYNC_KEY;
+  }
+  if (store === 'crypto_state') {
+    return typeof row === 'object' && row !== null && (row as { id?: unknown }).id === CRYPTO_KEY;
   }
   return isUlid((row as { id?: unknown } | null)?.id);
 }
@@ -225,6 +255,25 @@ export class AppDBImpl implements AppDB {
     this.#denied = new Set(entries.map((e) => denyKey(e.store, e.key)));
   }
 
+  /**
+   * @internal Runtime quarantine (ADR-007 Decision 9): rows that fail decrypt
+   * under a successfully unlocked key are excluded from reads, kept verbatim,
+   * downloadable via the same recovery file, and deleted only by explicit purge.
+   * Non-destructive — never crashed on, never silently dropped.
+   */
+  addQuarantine(entry: QuarantineEntry): void {
+    this.#quarantineEntries = [...this.#quarantineEntries, entry];
+    this.#denied.add(denyKey(entry.store, entry.key));
+  }
+
+  /** @internal Drop runtime decrypt-quarantine entries (ring grew — rows may heal). */
+  clearDecryptQuarantine(): void {
+    this.#quarantineEntries = this.#quarantineEntries.filter(
+      (e) => !e.issues.some((i) => i.startsWith('decrypt')),
+    );
+    this.#denied = new Set(this.#quarantineEntries.map((e) => denyKey(e.store, e.key)));
+  }
+
   /** @internal */
   get quarantineEntries(): readonly QuarantineEntry[] {
     return this.#quarantineEntries;
@@ -252,10 +301,36 @@ export class AppDBImpl implements AppDB {
 
   /* ------------------------------ public API ------------------------------ */
 
+  /**
+   * App-surface transaction: `tasks`/`lists` rows cross the ADR-007 Decision 4
+   * seam inside `TxImpl` (decrypt on read, encrypt on write).
+   */
   async tx<T>(
     stores: StoreName[],
     mode: 'readonly' | 'readwrite',
     fn: (t: Tx) => Promise<Result<T, StorageError>>,
+  ): Promise<Result<T, StorageError>> {
+    return this.#txWith(stores, mode, fn, true);
+  }
+
+  /**
+   * AT-REST transaction (ADR-007): no row transform — the bytes stored are the
+   * bytes handled. Sync engine apply, migration steps and snapshot-restore
+   * rollback use this (their rows must stay verbatim / byte-identical).
+   */
+  async txRaw<T>(
+    stores: StoreName[],
+    mode: 'readonly' | 'readwrite',
+    fn: (t: Tx) => Promise<Result<T, StorageError>>,
+  ): Promise<Result<T, StorageError>> {
+    return this.#txWith(stores, mode, fn, false);
+  }
+
+  async #txWith<T>(
+    stores: StoreName[],
+    mode: 'readonly' | 'readwrite',
+    fn: (t: Tx) => Promise<Result<T, StorageError>>,
+    transform: boolean,
   ): Promise<Result<T, StorageError>> {
     if (this.#closed) return err(unknownError(new Error('AppDB is closed')));
     if (stores.length === 0) return err(unknownError(new Error('tx: at least one store required')));
@@ -266,7 +341,7 @@ export class AppDBImpl implements AppDB {
     } catch (e) {
       return err(classifyUnknown(e));
     }
-    const wrapped = new TxImpl(rawTx, this.#denied);
+    const wrapped = new TxImpl(rawTx, this.#denied, transform, this);
     try {
       const result = await fn(wrapped);
       if (!result.ok) {
@@ -289,7 +364,7 @@ export class AppDBImpl implements AppDB {
         // fall through to classification
       }
       void rawTx.done.catch(() => undefined);
-      return err(classifyUnknown(e));
+      return err(e instanceof SeamFailure ? e.storageError : classifyUnknown(e));
     }
   }
 
@@ -302,7 +377,21 @@ export class AppDBImpl implements AppDB {
     if (this.#denied.has(denyKey(store, k))) return ok(undefined);
     try {
       const value = (await this.#db.get(store, k)) as Row<K> | undefined;
-      return ok(value);
+      if (value === undefined) return ok(undefined);
+      const seam = store === 'tasks' || store === 'lists' ? rowCryptoSeam() : null;
+      if (seam === null) return ok(value);
+      const read = await seam.readRow(store as 'tasks' | 'lists', value);
+      if (!read.ok) return err(read.error);
+      if (read.value === undefined) {
+        this.addQuarantine({
+          store,
+          key: k,
+          record: value,
+          issues: ['decrypt failed under the current key — quarantined (ADR-007 Decision 9)'],
+        });
+        return ok(undefined);
+      }
+      return ok(read.value as Row<K>);
     } catch (e) {
       return err(classifyUnknown(e));
     }
@@ -315,9 +404,28 @@ export class AppDBImpl implements AppDB {
     return this.query(store, spec ?? {});
   }
 
+  /**
+   * AT-REST rows (ADR-007): the sync engine pushes/pulls these verbatim and the
+   * backup/snapshot substrate serializes them without decrypting.
+   */
+  async getAllRaw<K extends StoreName>(
+    store: K,
+    spec?: QuerySpec,
+  ): Promise<Result<Row<K>[], StorageError>> {
+    return this.queryWith(store, spec ?? {}, false);
+  }
+
   async query<K extends StoreName>(
     store: K,
     spec: QuerySpec,
+  ): Promise<Result<Row<K>[], StorageError>> {
+    return this.queryWith(store, spec, true);
+  }
+
+  async queryWith<K extends StoreName>(
+    store: K,
+    spec: QuerySpec,
+    transform: boolean,
   ): Promise<Result<Row<K>[], StorageError>> {
     if (this.#closed) return err(unknownError(new Error('AppDB is closed')));
     try {
@@ -326,23 +434,61 @@ export class AppDBImpl implements AppDB {
         spec.index === undefined ? rawStore(base, store) : rawStore(base, store).index(spec.index);
       const rows = (await collect(src, spec)) as Row<K>[];
       await base.done;
-      return ok(rows.filter((r) => !this.#denied.has(denyKey(store, rowKey(store, r)))));
+      const alive = rows.filter((r) => !this.#denied.has(denyKey(store, rowKey(store, r))));
+      const seam = transform && (store === 'tasks' || store === 'lists') ? rowCryptoSeam() : null;
+      if (seam === null) return ok(alive);
+      const out: Row<K>[] = [];
+      for (const row of alive) {
+        const read = await seam.readRow(store as 'tasks' | 'lists', row);
+        if (!read.ok) return err(read.error);
+        if (read.value === undefined) {
+          this.addQuarantine({
+            store,
+            key: rowKey(store, row),
+            record: row,
+            issues: ['decrypt failed under the current key — quarantined (ADR-007 Decision 9)'],
+          });
+          continue;
+        }
+        out.push(read.value as Row<K>);
+      }
+      return ok(out);
     } catch (e) {
       return err(classifyUnknown(e));
     }
   }
 
   async put<K extends StoreName>(store: K, row: Row<K>): Promise<Result<void, StorageError>> {
+    return this.putWith(store, row, true);
+  }
+
+  /** AT-REST write (ADR-007): verbatim bytes — sync apply / rollback paths. */
+  async putRaw<K extends StoreName>(store: K, row: Row<K>): Promise<Result<void, StorageError>> {
+    return this.putWith(store, row, false);
+  }
+
+  async putWith<K extends StoreName>(
+    store: K,
+    row: Row<K>,
+    transform: boolean,
+  ): Promise<Result<void, StorageError>> {
     if (this.#closed) return err(unknownError(new Error('AppDB is closed')));
     if (this.#writeGuard !== null) return err(this.#writeGuard);
     if (!primaryKeyOk(store, row)) {
       return err(invalidRecord(store, ['missing or malformed primary key'], rowKey(store, row)));
     }
+    let toWrite: Row<K> = row;
+    const seam = transform && (store === 'tasks' || store === 'lists') ? rowCryptoSeam() : null;
+    if (seam !== null) {
+      const sealed = await seam.writeRow(store as 'tasks' | 'lists', row);
+      if (!sealed.ok) return err(sealed.error);
+      toWrite = sealed.value as Row<K>;
+    }
     try {
       if (store === 'meta') {
-        await this.#db.put(store, row, META_KEY);
+        await this.#db.put(store, toWrite, META_KEY);
       } else {
-        await this.#db.put(store, row);
+        await this.#db.put(store, toWrite);
       }
       return ok(undefined);
     } catch (e) {
@@ -371,10 +517,14 @@ export class AppDBImpl implements AppDB {
 class TxImpl implements Tx {
   readonly #tx: RawTx;
   readonly #denied: Set<string>;
+  readonly #transform: boolean;
+  readonly #owner: AppDBImpl;
 
-  constructor(tx: RawTx, denied: Set<string>) {
+  constructor(tx: RawTx, denied: Set<string>, transform: boolean, owner: AppDBImpl) {
     this.#tx = tx;
     this.#denied = denied;
+    this.#transform = transform;
+    this.#owner = owner;
   }
 
   async get<K extends StoreName>(store: K, key: string): Promise<Row<K> | undefined> {
@@ -382,7 +532,23 @@ class TxImpl implements Tx {
     // ADR-002 Decision 8 step 4: the denylist applies to EVERY app read —
     // single-row Tx reads included (readUnfiltered is the only unfiltered read).
     if (this.#denied.has(denyKey(store, k))) return undefined;
-    return (await rawStore(this.#tx, store).get(k)) as Row<K> | undefined;
+    const value = (await rawStore(this.#tx, store).get(k)) as Row<K> | undefined;
+    if (value === undefined) return undefined;
+    const seam =
+      this.#transform && (store === 'tasks' || store === 'lists') ? rowCryptoSeam() : null;
+    if (seam === null) return value;
+    const read = await seam.readRow(store as 'tasks' | 'lists', value);
+    if (!read.ok) throw new SeamFailure(read.error);
+    if (read.value === undefined) {
+      this.#owner.addQuarantine({
+        store,
+        key: k,
+        record: value,
+        issues: ['decrypt failed under the current key — quarantined (ADR-007 Decision 9)'],
+      });
+      return undefined;
+    }
+    return read.value as Row<K>;
   }
 
   async getAll<K extends StoreName>(store: K, spec?: QuerySpec): Promise<Row<K>[]> {
@@ -391,19 +557,59 @@ class TxImpl implements Tx {
         ? rawStore(this.#tx, store)
         : rawStore(this.#tx, store).index(spec.index);
     const rows = (await collect(src, spec)) as Row<K>[];
-    return rows.filter((r) => !this.#denied.has(denyKey(store, rowKey(store, r))));
+    const alive = rows.filter((r) => !this.#denied.has(denyKey(store, rowKey(store, r))));
+    const seam =
+      this.#transform && (store === 'tasks' || store === 'lists') ? rowCryptoSeam() : null;
+    if (seam === null) return alive;
+    const out: Row<K>[] = [];
+    for (const row of alive) {
+      const read = await seam.readRow(store as 'tasks' | 'lists', row);
+      if (!read.ok) throw new SeamFailure(read.error);
+      if (read.value === undefined) {
+        this.#owner.addQuarantine({
+          store,
+          key: rowKey(store, row),
+          record: row,
+          issues: ['decrypt failed under the current key — quarantined (ADR-007 Decision 9)'],
+        });
+        continue;
+      }
+      out.push(read.value as Row<K>);
+    }
+    return out;
   }
 
   async put<K extends StoreName>(store: K, row: Row<K>): Promise<void> {
+    let toWrite: Row<K> = row;
+    const seam =
+      this.#transform && (store === 'tasks' || store === 'lists') ? rowCryptoSeam() : null;
+    if (seam !== null) {
+      const sealed = await seam.writeRow(store as 'tasks' | 'lists', row);
+      if (!sealed.ok) throw new SeamFailure(sealed.error);
+      toWrite = sealed.value as Row<K>;
+    }
     if (store === 'meta') {
-      await rawStore(this.#tx, store).put(row, META_KEY);
+      await rawStore(this.#tx, store).put(toWrite, META_KEY);
     } else {
-      await rawStore(this.#tx, store).put(row);
+      await rawStore(this.#tx, store).put(toWrite);
     }
   }
 
   async delete(store: StoreName, key: string): Promise<void> {
     await rawStore(this.#tx, store).delete(store === 'meta' ? META_KEY : key);
+  }
+}
+
+/**
+ * Seam failures surface through the transaction's `catch` → `classifyUnknown`.
+ * Wrapping keeps the typed StorageError intact (a locked write refuses as
+ * `BLOCKED`, never a silent plaintext store — ADR-007 Decision 4).
+ */
+class SeamFailure extends Error {
+  readonly storageError: StorageError;
+  constructor(e: StorageError) {
+    super(`row seam refused: ${e.code}`);
+    this.storageError = e;
   }
 }
 

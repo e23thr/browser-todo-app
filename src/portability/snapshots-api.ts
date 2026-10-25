@@ -139,6 +139,8 @@ export function makeAdr004Codec(opts: Adr004CodecOptions = {}): SnapshotCodec {
           snapshot_payloads: [],
           // ADR-006 Decision 3: sync_state is local-only — never in documents.
           sync_state: [],
+          // ADR-007 Decision 2.4: crypto_state is local-only — never in documents.
+          crypto_state: [],
         },
       });
     },
@@ -158,12 +160,21 @@ export async function takeSnapshot(
   const db = resolved.value;
   const takenAt = (opts.now ?? Date.now)();
   const kind: SnapshotKind = reason === 'manual' ? 'manual' : 'auto';
+  // Lazy import: the crypto core rides its own chunk (§9.2, never the shell).
+  const { cryptoCodecHooks } = await import('../crypto/portability');
+  const { vault } = await import('../crypto/vault');
   const snap = await frameworkTakeSnapshot(db, {
     kind,
     reason,
     // Frozen clock: the document's `exportedAt` must equal `Snapshot.takenAt`
     // exactly (§8.1) — the codec's `now` is the same instant the row carries.
-    codec: makeAdr004Codec({ deviceId: db.deviceId, now: () => takenAt }),
+    // ADR-007 Decision 4.4: USER snapshots are plaintext ADR-004 JSON wrapped
+    // at rest — the crypto hooks decrypt the dump and seal the payload string
+    // (the migration chain's rollback snapshots deliberately use the raw codec).
+    codec: {
+      ...makeAdr004Codec({ deviceId: db.deviceId, now: () => takenAt }),
+      ...cryptoCodecHooks(vault),
+    },
     now: () => takenAt,
   });
   if (!snap.ok) return err(snap.error);
@@ -201,7 +212,12 @@ export async function downloadSnapshot(
   if (payload.value === undefined) {
     return err({ code: 'NOT_FOUND', store: 'snapshot_payloads', key: id });
   }
-  return ok(new Blob([payload.value], { type: 'application/json' }));
+  // ADR-007 Decision 4.4: a downloaded snapshot is a readable ADR-004 document
+  // — unwrap the at-rest wrapper (requires unlock when C1 is on).
+  const { vault } = await import('../crypto/vault');
+  const opened = await vault.unwrapSnapshotPayload(id, payload.value);
+  if (!opened.ok) return err({ code: 'BLOCKED', message: `LOCKED: ${opened.error.message}` });
+  return ok(new Blob([opened.value], { type: 'application/json' }));
 }
 
 /** Filename for a snapshot download (ADR-004 Decision 9). */
@@ -226,6 +242,13 @@ export async function maybeScheduledSnapshot(
   if (!listed.ok) return err(listed.error);
   const newest = listed.value[0];
   if (newest !== undefined && now() - newest.takenAt < SCHEDULED_SNAPSHOT_INTERVAL_MS) {
+    return ok(null);
+  }
+  // ADR-007 Decision 4.4: a user snapshot needs plaintext rows — while locked
+  // the auto trigger DEFERS (ok(null), retried on a later boot/unlock window)
+  // instead of failing into the boot warning channel every time.
+  const { vault } = await import('../crypto/vault');
+  if (vault.status !== 'off' && !vault.isUnlocked) {
     return ok(null);
   }
   return takeSnapshot('scheduled', { db, now });

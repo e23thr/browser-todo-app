@@ -148,6 +148,6 @@ describe('sync_state is local-only (ADR-006 Decision 3 exclusion)', () => {
     const serialized = JSON.stringify(source.value.stores);
     expect(serialized).not.toContain('must-never-leak');
     expect(serialized).not.toContain('secret.example');
-    expect(APP_SCHEMA_VERSION).toBe(3); // chain map stays contiguous with E7's step
+    expect(APP_SCHEMA_VERSION).toBe(4); // chain map stays contiguous with E7's + C1's steps
   });
 });

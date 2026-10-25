@@ -66,3 +66,14 @@ export function resetSearchIndexForTest(): void {
   syncedIds = new Map();
   syncedVersion = -1;
 }
+
+/**
+ * Drop the index on lock (ADR-007 Decision 5.2: decrypted caches never outlive
+ * the unlocked session). The next search-open rebuilds from the (decrypted)
+ * read path after unlock — see `src/features/crypto/wiring.ts`.
+ */
+export function dropSearchIndex(): void {
+  index = null;
+  syncedIds = new Map();
+  syncedVersion = -1;
+}

@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { List, Task } from '../../../src/domain/model';
+import type { List, RowLike, Task } from '../../../src/domain/model';
 import { planMerge } from '../../../src/sync/merge';
 import type { ShadowEntry } from '../../../src/sync/shadow';
 import type { SyncRecord } from '../../../src/sync/types';
@@ -27,7 +27,7 @@ function rng(seed: number): () => number {
 type Device = {
   id: string;
   clock: number;
-  rows: Map<string, List | Task>;
+  rows: Map<string, RowLike>;
   shadow: Record<string, ShadowEntry>;
   copySeq: number;
 };

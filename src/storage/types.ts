@@ -114,6 +114,65 @@ export type SyncStateRecord = {
   lastError: SyncErrorCode | null;
 };
 
+/**
+ * C1 key material (ADR-007 Decision 2.3). Stored ONLY wrapped — raw DMK bytes
+ * never touch IndexedDB. `kdf` params live per slot so old slots keep unlocking
+ * after the iteration floor rises (lazy re-wrap on unlock).
+ */
+export type KeyWrap = { iv: string; ct: string };
+
+export type PassphraseSlot = {
+  kind: 'passphrase';
+  kdf: { v: 1; alg: 'PBKDF2-HMAC-SHA-256'; iters: number; salt: string };
+  wrap: KeyWrap;
+  createdAt: number;
+};
+
+export type RecoverySlot = {
+  kind: 'recovery';
+  kdf: { v: 1; alg: 'HKDF-SHA-256'; info: 'todo-enc/1/recovery-kek' };
+  wrap: KeyWrap;
+  createdAt: number;
+};
+
+export type KeySlot = PassphraseSlot | RecoverySlot;
+
+export type KeyEntry = {
+  keyId: string;
+  /** Exactly one `passphrase` + 0..1 `recovery` per key (Decision 2.3). */
+  slots: KeySlot[];
+  createdAt: number;
+};
+
+/**
+ * Singleton row under key `'crypto'` (ADR-007 Decision 2.3/2.4). LOCAL-ONLY:
+ * excluded from exports, snapshot payloads and the remote like `meta`/
+ * `sync_state` — the remote never sees wrapped keys (until a future
+ * `todo-sync/2`).
+ *
+ * ADDITIVE to the ADR's sketch (recorded for review): `migration.direction`
+ * distinguishes the enable sweep (`encrypt`) from the disable sweep (`decrypt`)
+ * so a crash mid-sweep resumes in the right direction — the sketch's
+ * `status: 'migrating'` alone cannot.
+ */
+export type CryptoStateRecord = {
+  id: 'crypto';
+  status: 'off' | 'migrating' | 'on';
+  enabledAt: number | null;
+  migration: {
+    startedAt: number;
+    done: number;
+    total: number;
+    direction: 'encrypt' | 'decrypt';
+  } | null;
+  /** Steady state: length 1 (Decision 2.3 explains the >1 mixed-key case). */
+  keys: KeyEntry[];
+  /** `'declined'` is derivable: enabled && no recovery slot. */
+  recoveryOfferedAt: number | null;
+  /** Idle re-lock (Decision 5.2): 5 | 15 | 30 | 60 — "never" is not offered. */
+  lockAfterMinutes: number;
+};
+
 export type RowMap = {
   meta: Meta;
   lists: List;
@@ -122,6 +181,7 @@ export type RowMap = {
   snapshots: Snapshot;
   snapshot_payloads: SnapshotPayload;
   sync_state: SyncStateRecord;
+  crypto_state: CryptoStateRecord;
 };
 
 export type Row<K extends StoreName> = RowMap[K];
@@ -138,12 +198,15 @@ export const STORE_NAMES: readonly StoreName[] = [
   'snapshots',
   'snapshot_payloads',
   'sync_state',
+  'crypto_state',
 ] as const;
 
 /**
  * Stores whose rows are user data covered by export/snapshot payloads (ADR-002 §3.6).
  * `sync_state` is deliberately absent: local-only (ADR-006 Decision 3 — excluded
- * from export files, snapshots and remote payloads).
+ * from export files, snapshots and remote payloads). `crypto_state` is absent
+ * for the same reason (ADR-007 Decision 2.4 — the remote never sees wrapped
+ * keys).
  */
 export const DATA_STORES: readonly ('lists' | 'tasks' | 'settings')[] = [
   'lists',

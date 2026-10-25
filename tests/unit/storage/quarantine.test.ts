@@ -75,7 +75,7 @@ describe('quarantine building blocks (ADR-002 Decision 8 step 4)', () => {
       /^local-first-todo-recovery-\d{4}-\d{2}-\d{2}T\d{6}Z\.json$/u,
     );
     const defaultsParsed = JSON.parse(defaults.json) as { schemaVersion: number };
-    expect(defaultsParsed.schemaVersion).toBe(3); // APP_SCHEMA_VERSION default (v2 sync_state + v3 E7)
+    expect(defaultsParsed.schemaVersion).toBe(4); // APP_SCHEMA_VERSION default (v2 sync_state + v3 E7 + v4 crypto_state)
   });
 
   it('keyOf tolerates records without an id (quarantine entry still carries them)', async () => {

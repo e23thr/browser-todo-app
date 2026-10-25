@@ -62,6 +62,24 @@ export async function exportBackup(
   const source = await readSnapshotSource(db);
   if (!source.ok) return err(toExportError(source.error));
 
+  // ADR-007 Decision 4.5: the backup file is PLAINTEXT by definition — every
+  // at-rest row is decrypted here. Locked = unlock prompt (typed `LOCKED`);
+  // unreadable ciphertext fails with the count (recovery file covers those).
+  // Lazy import: the crypto core rides its own chunk (§9.2, never the shell).
+  const { decryptRowsForDocument } = await import('../crypto/portability');
+  const { vault } = await import('../crypto/vault');
+  const decrypted = await decryptRowsForDocument(vault, {
+    lists: source.value.stores.lists,
+    tasks: source.value.stores.tasks,
+  });
+  if (!decrypted.ok) {
+    return err(
+      decrypted.error.code === 'LOCKED'
+        ? { code: 'LOCKED', message: decrypted.error.message }
+        : { code: 'DECRYPT_FAILED', message: decrypted.error.message },
+    );
+  }
+
   const exportedAt = now();
   const storedSettings = source.value.stores.settings[0];
   // Decision 9.2: the document is self-consistent — its own lastBackupAt equals
@@ -78,8 +96,8 @@ export async function exportBackup(
       deviceId: db.deviceId,
       schemaVersion: source.value.schemaVersion,
       settings,
-      lists: source.value.stores.lists,
-      tasks: source.value.stores.tasks,
+      lists: decrypted.value.lists,
+      tasks: decrypted.value.tasks,
       snapshots: source.value.stores.snapshots,
       app: { name: APP_NAME, version: APP_VERSION },
     }),

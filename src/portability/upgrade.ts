@@ -100,6 +100,8 @@ export async function upgradeRawBackup(
     // rows; the migration step may seed it in-memory and the projection below
     // deliberately ignores it.
     sync_state: [],
+    // ADR-007 Decision 2.4: crypto_state is local-only — never in documents.
+    crypto_state: [],
   };
 
   const migrated = await migrateRows(registry, rows, raw.schemaVersion, target);

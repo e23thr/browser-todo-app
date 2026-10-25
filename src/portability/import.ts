@@ -164,6 +164,14 @@ export async function applyImport(
   if (!resolved.ok) return err(resolved.error);
   const db = resolved.value;
 
+  // ADR-007 Decision 4.5: import into an encrypted store requires unlock (a
+  // locked store prompts — never a partial or plaintext-visible apply).
+  // Lazy import: the crypto core rides its own chunk (§9.2, never the shell).
+  const { requireUnlockedForWrite } = await import('../crypto/portability');
+  const { vault } = await import('../crypto/vault');
+  const unlocked = requireUnlockedForWrite(vault);
+  if (!unlocked.ok) return err({ code: 'LOCKED', message: unlocked.error.message });
+
   const warnings = [...plan.warnings];
 
   // Stage 5: automatic pre-import snapshot — the ONE undo for this import.
@@ -193,8 +201,25 @@ export async function applyImport(
     for (const { store, id } of staleIds) {
       await t.delete(store, id);
     }
-    for (const list of plan.records.lists) await t.put('lists', list);
-    for (const task of plan.records.tasks) await t.put('tasks', task);
+    // ADR-007 Decision 4.5 (Decision 7.2 stamping applies): into an encrypted
+    // store every imported record is re-encrypted on write with a FRESH version
+    // stamp — the same content-shaping rule as the migration sweep, so the new
+    // ciphertext wins LWW everywhere instead of byte-diverging at equal stamps.
+    // Pre-C1 stores keep the M11 verbatim-stamps contract unchanged.
+    const stampImport = vault.status !== 'off';
+    const clock = opts.now ?? Date.now;
+    for (const list of plan.records.lists) {
+      await t.put(
+        'lists',
+        stampImport ? { ...list, updatedAt: clock(), deviceId: db.deviceId } : list,
+      );
+    }
+    for (const task of plan.records.tasks) {
+      await t.put(
+        'tasks',
+        stampImport ? { ...task, updatedAt: clock(), deviceId: db.deviceId } : task,
+      );
+    }
     if (plan.records.settings !== null) await t.put('settings', plan.records.settings);
     return ok(undefined);
   });
@@ -234,7 +259,19 @@ export async function prepareSnapshotRestore(
   if (stored === undefined) {
     return err({ code: 'UNKNOWN', cause: new Error(`snapshot payload ${id} not found`) });
   }
-  return prepareImport(stored.payload, { fileName: `snapshot-${id}.json` });
+  // ADR-007 Decision 4.4: user snapshot payloads are plaintext ADR-004 JSON
+  // WRAPPED at rest — unwrap first (requires unlock; `LOCKED` prompts, never a
+  // garbled restore). Legacy plaintext payloads pass through unchanged.
+  const { vault } = await import('../crypto/vault');
+  const opened = await vault.unwrapSnapshotPayload(id, stored.payload);
+  if (!opened.ok) {
+    return err(
+      opened.error.code === 'LOCKED'
+        ? { code: 'LOCKED', message: opened.error.message }
+        : { code: 'UNKNOWN', cause: new Error(opened.error.message) },
+    );
+  }
+  return prepareImport(opened.value, { fileName: `snapshot-${id}.json` });
 }
 
 /**

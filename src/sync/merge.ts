@@ -9,23 +9,34 @@
  * conflict materializes as a visible "Conflict copy of <task>" — never a silent
  * overwrite. CRDTs are out.
  *
- * Wire caveat (ADR-007 Decision 10): `SyncRecord.record` is the plaintext
- * `todo-sync/1` shape (List | Task). The encrypted envelope variant is an
- * ADR-007 extension of the same slots — its card adapts `recordOf`/stamps.
+ * Wire (ADR-006 Decision 10 / ADR-007): `SyncRecord.record` is the AT-REST row
+ * — plaintext `List | Task` or the self-describing encrypted shape. Envelope
+ * fields drive LWW/tombstones/shadow without keys; the content seam
+ * (`mergeSeam.ts`) is the ONLY crypto contact, and a plan needing conflict
+ * copies while locked DEFERS with `LOCKED` (ADR-007 Decision 8.4 — no partial
+ * apply, no fabricated copy).
  */
 
 import { compareLww, conflictCopyTitle } from '../domain/merge';
-import type { List, Task } from '../domain/model';
+import type {
+  EncryptedListRecord,
+  EncryptedTaskRecord,
+  List,
+  RowLike,
+  Task,
+} from '../domain/model';
+import { isEncryptedRecord, rowKindOf } from '../domain/model';
 import { err, ok } from '../domain/kernel';
 import type { Result } from '../domain/kernel';
 import { contentHashOf } from './hash';
 import { classifyDivergence, sameVersion } from './shadow';
 import type { ShadowEntry, Side, Stamp } from './shadow';
+import { mergeCryptoSeam } from './mergeSeam';
 import type { ConflictCopySpec, MergePlan, SyncError, SyncRecord } from './types';
 
 export type MergeInput = {
-  localLists: List[];
-  localTasks: Task[];
+  localLists: (List | EncryptedListRecord)[];
+  localTasks: (Task | EncryptedTaskRecord)[];
   /** Every fetched record version (snapshots + batches) — folded per id below. */
   fetched: SyncRecord[];
   shadow: Record<string, ShadowEntry>;
@@ -36,7 +47,7 @@ export type MergeInput = {
   newId: () => string;
 };
 
-type EitherRow = List | Task;
+type EitherRow = RowLike;
 
 function isTombstone(row: EitherRow): boolean {
   return row.deletedAt !== null;
@@ -79,8 +90,62 @@ export function conflictCopyOf(loser: Task, id: string, now: number, deviceId: s
 }
 
 /**
+ * ADR-007 Decision 8.3 materialization for an ENCRYPTED loser: decrypt ->
+ * "Conflict copy of <title>" -> fresh id/IV under the new identity. Returns
+ * `null` signals via the Result: `LOCKED` defers the whole run (Decision 8.4);
+ * `DECRYPT_FAILED` means the ciphertext is unreadable even unlocked — the
+ * caller then preserves the raw bytes verbatim under the new id (quarantine
+ * keeps them recoverable — never a silent drop).
+ */
+async function materializeCopy(
+  loser: Task | EncryptedTaskRecord,
+  copyId: string,
+  now: number,
+  deviceId: string,
+): Promise<Result<Task | EncryptedTaskRecord, SyncError>> {
+  if (!isEncryptedRecord(loser)) {
+    return ok(conflictCopyOf(loser, copyId, now, deviceId));
+  }
+  const seam = mergeCryptoSeam();
+  if (seam === null || !seam.canDecrypt()) {
+    return err({
+      code: 'LOCKED',
+      message: 'conflict copies require the key — run deferred until unlock (ADR-007 Decision 8.4)',
+      retryable: true,
+    });
+  }
+  const built = await seam.conflictCopyRow(loser, copyId, now, deviceId);
+  if (built.ok) return ok(built.value);
+  if (built.error.code === 'LOCKED') {
+    return err({ code: 'LOCKED', message: built.error.message, retryable: true });
+  }
+  // Undecryptable loser: PRESERVE the bytes (envelope + payload copied verbatim
+  // under the new id — deliberately undecryptable by AAD binding, quarantined on
+  // read and downloadable via the recovery file; ADR-007 Decision 9's "never
+  // silently dropped" beats D1.3's copyability rule here, recorded for review).
+  return ok({
+    ...loser,
+    id: copyId,
+    createdAt: now,
+    updatedAt: now,
+    deviceId,
+    deletedAt: null,
+    kind: 'task',
+  });
+}
+
+async function titleOf(row: EitherRow): Promise<string> {
+  if (!isEncryptedRecord(row)) return 'title' in row ? row.title : row.name;
+  const seam = mergeCryptoSeam();
+  if (seam === null || !seam.canDecrypt()) return '(encrypted)';
+  return seam.displayTitle(row);
+}
+
+/**
  * Plan the merge. `Result`-typed like every seam: a remote artifact that mixes
  * kinds for one id is corruption — planning refuses and NOTHING is applied.
+ * A plan that needs ≥1 conflict copy while locked defers with `LOCKED`
+ * (ADR-007 Decision 8.4) — again: nothing is applied.
  */
 export async function planMerge(input: MergeInput): Promise<Result<MergePlan, SyncError>> {
   const { shadow, deviceId, now, newId } = input;
@@ -158,16 +223,23 @@ export async function planMerge(input: MergeInput): Promise<Result<MergePlan, Sy
           plan.notices.push({
             kind: 'delete-lost',
             recordId: id,
-            title: titleOf(local),
+            title: await titleOf(local),
             lostTo,
           });
         } else if (entry.kind === 'task') {
           const copyId = newId();
-          const row = conflictCopyOf(local as Task, copyId, now, deviceId);
+          const built = await materializeCopy(
+            local as Task | EncryptedTaskRecord,
+            copyId,
+            now,
+            deviceId,
+          );
+          if (!built.ok) return built;
+          const row = built.value;
           const spec: ConflictCopySpec = {
             copyId,
             row,
-            summary: { recordId: id, title: titleOf(local), copyId, lostTo },
+            summary: { recordId: id, title: await titleOf(local), copyId, lostTo },
           };
           plan.copies.push(spec);
           plan.shadowUpserts[copyId] = {
@@ -181,7 +253,7 @@ export async function planMerge(input: MergeInput): Promise<Result<MergePlan, Sy
           plan.notices.push({
             kind: 'list-conflict',
             recordId: id,
-            title: titleOf(local),
+            title: await titleOf(local),
             lostTo,
           });
         }
@@ -206,18 +278,12 @@ export async function planMerge(input: MergeInput): Promise<Result<MergePlan, Sy
   return ok(plan);
 }
 
-function titleOf(row: EitherRow): string {
-  return 'title' in row ? row.title : row.name;
-}
-
 /**
  * Build the push set: local rows changed since the push watermark (with the
  * Decision 5 step 7 OVERLAP guard — re-pushing a version is idempotent).
  */
-export function collectPushSet(
-  rows: (List | Task)[],
-  pushedUpTo: number,
-  overlapMs: number,
-): (List | Task)[] {
+export function collectPushSet(rows: RowLike[], pushedUpTo: number, overlapMs: number): RowLike[] {
   return rows.filter((r) => r.updatedAt >= pushedUpTo - overlapMs);
 }
+
+export { rowKindOf };

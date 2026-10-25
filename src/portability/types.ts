@@ -50,6 +50,12 @@ export type ImportError =
    */
   | { code: 'NOTHING_TO_IMPORT'; quarantined: number; recoveryFile: RecoveryFile | null }
   | { code: 'SNAPSHOT_FAILED'; cause?: unknown }
+  /**
+   * ADDITIVE (ADR-007 Decision 4.5): import/restore into an encrypted store
+   * while locked prompts an unlock — it never applies partially and never
+   * silently stores plaintext.
+   */
+  | { code: 'LOCKED'; message: string }
   | { code: 'QUOTA_EXCEEDED'; cause?: unknown }
   | { code: 'TX_ABORTED'; cause?: unknown }
   | { code: 'UNAVAILABLE'; cause?: unknown }
@@ -65,6 +71,13 @@ export type ExportError =
   | { code: 'QUOTA_EXCEEDED'; cause?: unknown }
   | { code: 'TX_ABORTED'; cause?: unknown }
   | { code: 'UNAVAILABLE'; cause?: unknown }
+  /**
+   * ADDITIVE (ADR-007 Decision 4.5): export while locked = an unlock prompt,
+   * never a silently truncated file; unreadable ciphertext fails the export
+   * with the count (the recovery file carries those bytes).
+   */
+  | { code: 'LOCKED'; message: string }
+  | { code: 'DECRYPT_FAILED'; message: string }
   | { code: 'UNKNOWN'; cause?: unknown };
 
 export type ImportPlan = {

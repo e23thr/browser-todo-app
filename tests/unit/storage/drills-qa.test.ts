@@ -143,6 +143,13 @@ const failingV4Step: MigrationStep = {
   },
 };
 
+/** v4 companion: the "fixed chain" completes to the APP baseline. */
+const v4Step: MigrationStep = {
+  to: 4,
+  stores: ['settings'],
+  run: () => ok(undefined),
+};
+
 async function seedV1(name: string): Promise<{
   meta: Meta;
   lists: List[];
@@ -217,9 +224,9 @@ describe('Drill 1: migration interrupted mid-chain rolls back via the pre-migrat
     expect(bad.ok).toBe(false);
     resetBootSingleton(name); // failed boot must not poison the retry
 
-    const db = await bootOk(name, [v2Step, v3Step]);
-    expect(db.bootReport.migrated).toEqual({ from: 1, to: 3 });
-    expect(db.schemaVersion).toBe(3);
+    const db = await bootOk(name, [v2Step, v3Step, v4Step]);
+    expect(db.bootReport.migrated).toEqual({ from: 1, to: 4 });
+    expect(db.schemaVersion).toBe(4);
     const tasks = await db.getAll('tasks');
     // v2 backfills notes on rows that had none; existing notes survive.
     expect(tasks.ok && byId(tasks.value).map((t) => t.notes)).toEqual(['', 'keep me']);
@@ -316,7 +323,7 @@ describe('Drill 2: corrupt records quarantine to a downloadable, loadable recove
       // to the binding format; the pre-fix shape was defect D7).
       expect(reloaded.format).toBe('local-first-todo-recovery'); // NOT importable
       expect(reloaded.createdAt).toBeTruthy();
-      expect(reloaded.schemaVersion).toBe(3);
+      expect(reloaded.schemaVersion).toBe(4);
       expect(reloaded.entries).toHaveLength(3);
 
       // Every quarantined record appears VERBATIM (nothing lost in the file).
@@ -402,7 +409,7 @@ describe('Drill 3: QuotaExceededError is a typed QUOTA_EXCEEDED on every write s
   it('boot survives quota exhaustion in bookkeeping: warnings carry QUOTA_EXCEEDED, never silent', async () => {
     const name = uniqueDbName('drill3-bootwarn');
     await seedDb(name, {
-      meta: makeMeta({ schemaVersion: 3 }),
+      meta: makeMeta({ schemaVersion: 4 }),
       tasks: [makeTask({ deletedAt: T0 - 100 * DAY })],
     });
     const restore = injectQuotaOnPuts();
@@ -441,7 +448,7 @@ describe('Drill 4: boot validation on a mixed valid/invalid dataset', () => {
     const oldTombstone = makeTask({ title: 'ancient', deletedAt: T0 - 91 * DAY });
     const freshTombstone = makeTask({ title: 'recent', deletedAt: T0 - DAY });
     await seedDb(name, {
-      meta: makeMeta({ schemaVersion: 3 }),
+      meta: makeMeta({ schemaVersion: 4 }),
       lists: [goodList, badList],
       tasks: [goodTask, badDue, oldTombstone, freshTombstone],
       settings: [badSettings],
@@ -596,8 +603,8 @@ describe('Drill 6: snapshot restore (take -> corrupt -> restore)', () => {
     // Identity stays with the profile; schemaVersion follows the payload.
     expect(db.deviceId).toBe(deviceId);
     const meta = await db.get('meta', 'meta');
-    expect(meta.ok && meta.value?.schemaVersion).toBe(3);
-    expect(db.schemaVersion).toBe(3);
+    expect(meta.ok && meta.value?.schemaVersion).toBe(4);
+    expect(db.schemaVersion).toBe(4);
 
     // The snapshot itself survives its own restore (evidence kept).
     const snaps = await listSnapshots(db);
@@ -706,7 +713,7 @@ describe('Regression P1 (D1): Tx.get applies the quarantine denylist end-to-end'
 describe('Regression P2 (D2): quarantine.purge() never destroys the singletons', () => {
   it('a quarantined meta survives purge + reboot — deviceId is never reset (ADR-002 §3.1)', async () => {
     const name = uniqueDbName('p2-purge-meta');
-    const badMeta = makeMeta({ deviceId: 'not-a-ulid' });
+    const badMeta = makeMeta({ deviceId: 'not-a-ulid', schemaVersion: 3 });
     await seedDb(name, { meta: badMeta, tasks: [makeTask({ title: 'fine' })] });
 
     const db = await bootOk(name);
@@ -722,7 +729,7 @@ describe('Regression P2 (D2): quarantine.purge() never destroys the singletons',
     const raw = await db.readUnfiltered('meta');
     // Identity fields stay byte-identical; `schemaVersion` moved in-step with the
     // migration chain (executeStep bumps meta inside its own transaction).
-    expect(raw.ok && raw.value).toEqual([{ ...badMeta, schemaVersion: 3 }]); // byte-identical identity
+    expect(raw.ok && raw.value).toEqual([{ ...badMeta, schemaVersion: 4 }]); // byte-identical identity
 
     resetBootSingleton(name);
     const second = await bootOk(name);

@@ -82,6 +82,43 @@ const SNAPSHOT_KEYS = [
   'payloadRef',
 ] as const;
 const RECURRENCE_KEYS = ['freq', 'interval', 'until'] as const;
+// ADR-007 Decision 4.1 at-rest shapes: the encrypted rows ride backup/snapshot
+// documents VERBATIM (whitelist-rebuilt, never spread) — this is what keeps the
+// migration pre-migration snapshot lossless over an encrypted store.
+const ENC_ENVELOPE_KEYS = ['alg', 'v', 'iv'] as const;
+const ENC_TASK_KEYS = [
+  'id',
+  'kind',
+  'listId',
+  'status',
+  'priority',
+  'dueDate',
+  'reminderAt',
+  'recurrence',
+  'parentTaskId',
+  'sortOrder',
+  'createdAt',
+  'updatedAt',
+  'completedAt',
+  'deletedAt',
+  'deviceId',
+  'payloadHash',
+  'enc',
+  'payload',
+] as const;
+const ENC_LIST_KEYS = [
+  'id',
+  'kind',
+  'color',
+  'sortOrder',
+  'createdAt',
+  'updatedAt',
+  'deletedAt',
+  'deviceId',
+  'payloadHash',
+  'enc',
+  'payload',
+] as const;
 
 /** Optional fields are omitted when `undefined` (never written as `null`). */
 const OPTIONAL_KEYS: readonly string[] = [
@@ -111,16 +148,26 @@ function rebuild(raw: unknown, keys: readonly string[]): Record<string, unknown>
  * validation (which rejects them) runs first on untrusted input.
  */
 export function canonicalizeRecord(section: SectionName, raw: unknown): Record<string, unknown> {
+  const encrypted =
+    typeof raw === 'object' && raw !== null && (raw as { enc?: unknown }).enc !== undefined;
   switch (section) {
     case 'settings':
       return rebuild(raw, SETTINGS_KEYS);
     case 'lists':
-      return rebuild(raw, LIST_KEYS);
+      return encrypted ? rebuildEncrypted(raw, ENC_LIST_KEYS) : rebuild(raw, LIST_KEYS);
     case 'tasks':
-      return rebuild(raw, TASK_KEYS);
+      return encrypted ? rebuildEncrypted(raw, ENC_TASK_KEYS) : rebuild(raw, TASK_KEYS);
     case 'snapshots':
       return rebuild(raw, SNAPSHOT_KEYS);
   }
+}
+
+/** Encrypted-shape rebuild: same whitelist discipline, nested `enc` envelope included. */
+function rebuildEncrypted(raw: unknown, keys: readonly string[]): Record<string, unknown> {
+  const out = rebuild(raw, keys);
+  const enc = (raw as { enc?: unknown } | null)?.enc;
+  out['enc'] = typeof enc === 'object' && enc !== null ? rebuild(enc, ENC_ENVELOPE_KEYS) : enc;
+  return out;
 }
 
 /** Ordinal string comparison on keys (Decision 2.4.3) with `id` tie-break. */

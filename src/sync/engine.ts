@@ -12,15 +12,17 @@
  * state that has absorbed what it pulled.
  */
 
-import type { List, Task } from '../domain/model';
+import type { EncryptedListRecord, EncryptedTaskRecord, List, Task } from '../domain/model';
+import { rowKindOf } from '../domain/model';
 import { err, ok } from '../domain/kernel';
 import type { Result } from '../domain/kernel';
 import type { AppDB, Tx } from '../storage/db';
 import type { ErrorLog } from '../storage/errorLog';
 import { unknownError } from '../storage/errors';
+import type { StorageError } from '../storage/errors';
 import { isUlid } from '../storage/id';
 import { SYNC_KEY } from '../storage/schema';
-import type { SyncCursor, SyncShadowEntry, SyncStateRecord } from '../storage/types';
+import type { StoreName, SyncCursor, SyncShadowEntry, SyncStateRecord } from '../storage/types';
 import { validateRow } from '../storage/validate';
 import { decodeBatch, decodeSnapshot, encodeBatch, encodeSnapshot } from './batchCodec';
 import type { DecodeErrorKind } from './batchCodec';
@@ -285,7 +287,7 @@ export async function runSyncOnce(
   // invalid row (corrupt remote content that passed the hash) refuses the whole
   // plan — no partial application, local byte-identical.
   for (const row of plan.puts) {
-    const store = 'title' in row ? 'tasks' : 'lists';
+    const store = rowKindOf(row) === 'task' ? 'tasks' : 'lists';
     const checked = validateRow(store, row);
     if (!checked.ok) {
       return fail(
@@ -315,13 +317,26 @@ export async function runSyncOnce(
   /* ---- phase 6: apply — the ONLY local write of phases 2..6 ---- */
   phase('apply');
   const shadow: Record<string, SyncShadowEntry> = { ...state.shadow, ...plan.shadowUpserts };
-  const applied = await db.tx(['lists', 'tasks', 'sync_state'], 'readwrite', async (t) => {
+  const rawTx: <T>(
+    stores: StoreName[],
+    mode: 'readonly' | 'readwrite',
+    fn: (t: Tx) => Promise<Result<T, StorageError>>,
+  ) => Promise<Result<T, StorageError>> = (s, m, fn) =>
+    // Method-call dispatch inside the wrapper: a detached `db.txRaw ?? …`
+    // reference loses `this` and crashes (`txRaw` runs `this.#txWith`).
+    // Fixed from the sync-UI card t_5f4fe7db while the ADR-007 card was mid-
+    // refactor — see the hotspot comment on that card.
+    db.txRaw === undefined ? db.tx(s, m, fn) : db.txRaw(s, m, fn);
+  const applied = await rawTx(['lists', 'tasks', 'sync_state'], 'readwrite', async (t) => {
     for (const row of plan.puts) {
-      if ('title' in row) await t.put('tasks', row);
-      else await t.put('lists', row);
+      // At-rest rows verbatim (ADR-007 Decision 8.1) — merge-applied rows never
+      // pass through the app-surface transform. The decrypted-shaped row type is
+      // the documented RowMap simplification; both at-rest shapes fit it.
+      if (rowKindOf(row) === 'task') await t.put('tasks', row as Task);
+      else await t.put('lists', row as List);
     }
     for (const copy of plan.copies) {
-      await t.put('tasks', copy.row);
+      await t.put('tasks', copy.row as Task);
     }
     const row = await t.get('sync_state', SYNC_KEY);
     if (row === undefined) {
@@ -471,11 +486,25 @@ export async function runSyncOnce(
 /** Read every sync-visible row (tombstones included — they are sync records). */
 export async function readAllRecords(
   db: AppDB,
-): Promise<Result<{ lists: List[]; tasks: Task[] }, SyncError>> {
-  const lists = await db.getAll('lists');
+): Promise<
+  Result<
+    { lists: (List | EncryptedListRecord)[]; tasks: (Task | EncryptedTaskRecord)[] },
+    SyncError
+  >
+> {
+  // AT-REST rows (ADR-007 Decision 8.1): the engine pushes/pulls ciphertext
+  // verbatim — it never decrypts. Test doubles without `getAllRaw` are already
+  // at-rest, so the fallback is correct for them.
+  // (Method-call dispatch: `readRaw(store)` must keep `this` — a detached
+  //  `db.getAllRaw ?? db.getAll` reference crashes on `this.queryWith`.
+  //  Fixed from the sync-UI card t_5f4fe7db while the ADR-007 card was mid-
+  //  refactor here — see the hotspot comment on that card.)
+  const readRaw = (store: StoreName) =>
+    db.getAllRaw === undefined ? db.getAll(store) : db.getAllRaw(store);
+  const lists = (await readRaw('lists')) as Result<(List | EncryptedListRecord)[], StorageError>;
   if (!lists.ok)
     return err(makeSyncError('LOCAL_STORAGE', 'failed to read lists', true, lists.error.code));
-  const tasks = await db.getAll('tasks');
+  const tasks = (await readRaw('tasks')) as Result<(Task | EncryptedTaskRecord)[], StorageError>;
   if (!tasks.ok)
     return err(makeSyncError('LOCAL_STORAGE', 'failed to read tasks', true, tasks.error.code));
   return ok({ lists: lists.value, tasks: tasks.value });

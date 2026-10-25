@@ -37,6 +37,18 @@ export type SnapshotCodec = {
   readonly name: string;
   serialize(source: SnapshotSource): string;
   deserialize(payload: string): Result<SnapshotSource, StorageError>;
+  /**
+   * ADR-007 Decision 4.4 optional async hooks (absent = raw byte-identical
+   * payloads, e.g. the migration chain's rollback snapshots):
+   * - `preSerialize`: transform the source BEFORE sync `serialize` (e.g.
+   *   decrypt rows so the JSON inside the wrapper is the plaintext ADR-004
+   *   export format);
+   * - `seal` / `open`: wrap/unwrap the serialized payload STRING for at-rest
+   *   storage (the self-contained `todo-enc/1` wrapper).
+   */
+  preSerialize?: (source: SnapshotSource) => Promise<Result<SnapshotSource, StorageError>>;
+  seal?: (snapshotId: string, json: string) => Promise<Result<string, StorageError>>;
+  open?: (snapshotId: string, stored: string) => Promise<Result<string, StorageError>>;
 };
 
 export const fallbackRawCodec: SnapshotCodec = {
@@ -65,6 +77,7 @@ export const fallbackRawCodec: SnapshotCodec = {
           snapshots: stores.snapshots ?? [],
           snapshot_payloads: stores.snapshot_payloads ?? [],
           sync_state: [],
+          crypto_state: [],
         },
       });
     } catch (e) {
@@ -115,23 +128,37 @@ export async function takeSnapshot(
 ): Promise<Result<Snapshot, StorageError>> {
   const codec = options.codec ?? fallbackRawCodec;
   const now = options.now ?? Date.now;
-  const source = await readSnapshotSource(db);
-  if (!source.ok) return err(source.error);
+  const readSource = await readSnapshotSource(db);
+  if (!readSource.ok) return err(readSource.error);
+  let source = readSource.value;
+  if (codec.preSerialize !== undefined) {
+    const prepared = await codec.preSerialize(source);
+    if (!prepared.ok) return err(prepared.error);
+    source = prepared.value;
+  }
 
+  // The id is minted BEFORE serialize so ADR-007's `seal` can bind the payload
+  // to it (`todo-enc/1|snapshot|<id>` AAD). With `now` frozen (snapshots-api)
+  // the id/metadata/envelope still agree exactly (ADR-004 §8.1).
+  const id = newUlid(now());
   let payload: string;
   try {
-    payload = codec.serialize(source.value);
+    payload = codec.serialize(source);
   } catch (e) {
     return err(unknownError(e));
   }
-  const id = newUlid(now());
+  if (codec.seal !== undefined) {
+    const sealed = await codec.seal(id, payload);
+    if (!sealed.ok) return err(sealed.error);
+    payload = sealed.value;
+  }
   const snapshot: Snapshot = {
     id,
     takenAt: now(),
     kind: options.kind,
     reason: options.reason,
     sizeBytes: new TextEncoder().encode(payload).length,
-    schemaVersion: source.value.schemaVersion,
+    schemaVersion: source.schemaVersion,
     payloadRef: id,
   };
 
@@ -234,25 +261,39 @@ export async function restoreSnapshot(
   if (payload.value === undefined) {
     return err(unknownError(new Error(`snapshot payload ${id} not found`)));
   }
-  const source = codec.deserialize(payload.value);
+  let atRest = payload.value;
+  if (codec.open !== undefined) {
+    // ADR-007 Decision 4.4: restore requires unlock — `open` maps a locked
+    // session to a typed error, never a truncated or garbled restore.
+    const opened = await codec.open(id, atRest);
+    if (!opened.ok) return err(opened.error);
+    atRest = opened.value;
+  }
+  const source = codec.deserialize(atRest);
   if (!source.ok) return err(source.error);
 
-  const restored = await db.tx(['lists', 'tasks', 'settings', 'meta'], 'readwrite', async (t) => {
-    for (const name of DATA_STORES) {
-      const existing = await t.getAll(name);
-      for (const row of existing) {
-        await t.delete(name, row.id);
+  // AT-REST rows VERBATIM (ADR-007): this is the migration rollback path —
+  // restoring must be byte-identical, never re-encrypted through the app seam.
+  const restored = await db.txRaw(
+    ['lists', 'tasks', 'settings', 'meta'],
+    'readwrite',
+    async (t) => {
+      for (const name of DATA_STORES) {
+        const existing = await t.getAll(name);
+        for (const row of existing) {
+          await t.delete(name, row.id);
+        }
+        for (const row of source.value.stores[name]) {
+          await t.put(name, row);
+        }
       }
-      for (const row of source.value.stores[name]) {
-        await t.put(name, row);
+      const meta = await t.get('meta', 'meta');
+      if (meta !== undefined) {
+        await t.put('meta', { ...meta, schemaVersion: source.value.schemaVersion });
       }
-    }
-    const meta = await t.get('meta', 'meta');
-    if (meta !== undefined) {
-      await t.put('meta', { ...meta, schemaVersion: source.value.schemaVersion });
-    }
-    return ok(undefined);
-  });
+      return ok(undefined);
+    },
+  );
   if (!restored.ok) return err(restored.error);
   db.setSchemaVersion(source.value.schemaVersion);
   return ok(undefined);

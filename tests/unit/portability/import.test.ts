@@ -57,7 +57,7 @@ describe('prepareImport — accept path (stages 1–3)', () => {
       fileName: 'backup.json',
       formatVersion: 1,
       schemaVersion: 1,
-      upgradedTo: 3,
+      upgradedTo: 4,
       kind: 'export',
     });
     expect(plan.accepted).toEqual({ lists: 2, tasks: 3, settings: true });
@@ -266,9 +266,14 @@ describe('old exports upgrade through the migration chain (drill 3)', () => {
       return { ok: true, value: undefined };
     },
   };
-  /** Completes the chain to the APP baseline (3) without touching rows. */
+  /** Completes the chain to the APP baseline without touching rows. */
   const toV3Noop: MigrationStep = {
     to: 3,
+    stores: ['tasks'],
+    run: () => ({ ok: true as const, value: undefined }),
+  };
+  const toV4Noop: MigrationStep = {
+    to: 4,
     stores: ['tasks'],
     run: () => ({ ok: true as const, value: undefined }),
   };
@@ -286,11 +291,11 @@ describe('old exports upgrade through the migration chain (drill 3)', () => {
     const db = await openSeeded();
 
     const prepared = await prepareImport(JSON.stringify(doc), {
-      migrations: [notesBackfill, toV3Noop],
+      migrations: [notesBackfill, toV3Noop, toV4Noop],
     });
     expect(prepared.ok).toBe(true);
     if (!prepared.ok) return;
-    expect(prepared.value.fileSummary).toMatchObject({ schemaVersion: 1, upgradedTo: 3 });
+    expect(prepared.value.fileSummary).toMatchObject({ schemaVersion: 1, upgradedTo: 4 });
     expect(prepared.value.records.tasks[0]?.notes).toBe(''); // migrated shape validates
     await expectUntouched(db);
   });
@@ -302,12 +307,12 @@ describe('old exports upgrade through the migration chain (drill 3)', () => {
     const prepared = await prepareImport(
       JSON.stringify(makeDocObject({ schemaVersion: 1, lists: [l1], tasks: [v1Task] })),
       {
-        migrations: [notesBackfill, failing],
+        migrations: [notesBackfill, failing, toV4Noop],
       },
     );
     expect(prepared).toMatchObject({
       ok: false,
-      error: { code: 'UPGRADE_FAILED', from: 1, to: 3 },
+      error: { code: 'UPGRADE_FAILED', from: 1, to: 4 },
     });
   });
 });

@@ -196,6 +196,42 @@ const SNAPSHOT_FIELDS = [
 ] as const;
 const PAYLOAD_FIELDS = ['id', 'payload'] as const;
 
+// ADR-007 Decision 4.1: the encrypted at-rest shapes — plaintext envelope +
+// structural fields + ciphertext payload (user text is NOT a field).
+const ENCRYPTED_TASK_FIELDS = [
+  'id',
+  'kind',
+  'updatedAt',
+  'deviceId',
+  'deletedAt',
+  'payloadHash',
+  'enc',
+  'payload',
+  'listId',
+  'status',
+  'priority',
+  'dueDate',
+  'reminderAt',
+  'recurrence',
+  'parentTaskId',
+  'sortOrder',
+  'createdAt',
+  'completedAt',
+] as const;
+const ENCRYPTED_LIST_FIELDS = [
+  'id',
+  'kind',
+  'updatedAt',
+  'deviceId',
+  'deletedAt',
+  'payloadHash',
+  'enc',
+  'payload',
+  'color',
+  'sortOrder',
+  'createdAt',
+] as const;
+
 export function validateMeta(value: unknown): ValidationResult {
   const { fields, issues } = checkShape(value, META_FIELDS);
   push(
@@ -649,15 +685,357 @@ export function validateSyncState(value: unknown): ValidationResult {
   return resultOf(issues);
 }
 
+/* ------------------- C1 encrypted record shapes (ADR-007 Decision 4.1) ------------------- */
+
+// The ciphertext is bounded by the plaintext caps (title 1000 + notes 20000 +
+// 50 tags x 100 chars) plus GCM overhead — 64 KB of base64 leaves headroom and
+// keeps a corrupt row from costing an unbounded read.
+const MAX_PAYLOAD_B64 = 64_000;
+
+function checkEncEnvelope(issues: ShapeIssue[], fields: Record<string, unknown>): void {
+  const enc = fields['enc'];
+  if (!isRecord(enc)) {
+    push(issues, 'enc', false, 'type', 'object');
+    return;
+  }
+  for (const key of Object.keys(enc)) {
+    if ((FORBIDDEN_KEYS as readonly string[]).includes(key) || !['alg', 'v', 'iv'].includes(key)) {
+      issues.push({ path: `enc.${key}`, kind: 'unknown', detail: 'unexpected field' });
+    }
+  }
+  push(issues, 'enc.alg', enc['alg'] === 'AES-GCM', 'format', "'AES-GCM'");
+  push(issues, 'enc.v', enc['v'] === 1, 'format', '1 (payload envelope version)');
+  const iv = enc['iv'];
+  push(
+    issues,
+    'enc.iv',
+    typeof iv === 'string' && fromBase64Len(iv) === 12,
+    'format',
+    'base64 of 12 bytes',
+  );
+}
+
+function fromBase64Len(text: string): number | null {
+  if (typeof text !== 'string' || text.length % 4 !== 0) return null;
+  const clean = text.replace(/=+$/u, '');
+  if (!/^[A-Za-z0-9+/_-]*$/u.test(clean)) return null;
+  return Math.floor((clean.length * 3) / 4);
+}
+
+function checkCiphertext(issues: ShapeIssue[], fields: Record<string, unknown>): void {
+  const payload = fields['payload'];
+  push(
+    issues,
+    'payload',
+    typeof payload === 'string' &&
+      payload.length >= 24 &&
+      payload.length <= MAX_PAYLOAD_B64 &&
+      fromBase64Len(payload) !== null,
+    'format',
+    `base64 ciphertext (${String(MAX_PAYLOAD_B64)} chars max)`,
+  );
+  push(
+    issues,
+    'payloadHash',
+    typeof fields['payloadHash'] === 'string' && /^[0-9a-f]{64}$/u.test(fields['payloadHash']),
+    'format',
+    'sha256 hex of `payload`',
+  );
+}
+
+/**
+ * The encrypted `tasks` at-rest shape: plaintext envelope + structural fields +
+ * one ciphertext payload. Caps on the CIPHERTEXT apply here; caps on decrypted
+ * fields are enforced at decrypt time (Decision 4.1 — "rejected then,
+ * quarantined, never crashed on").
+ */
+export function validateEncryptedTask(value: unknown): ValidationResult {
+  const { fields, issues } = checkShape(value, ENCRYPTED_TASK_FIELDS);
+  push(issues, 'id', isUlid(fields['id']), 'format', 'ULID');
+  push(issues, 'kind', fields['kind'] === 'task', 'format', "literal 'task'");
+  push(issues, 'listId', isUlid(fields['listId']), 'format', 'ULID');
+  push(
+    issues,
+    'status',
+    fields['status'] === 'open' || fields['status'] === 'done' || fields['status'] === 'archived',
+    'format',
+    'open|done|archived',
+  );
+  push(
+    issues,
+    'priority',
+    fields['priority'] === 'P1' ||
+      fields['priority'] === 'P2' ||
+      fields['priority'] === 'P3' ||
+      fields['priority'] === 'P4',
+    'format',
+    'P1|P2|P3|P4',
+  );
+  if (fields['dueDate'] !== undefined)
+    push(
+      issues,
+      'dueDate',
+      isLocalDateString(fields['dueDate']),
+      'format',
+      'YYYY-MM-DD (real calendar day)',
+    );
+  if (fields['reminderAt'] !== undefined) checkTimestamp(issues, fields, 'reminderAt');
+  if (fields['completedAt'] !== undefined) checkTimestamp(issues, fields, 'completedAt');
+  checkRecurrence(issues, fields);
+  if (fields['parentTaskId'] !== undefined)
+    push(issues, 'parentTaskId', isUlid(fields['parentTaskId']), 'format', 'ULID');
+  push(
+    issues,
+    'sortOrder',
+    isCanonicalOrderKey(fields['sortOrder']),
+    'format',
+    'canonical order key',
+  );
+  checkTimestamp(issues, fields, 'createdAt');
+  checkTimestamp(issues, fields, 'updatedAt');
+  checkTombstone(issues, fields);
+  push(issues, 'deviceId', isUlid(fields['deviceId']), 'format', 'ULID');
+  checkEncEnvelope(issues, fields);
+  checkCiphertext(issues, fields);
+  return resultOf(issues);
+}
+
+/** The encrypted `lists` at-rest shape. */
+export function validateEncryptedList(value: unknown): ValidationResult {
+  const { fields, issues } = checkShape(value, ENCRYPTED_LIST_FIELDS);
+  push(issues, 'id', isUlid(fields['id']), 'format', 'ULID');
+  push(issues, 'kind', fields['kind'] === 'list', 'format', "literal 'list'");
+  push(issues, 'color', isColor(fields['color']), 'format', '#rrggbb or theme token id');
+  push(
+    issues,
+    'sortOrder',
+    isCanonicalOrderKey(fields['sortOrder']),
+    'format',
+    'canonical order key',
+  );
+  checkTimestamp(issues, fields, 'createdAt');
+  checkTimestamp(issues, fields, 'updatedAt');
+  checkTombstone(issues, fields);
+  push(issues, 'deviceId', isUlid(fields['deviceId']), 'format', 'ULID');
+  checkEncEnvelope(issues, fields);
+  checkCiphertext(issues, fields);
+  return resultOf(issues);
+}
+
+/* ------------------- crypto_state singleton (ADR-007 Decision 2.3/2.4) ------------------- */
+
+const CRYPTO_STATE_FIELDS = [
+  'id',
+  'status',
+  'enabledAt',
+  'migration',
+  'keys',
+  'recoveryOfferedAt',
+  'lockAfterMinutes',
+] as const;
+const KEY_ENTRY_FIELDS = ['keyId', 'slots', 'createdAt'] as const;
+const KEY_SLOT_FIELDS = ['kind', 'kdf', 'wrap', 'createdAt'] as const;
+const KEY_WRAP_FIELDS = ['iv', 'ct'] as const;
+const LOCK_MINUTES = [5, 15, 30, 60] as const;
+
+function checkKeySlot(issues: ShapeIssue[], slot: unknown, path: string): void {
+  if (!isRecord(slot)) {
+    push(issues, path, false, 'type', 'object');
+    return;
+  }
+  for (const key of Object.keys(slot)) {
+    if (
+      (FORBIDDEN_KEYS as readonly string[]).includes(key) ||
+      !(KEY_SLOT_FIELDS as readonly string[]).includes(key)
+    ) {
+      issues.push({ path: `${path}.${key}`, kind: 'unknown', detail: 'unexpected field' });
+    }
+  }
+  const kind = slot['kind'];
+  push(
+    issues,
+    `${path}.kind`,
+    kind === 'passphrase' || kind === 'recovery',
+    'format',
+    'passphrase|recovery',
+  );
+  const wrap = slot['wrap'];
+  if (!isRecord(wrap)) {
+    push(issues, `${path}.wrap`, false, 'type', 'object');
+  } else {
+    for (const key of Object.keys(wrap)) {
+      if (
+        (FORBIDDEN_KEYS as readonly string[]).includes(key) ||
+        !(KEY_WRAP_FIELDS as readonly string[]).includes(key)
+      ) {
+        issues.push({ path: `${path}.wrap.${key}`, kind: 'unknown', detail: 'unexpected field' });
+      }
+    }
+    push(
+      issues,
+      `${path}.wrap.iv`,
+      typeof wrap['iv'] === 'string' && fromBase64Len(wrap['iv']) === 12,
+      'format',
+      'base64 of 12 bytes',
+    );
+    push(
+      issues,
+      `${path}.wrap.ct`,
+      typeof wrap['ct'] === 'string' &&
+        (fromBase64Len(wrap['ct']) ?? 0) >= 32 &&
+        (fromBase64Len(wrap['ct']) ?? 0) <= 128,
+      'format',
+      'base64 wrapped key bytes',
+    );
+  }
+  const kdf = slot['kdf'];
+  if (!isRecord(kdf)) {
+    push(issues, `${path}.kdf`, false, 'type', 'object');
+    return;
+  }
+  if (kind === 'passphrase') {
+    push(
+      issues,
+      `${path}.kdf.alg`,
+      kdf['alg'] === 'PBKDF2-HMAC-SHA-256' && kdf['v'] === 1,
+      'format',
+      "v1 'PBKDF2-HMAC-SHA-256'",
+    );
+    push(
+      issues,
+      `${path}.kdf.iters`,
+      typeof kdf['iters'] === 'number' && Number.isSafeInteger(kdf['iters']) && kdf['iters'] >= 1,
+      'range',
+      'safe integer >= 1',
+    );
+    push(
+      issues,
+      `${path}.kdf.salt`,
+      typeof kdf['salt'] === 'string' && fromBase64Len(kdf['salt']) === 16,
+      'format',
+      'base64 of 16 bytes',
+    );
+  } else {
+    push(
+      issues,
+      `${path}.kdf`,
+      kdf['v'] === 1 && kdf['alg'] === 'HKDF-SHA-256' && kdf['info'] === 'todo-enc/1/recovery-kek',
+      'format',
+      "v1 'HKDF-SHA-256' with the fixed info string",
+    );
+  }
+}
+
+/** Singleton `crypto_state` row (ADR-007 Decision 2.3) — strict like every validator. */
+export function validateCryptoState(value: unknown): ValidationResult {
+  const { fields, issues } = checkShape(value, CRYPTO_STATE_FIELDS);
+  push(issues, 'id', fields['id'] === 'crypto', 'format', "singleton key 'crypto'");
+  push(
+    issues,
+    'status',
+    fields['status'] === 'off' || fields['status'] === 'migrating' || fields['status'] === 'on',
+    'format',
+    'off|migrating|on',
+  );
+  checkNullableTimestamp(issues, fields, 'enabledAt');
+  checkNullableTimestamp(issues, fields, 'recoveryOfferedAt');
+  push(
+    issues,
+    'lockAfterMinutes',
+    (LOCK_MINUTES as readonly number[]).includes(fields['lockAfterMinutes'] as number),
+    'format',
+    '5|15|30|60',
+  );
+  const migration = fields['migration'];
+  if (migration === null || migration === undefined) {
+    // null is the steady state; absent is a shape issue (the field is required).
+    push(issues, 'migration', migration === null, 'type', 'null or migration progress object');
+  } else if (!isRecord(migration)) {
+    push(issues, 'migration', false, 'type', 'object');
+  } else {
+    for (const key of Object.keys(migration)) {
+      if (
+        (FORBIDDEN_KEYS as readonly string[]).includes(key) ||
+        !['startedAt', 'done', 'total', 'direction'].includes(key)
+      ) {
+        issues.push({ path: `migration.${key}`, kind: 'unknown', detail: 'unexpected field' });
+      }
+    }
+    checkTimestamp(issues, migration, 'startedAt');
+    for (const key of ['done', 'total'] as const) {
+      push(
+        issues,
+        `migration.${key}`,
+        typeof migration[key] === 'number' &&
+          Number.isSafeInteger(migration[key]) &&
+          (migration[key]) >= 0,
+        'range',
+        'safe integer >= 0',
+      );
+    }
+    push(
+      issues,
+      'migration.direction',
+      migration['direction'] === 'encrypt' || migration['direction'] === 'decrypt',
+      'format',
+      'encrypt|decrypt',
+    );
+  }
+  const keys = fields['keys'];
+  if (!Array.isArray(keys)) {
+    push(issues, 'keys', false, 'type', 'array');
+  } else {
+    push(issues, 'keys', keys.length <= 8, 'range', 'at most 8 ring entries');
+    keys.forEach((entry, i) => {
+      const path = `keys[${String(i)}]`;
+      if (!isRecord(entry)) {
+        push(issues, path, false, 'type', 'object');
+        return;
+      }
+      for (const key of Object.keys(entry)) {
+        if (
+          (FORBIDDEN_KEYS as readonly string[]).includes(key) ||
+          !(KEY_ENTRY_FIELDS as readonly string[]).includes(key)
+        ) {
+          issues.push({ path: `${path}.${key}`, kind: 'unknown', detail: 'unexpected field' });
+        }
+      }
+      push(issues, `${path}.keyId`, isUlid(entry['keyId']), 'format', 'ULID');
+      checkTimestamp(issues, entry, 'createdAt');
+      const slots = entry['slots'];
+      if (!Array.isArray(slots)) {
+        push(issues, `${path}.slots`, false, 'type', 'array');
+        return;
+      }
+      push(
+        issues,
+        `${path}.slots`,
+        slots.length >= 1 && slots.length <= 2,
+        'range',
+        'exactly one passphrase slot + 0..1 recovery slot',
+      );
+      for (const [j, slot] of slots.entries())
+        checkKeySlot(issues, slot, `${path}.slots[${String(j)}]`);
+    });
+  }
+  return resultOf(issues);
+}
+
 /** Validate one row for its store (boot validation + import share this). */
 export function validateRow(store: StoreName, value: unknown): ValidationResult {
   switch (store) {
     case 'meta':
       return validateMeta(value);
     case 'lists':
-      return validateList(value);
+      // Self-describing rows (ADR-007 Decision 4.1): `enc` present = the
+      // encrypted at-rest shape; mixed stores are legal (Decision 7.1).
+      return isRecord(value) && value['enc'] !== undefined
+        ? validateEncryptedList(value)
+        : validateList(value);
     case 'tasks':
-      return validateTask(value);
+      return isRecord(value) && value['enc'] !== undefined
+        ? validateEncryptedTask(value)
+        : validateTask(value);
     case 'settings':
       return validateSettings(value);
     case 'snapshots':
@@ -666,5 +1044,7 @@ export function validateRow(store: StoreName, value: unknown): ValidationResult 
       return validateSnapshotPayload(value);
     case 'sync_state':
       return validateSyncState(value);
+    case 'crypto_state':
+      return validateCryptoState(value);
   }
 }

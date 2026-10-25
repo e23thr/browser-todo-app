@@ -7,7 +7,7 @@
  * implemented in `merge.ts` — never redesigned here.
  */
 
-import type { List, Task } from '../domain/model';
+import type { EncryptedTaskRecord, RowLike, Task } from '../domain/model';
 import type { Result } from '../domain/kernel';
 import type { SyncErrorCode } from '../storage/types';
 
@@ -28,7 +28,8 @@ export const SYNC_FORMAT = 'todo-sync/1';
 /** Full-record state versions (not field diffs) — merge is order-insensitive and idempotent. */
 export type SyncRecord = {
   kind: 'list' | 'task';
-  record: List | Task;
+  /** At-rest row (ADR-007: encrypted rows ride the wire verbatim — Decision 8.1). */
+  record: RowLike;
 };
 
 /** `changes/<deviceId>/<seq>.json` — immutable per-device change batch (§2.1). */
@@ -69,7 +70,7 @@ export type ConflictCopySpec = {
   /** Fresh ULID for the new Task row (copies are new records that sync out normally). */
   copyId: string;
   /** The materialized row, already stamped with now/this-device (`deletedAt: null`). */
-  row: Task;
+  row: Task | EncryptedTaskRecord;
   /** Summary for `conflicts-pending` (Decision 9.2). */
   summary: ConflictSummary;
 };
@@ -84,7 +85,7 @@ export type SyncNotice = {
 
 export type MergePlan = {
   /** Record outcomes (LWW fold winners) — raw rows, remote stamps preserved byte-for-byte. */
-  puts: (List | Task)[];
+  puts: RowLike[];
   copies: ConflictCopySpec[];
   notices: SyncNotice[];
   /** Shadow entries to upsert (keyed by record id — copies included). */

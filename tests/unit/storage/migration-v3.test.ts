@@ -150,9 +150,9 @@ describe('schemaVersion 3 — real chain over a v1 database + rollback drill', (
     if (!migrated.ok) return;
     expect(migrated.value.from).toBe(1);
     expect(migrated.value.to).toBe(APP_SCHEMA_VERSION);
-    expect(targetVersionOf(productionMigrations)).toBe(3);
+    expect(targetVersionOf(productionMigrations)).toBe(4);
     expect(migrated.value.preMigrationSnapshotId).not.toBeNull();
-    expect(db.schemaVersion).toBe(3);
+    expect(db.schemaVersion).toBe(APP_SCHEMA_VERSION);
 
     const rows = await db.readUnfiltered('tasks');
     if (!rows.ok) throw new Error('read failed');
@@ -244,7 +244,7 @@ describe('schemaVersion 3 — old exports upgrade through the same chain', () =>
     expect(plan.ok).toBe(true);
     if (!plan.ok) return;
     expect(plan.value.fileSummary.schemaVersion).toBe(1);
-    expect(plan.value.fileSummary.upgradedTo).toBe(3);
+    expect(plan.value.fileSummary.upgradedTo).toBe(4);
     expect(plan.value.accepted.tasks).toBe(2);
     expect(plan.value.quarantined).toEqual([]);
     const byId = new Map(plan.value.records.tasks.map((t) => [t.id, t]));

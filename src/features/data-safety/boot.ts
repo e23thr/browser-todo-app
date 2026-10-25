@@ -26,6 +26,7 @@ import { deriveBanners } from './derive';
 import { invalidateCounts, probeData, readCounts, readLastBackupAt } from './dbAccess';
 import { hasPriorData, markPriorData, readOnboardingStep, recoveryStartedAt } from './flags';
 import { beginPriorUseProbe, resetPriorUseProbe } from './probe';
+import { initCryptoForApp } from '../crypto/wiring';
 import { patchState } from './state';
 import { refreshPersistence, refreshQuota } from './storageInfo';
 import type { BootClassification, DataCounts } from './types';
@@ -189,6 +190,9 @@ async function run(opts: { now?: () => number }): Promise<void> {
 
   const db = booted.value as AppDBImpl;
   bindDataSafetyDb(db);
+  // ADR-007: the C1 session vault attaches to the booted DB and the row/merge
+  // seams register before any task/list read/write crosses the boundary.
+  await initCryptoForApp(db);
 
   const lastBackupAt = await readLastBackupAt(db);
   const probed = await probeData(db);
