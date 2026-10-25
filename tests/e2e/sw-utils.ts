@@ -92,24 +92,6 @@ export function countMainNavigations(page: Page): () => number {
   return () => count;
 }
 
-/** Install the CSP-violation collector used by the parity checks (ADR-005 Decision 9, test 9). */
-export async function installCspCollector(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    const violations: string[] = [];
-    (window as unknown as { __cspViolations: string[] }).__cspViolations = violations;
-    document.addEventListener('securitypolicyviolation', (event) => {
-      violations.push(`${event.violatedDirective} blocked=${event.blockedURI}`);
-    });
-  });
-}
-
-/** Read the collected CSP violations. */
-export async function cspViolations(page: Page): Promise<string[]> {
-  return page.evaluate(
-    () => (window as unknown as { __cspViolations?: string[] }).__cspViolations ?? [],
-  );
-}
-
 /** The update notice root exists only while a notice is on screen. */
 export function updateNotice(page: Page): ReturnType<Page['locator']> {
   return page.locator('[data-update-notice]');

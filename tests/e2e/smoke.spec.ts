@@ -1,6 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { APP_ORIGIN, APP_URL, seedOnboardingDone } from './helpers';
+import {
+  APP_ORIGIN,
+  APP_URL,
+  cspViolations,
+  installCspCollector,
+  seedOnboardingDone,
+} from './helpers';
 
 /**
  * E2E smoke (ADR-001 §6 / §7 CI matrix): boots under the GitHub-Pages-style base path, proves
@@ -17,10 +23,6 @@ import { APP_ORIGIN, APP_URL, seedOnboardingDone } from './helpers';
  * accepted a broken label — renaming the Today heading to "Todayy" passed the whole suite 7/7
  * (QA defect D1, docs/qa/e1-scaffold-gates.md §2.7). Never drop `exact: true`.
  */
-
-interface WindowWithDiagnostics {
-  __cspViolations?: string[];
-}
 
 function collectRequests(page: Page): () => string[] {
   const origins = new Set<string>();
@@ -88,13 +90,7 @@ test('the skip link is the first focusable element', async ({ page }) => {
 
 test('no CSP violation fires while the app boots and navigates', async ({ page }) => {
   await seedOnboardingDone(page);
-  await page.addInitScript(() => {
-    const violations: string[] = [];
-    (window as WindowWithDiagnostics).__cspViolations = violations;
-    document.addEventListener('securitypolicyviolation', (event) => {
-      violations.push(`${event.violatedDirective} blocked=${event.blockedURI}`);
-    });
-  });
+  await installCspCollector(page);
 
   await page.goto(APP_URL);
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
@@ -104,9 +100,7 @@ test('no CSP violation fires while the app boots and navigates', async ({ page }
   await page.getByRole('link', { name: 'Today', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Today', level: 1, exact: true })).toBeVisible();
 
-  const violations = await page.evaluate(
-    () => (window as WindowWithDiagnostics).__cspViolations ?? [],
-  );
+  const violations = await cspViolations(page);
   expect(violations).toEqual([]);
 });
 

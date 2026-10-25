@@ -14,14 +14,12 @@ import { expect, test } from '@playwright/test';
 import { FIXTURES, ensureFixtures } from './fixtures/build-fixtures.mjs';
 import type { StaticServer } from './fixtures/static-server.mjs';
 import { shouldPrecache } from '../../scripts/generate-precache.mjs';
-import { BASE_PATH } from './helpers';
+import { BASE_PATH, cspViolations, installCspCollector } from './helpers';
 import {
   BOOT_BUDGET_MS,
   cacheEntryUrls,
   completeFirstRunOnboarding,
-  cspViolations,
   expectSingleVersionedCache,
-  installCspCollector,
   interactiveStartMs,
   startFixtureServer,
   triggerUpdateCheck,

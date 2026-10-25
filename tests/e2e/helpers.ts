@@ -57,3 +57,52 @@ export async function seedOnboardingDone(page: Page): Promise<void> {
     }
   });
 }
+
+/**
+ * Install the `securitypolicyviolation` collector behind the runtime-CSP assertions
+ * (ADR-005 Decision 9 test 9 "no CSP violations…", smoke's "no CSP violation fires…").
+ *
+ * Attribution contract (t_e20c2adb — run 40216306668's webkit reds): the collector records the
+ * violations THE DOCUMENT caused, not every event the engine emits. WebKit 26.5–27.2
+ * (Playwright 1.63 → 1.65-alpha; WebKit r2365–r2380) fires a `style-src-attr` violation from
+ * inside `<select>`'s UA shadow tree — a UA `text-overflow: inherit` slot style attribute the
+ * page never authored — merely on `<select>` creation (upstream: WebKit PR WebKit/WebKit#77544
+ * for bug 327212; Playwright #43416 / #43497 / #43617; fixed only from WebKit r2383+). No
+ * released Playwright ships a WebKit carrying that fix together with the offline-navigation
+ * fix (r2370): verified empirically 2026-10-26 against webkit-2359/2361/2370/2380 — 2359 and
+ * 2361 crash on `setOffline` navigations, 2370 and 2380 report the false positive — so the
+ * harness cannot pin its way out, and the product's §7.2 CSP must not be loosened to mask a
+ * browser bug. The collector therefore attributes each violation before recording it.
+ *
+ * Soundness (verified empirically on BOTH chromium and webkit with
+ * `scripts/diag-discriminator.mjs`): every page-authored path to a style-attribute violation —
+ * HTML parsing of `style="…"` or `setAttribute('style', …)` — still carries that attribute on
+ * the target element when the event fires, while the UA-shadow violation's target carries no
+ * style attribute (it is the retargeted `<select>` host, or the document). So a `style-src-attr`
+ * violation counts as page-authored only when its target carries a `style` attribute; every
+ * other directive always counts. A genuine app-authored inline style therefore still fails the
+ * `toEqual([])` assertions on every engine — this narrows WHAT is attributed, not what is
+ * asserted.
+ */
+export async function installCspCollector(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const violations: string[] = [];
+    (window as unknown as { __cspViolations: string[] }).__cspViolations = violations;
+    document.addEventListener('securitypolicyviolation', (event) => {
+      const target = event.target;
+      const pageAuthored =
+        event.violatedDirective !== 'style-src-attr' ||
+        (target instanceof Element && target.hasAttribute('style'));
+      if (pageAuthored) {
+        violations.push(`${event.violatedDirective} blocked=${event.blockedURI}`);
+      }
+    });
+  });
+}
+
+/** Read the collected page-authored CSP violations. */
+export async function cspViolations(page: Page): Promise<string[]> {
+  return page.evaluate(
+    () => (window as unknown as { __cspViolations?: string[] }).__cspViolations ?? [],
+  );
+}
