@@ -11,10 +11,17 @@
  * Each region owns its PENDING slot: within one region's delay window the newest message wins
  * and the pending one is dropped — but the polite and assertive regions are independent, so a
  * message in one NEVER cancels a pending message in the other (WCAG 2.2 SC 4.1.3: a status
- * message the app announced must actually reach the user). The only carve-out from same-region
- * supersede is the caller passing `{ deferred: true }`, which holds its message back past the
- * window so a status notice fired in the same tick cannot cancel the one in flight (M13-B1) —
- * the deferred hold is per-region as well.
+ * message the app announced must actually reach the user). Two carve-outs from same-region
+ * supersede, both for the caller passing `{ deferred: true }` (M13-B1, t_bb9053ec):
+ *
+ * 1. The message sits in a per-region hold and, when the hold expires, QUEUES behind whatever
+ *    the region still has in flight instead of superseding it — it waits out a pending
+ *    message's landing window (and the observation window after that) rather than bumping the
+ *    token, so both messages reach the user, in order.
+ * 2. Once it has waited its turn and entered the region, it is never silently dropped before
+ *    it lands: a newer message hands its slot back to the hold (no remaining hold) and it
+ *    queues behind the newcomer instead. A deferred message is dropped only when the regions
+ *    unregister (or a newer deferred message replaces it — newest held message wins).
  */
 
 /** `polite` = global status region, `assertive` = global alert region (design §11.2). */
@@ -56,25 +63,38 @@ export interface AnnounceOptions {
    * Epic E3's first-write persistence notice vs. the composer's `a11y.taskAdded`: inside the
    * announce window the newer `announce()` supersedes the pending message, so announcing the
    * notice immediately would cancel the capture confirmation and leave the region with the
-   * notice alone. A deferred message never enters the window early; it is dropped only when
-   * the regions unregister (same as any pending message).
+   * notice alone. A deferred message never enters the window early; when the hold expires it
+   * queues behind any message the region still has in flight instead of cancelling it, and
+   * once in flight it is re-queued — never dropped — if a newer message supersedes it. It
+   * disappears only when the regions unregister (or a newer deferred message replaces it).
    */
   readonly deferred?: boolean;
 }
 
 /**
- * One pending slot per region: the supersede token and timer for the message in flight,
- * plus the deferred hold (M13-B1) and its timer. A region only ever reads its own slot,
- * so nothing one region does can cancel what the other one is about to say.
+ * One pending slot per region: the supersede token and timers for the message in flight
+ * (landing + observation window), the handed-over deferred message currently in flight (which
+ * is protected from supersede until it lands), plus the deferred hold (M13-B1) and its timer.
+ * A region only ever reads its own slot, so nothing one region does can cancel what the other
+ * one is about to say.
  */
 interface PendingSlot {
   token: number;
   timer: ReturnType<typeof setTimeout> | null;
+  settle: ReturnType<typeof setTimeout> | null;
+  committed: string | null;
   deferred: { readonly message: string } | null;
   deferredTimer: ReturnType<typeof setTimeout> | null;
 }
 
-const newSlot = (): PendingSlot => ({ token: 0, timer: null, deferred: null, deferredTimer: null });
+const newSlot = (): PendingSlot => ({
+  token: 0,
+  timer: null,
+  settle: null,
+  committed: null,
+  deferred: null,
+  deferredTimer: null,
+});
 
 const slots: Record<Politeness, PendingSlot> = { polite: newSlot(), assertive: newSlot() };
 
@@ -85,10 +105,15 @@ function clearSlot(slot: PendingSlot): void {
     clearTimeout(slot.timer);
     slot.timer = null;
   }
+  if (slot.settle !== null) {
+    clearTimeout(slot.settle);
+    slot.settle = null;
+  }
   if (slot.deferredTimer !== null) {
     clearTimeout(slot.deferredTimer);
     slot.deferredTimer = null;
   }
+  slot.committed = null;
   slot.deferred = null;
 }
 
@@ -105,6 +130,83 @@ export function registerLiveRegions(next: LiveRegions): () => void {
     clearSlot(slots.polite);
     clearSlot(slots.assertive);
   };
+}
+
+/**
+ * Hand a hold-expired deferred message over to the normal path — but never cancel what the
+ * region is still saying. While a non-deferred message is inside its landing window (or the
+ * observation window right after it), the hand-over waits its turn: the region's own timers
+ * re-invoke this until the way is clear, so both messages reach the user, in order
+ * (t_bb9053ec, WCAG 2.2 SC 4.1.3). The message then enters {@link speak} marked `committed`:
+ * it has already waited its turn, so a newer message re-queues it instead of dropping it.
+ */
+function deliverDeferred(slot: PendingSlot, politeness: Politeness): void {
+  const held = slot.deferred;
+  // Nothing held, or the hold is still running (a newer deferred message re-armed it).
+  if (held === null || slot.deferredTimer !== null) return;
+  const region = politeness === 'assertive' ? regions.assertive : regions.polite;
+  if (region === null) {
+    // Regions went away without the disposer: drop the hold like clearSlot would.
+    slot.deferred = null;
+    return;
+  }
+  if (slot.timer !== null || slot.settle !== null) return; // in flight — retried from `settle`
+  slot.deferred = null;
+  speak(slot, region, politeness, held.message, true);
+}
+
+/**
+ * Put `message` in the region's landing window (`committed` = it came from the deferred
+ * hand-over and must not be dropped). Same-region supersede applies as usual — except that a
+ * committed message goes back to the hold slot instead of being lost.
+ */
+function speak(
+  slot: PendingSlot,
+  region: HTMLElement,
+  politeness: Politeness,
+  message: string,
+  committed: boolean,
+): void {
+  if (slot.committed !== null) {
+    // The message in flight is a deferred hand-over that has not landed yet: hand its slot
+    // back to the hold with NO remaining hold, so deliverDeferred queues it behind this one.
+    const returned = slot.committed;
+    slot.committed = null;
+    if (slot.deferredTimer !== null) clearTimeout(slot.deferredTimer);
+    slot.deferred = { message: returned };
+    slot.deferredTimer = setTimeout(() => {
+      slot.deferredTimer = null;
+      deliverDeferred(slot, politeness);
+    }, 0);
+  }
+
+  slot.token += 1;
+  const token = slot.token;
+
+  if (slot.timer !== null) clearTimeout(slot.timer);
+  if (slot.settle !== null) clearTimeout(slot.settle);
+  region.textContent = '';
+  slot.committed = committed ? message : null;
+
+  slot.timer = setTimeout(() => {
+    slot.timer = null;
+    // A newer announcement in THIS region (or an unmount) supersedes this one —
+    // never a message in the other region. A superseded committed message was already
+    // returned to the hold slot above.
+    if (token !== slot.token) return;
+    region.textContent = message;
+    if (committed) slot.committed = null; // landed — the re-queue protection ends here
+  }, ANNOUNCE_DELAY_MS);
+
+  // Observation window: the landed text stays up ANNOUNCE_DELAY_MS so assistive tech can
+  // observe it before anything replaces it. It also gates the deferred hand-over — when the
+  // window closes, a held message gets its turn (deliverDeferred) instead of bumping the
+  // token mid-flight and silently dropping this one.
+  slot.settle = setTimeout(() => {
+    slot.settle = null;
+    if (token !== slot.token) return;
+    deliverDeferred(slot, politeness);
+  }, ANNOUNCE_DELAY_MS * 2);
 }
 
 /**
@@ -127,27 +229,10 @@ export function announce(
     slot.deferred = { message };
     slot.deferredTimer = setTimeout(() => {
       slot.deferredTimer = null;
-      const held = slot.deferred;
-      slot.deferred = null;
-      if (held === null) return;
-      // Hand over to the normal path: by now the announce window of anything announced in
-      // the original tick has closed, so this message lands instead of cancelling it.
-      announce(held.message, politeness);
+      deliverDeferred(slot, politeness);
     }, DEFERRED_ANNOUNCE_DELAY_MS);
     return;
   }
 
-  slot.token += 1;
-  const token = slot.token;
-
-  if (slot.timer !== null) clearTimeout(slot.timer);
-  region.textContent = '';
-
-  slot.timer = setTimeout(() => {
-    slot.timer = null;
-    // A newer announcement in THIS region (or an unmount) supersedes this one —
-    // never a message in the other region.
-    if (token !== slot.token) return;
-    region.textContent = message;
-  }, ANNOUNCE_DELAY_MS);
+  speak(slot, region, politeness, message, false);
 }

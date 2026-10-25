@@ -104,6 +104,24 @@ Regression coverage: `tests/unit/announce.test.ts` (+2), new
 `tests/unit/data-safety/persist-gate-announcements.test.ts`, `tests/component/core-ui-composer.test.tsx` (+1);
 `npm run ci` exit 0 (**893/893**) in the re-run.
 
+**Hand-over refinement (`t_bb9053ec`, found by the MVP DoD gate at `225a1f3`):** the deferred
+notice's hand-over re-entered `announce()` at the end of the 500 ms hold, which bumped the region's
+supersede token — so when a message landed **inside** its 60 ms window at that instant (the
+`a11y.taskSaved` vs. persistence-notice collision, `docs/qa/mvp-dod-logs/announce-taskSaved-race.md`)
+the hand-over cancelled it and the user heard only the notice. Observable behaviour change: the
+hand-over now **queues behind** whatever the region still has in flight (its landing window plus a
+60 ms observation window), and once in flight the notice is never silently dropped — a newer
+message (e.g. `a11y.taskCompleted`) re-queues it behind itself instead of cancelling its landing.
+Both messages therefore reach the user, in order — e.g. `Task saved` → `This browser did not
+grant extra protection.` — and the keyboard journey records
+`Task added … | Task saved | Task completed | This browser did not grant extra protection.`
+where the pre-fix run recorded only the notice. Covered by `tests/unit/announce.test.ts` *"a
+deferred hand-over waits out a PENDING message instead of cancelling it"* and *"a newer message
+re-queues an in-flight deferred hand-over instead of dropping it"* (the PENDING half of the pair
+at *"lands a deferred message after the window instead of superseding the one in flight"*, which
+only covered an already-landed message). The 12 announcement probes below do **not** script this
+collision — the save-vs-persistence timing race only reproduces under automation speed.
+
 ### B2 — CI's axe gate scans only the onboarding screen — ✅ FIXED (`981c822`, verified in re-run)
 
 `tests/e2e/a11y.spec.ts` never dismisses E3's first-run onboarding. On a fresh CI profile,

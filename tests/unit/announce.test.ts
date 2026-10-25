@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   ANNOUNCE_DELAY_MS,
@@ -150,6 +150,66 @@ describe('global announcer (design §11.2)', () => {
     await tick(DEFERRED_ANNOUNCE_DELAY_MS + ANNOUNCE_DELAY_MS);
     expect(polite.textContent).toBe('This browser did not grant extra protection.');
     dispose();
+  });
+
+  it('a deferred hand-over waits out a PENDING message instead of cancelling it (t_bb9053ec)', () => {
+    vi.useFakeTimers();
+    try {
+      const { polite, dispose } = mountRegions();
+
+      // The F2-edit collision from docs/qa/mvp-dod-logs/announce-taskSaved-race.md: the save
+      // is announced INSIDE its 60 ms landing window when the deferred hold expires, so the
+      // old hand-over bumped the token and 'Task saved' never reached the region (the
+      // `taskSaved` half of the M13-B1 pair — the case above only covers a message
+      // that has ALREADY landed).
+      announce('This browser did not grant extra protection.', 'polite', { deferred: true });
+      vi.advanceTimersByTime(DEFERRED_ANNOUNCE_DELAY_MS - 30);
+      announce('Task saved');
+
+      // The hold expires 30 ms into 'Task saved''s window: the hand-over must not fire yet.
+      vi.advanceTimersByTime(30);
+      expect(polite.textContent).toBe('');
+
+      // 'Task saved' lands uncancelled…
+      vi.advanceTimersByTime(30);
+      expect(polite.textContent).toBe('Task saved');
+
+      // …stays up for its observation window (so assistive tech can actually read it)…
+      vi.advanceTimersByTime(ANNOUNCE_DELAY_MS - 10);
+      expect(polite.textContent).toBe('Task saved');
+
+      // …and only then does the deferred notice land, second. Both reached the user, in order.
+      vi.advanceTimersByTime(DEFERRED_ANNOUNCE_DELAY_MS);
+      expect(polite.textContent).toBe('This browser did not grant extra protection.');
+      dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a newer message re-queues an in-flight deferred hand-over instead of dropping it', () => {
+    vi.useFakeTimers();
+    try {
+      const { polite, dispose } = mountRegions();
+
+      announce('This browser did not grant extra protection.', 'polite', { deferred: true });
+      // The hold expires and the notice is INSIDE its landing window…
+      vi.advanceTimersByTime(DEFERRED_ANNOUNCE_DELAY_MS + 30);
+      // …when the next user message (F3 complete) lands on the same region. The keyboard e2e
+      // caught this exact shape eating the notice (t_bb9053ec debug run): the notice had
+      // waited its turn, so it must be re-queued behind the newcomer, not silently dropped.
+      announce('Task completed');
+
+      vi.advanceTimersByTime(ANNOUNCE_DELAY_MS);
+      expect(polite.textContent).toBe('Task completed');
+
+      // The notice is delivered after the newcomer — the third message delays it, never kills it.
+      vi.advanceTimersByTime(DEFERRED_ANNOUNCE_DELAY_MS);
+      expect(polite.textContent).toBe('This browser did not grant extra protection.');
+      dispose();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('still supersedes the newest DEFERRED message within one region (M13-B1 rule unchanged)', async () => {

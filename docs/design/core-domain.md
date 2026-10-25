@@ -238,6 +238,16 @@ to the mobile layout without horizontal scrolling (§8).
 Toasts (S8) render visually AND map to these announcements; announcements without toast are still
 delivered by the single always-mounted region (`aria-live="polite"`, visually hidden).
 
+Delivery contract (`src/app/announce.ts`): each region carries one message at a time — inside a
+region's 60 ms announce window the newest message supersedes the pending one — and the two regions
+never cancel each other (WCAG 2.2 SC 4.1.3). A background notice fired while a user-facing message
+is on the way (E3's first-write persistence notice vs. `a11y.taskAdded` / `a11y.taskSaved`) is
+announced `{ deferred: true }`: it holds ~500 ms and then **queues behind** whatever the region
+still has in flight — including a message still inside its landing window — instead of cancelling
+it, so both messages reach the user, in order (`t_bb9053ec`). Once in flight it is never silently
+dropped either: a newer message re-queues it behind itself instead of cancelling its landing, so
+the notice reaches the user even when several user actions follow it closely.
+
 ### 5.6 Optimistic write protocol (D11 — applies to every mutating action)
 
 ```
