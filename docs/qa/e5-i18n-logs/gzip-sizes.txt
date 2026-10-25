@@ -1,0 +1,3 @@
+# gzip -9 locale catalogs
+src/i18n/en.json raw=8213 gz=2581
+src/i18n/th.json raw=13826 gz=3255

@@ -1,0 +1,127 @@
+{
+  "en": [
+    {
+      "scenario": "task-added",
+      "expect": "Task added: Announce add",
+      "polite": [
+        "View: All open",
+        "Task added: Announce add",
+        "This browser did not grant extra protection."
+      ],
+      "assertive": [],
+      "hit": true
+    },
+    {
+      "scenario": "task-completed",
+      "expect": "Task completed",
+      "polite": [
+        "Task completed"
+      ],
+      "assertive": [],
+      "hit": true
+    },
+    {
+      "scenario": "task-reopened",
+      "expect": "Task reopened",
+      "polite": [
+        "View: Completed",
+        "Task reopened"
+      ],
+      "assertive": [],
+      "hit": true,
+      "error": "locator.uncheck: Timeout 30000ms exceeded."
+    },
+    {
+      "scenario": "route-change",
+      "expect": "View: {view}",
+      "polite": [
+        "View: Next 7 days"
+      ],
+      "assertive": [],
+      "hit": true
+    },
+    {
+      "scenario": "search-results",
+      "expect": "{count} results for \"{query}\"",
+      "polite": [
+        "View: Search",
+        "1 results for \"a\""
+      ],
+      "assertive": [],
+      "hit": true
+    },
+    {
+      "scenario": "list-created",
+      "expect": "List created: Announce list",
+      "polite": [
+        "View: Manage lists",
+        "List created: Announce list"
+      ],
+      "assertive": [],
+      "hit": true
+    }
+  ],
+  "th": [
+    {
+      "scenario": "task-added",
+      "expect": "เพิ่มงานแล้ว: เพิ่มงานใหม่",
+      "polite": [
+        "มุมมอง: ทั้งหมดที่ยังไม่เสร็จ",
+        "เพิ่มงานแล้ว: เพิ่มงานใหม่",
+        "เบราว์เซอร์นี้ไม่ได้ให้การปกป้องเพิ่มเติม"
+      ],
+      "assertive": [],
+      "hit": true
+    },
+    {
+      "scenario": "task-completed",
+      "expect": "เสร็จงานแล้ว",
+      "polite": [
+        "เสร็จงานแล้ว"
+      ],
+      "assertive": [],
+      "hit": true
+    },
+    {
+      "scenario": "task-reopened",
+      "expect": "เปิดงานอีกครั้ง",
+      "polite": [
+        "มุมมอง: เสร็จแล้ว",
+        "เปิดงานอีกครั้ง"
+      ],
+      "assertive": [],
+      "hit": true,
+      "error": "locator.uncheck: Timeout 30000ms exceeded."
+    },
+    {
+      "scenario": "route-change",
+      "expect": "มุมมอง: {view}",
+      "polite": [
+        "มุมมอง: 7 วันข้างหน้า"
+      ],
+      "assertive": [],
+      "hit": true
+    },
+    {
+      "scenario": "search-results",
+      "expect": "{count} ผลลัพธ์สำหรับ \"{query}\"",
+      "polite": [
+        "มุมมอง: ค้นหา",
+        "0 ผลลัพธ์สำหรับ \"a\""
+      ],
+      "assertive": [],
+      "hit": true
+    },
+    {
+      "scenario": "list-created",
+      "expect": "สร้างรายการแล้ว: รายการทดสอบ",
+      "polite": [
+        "มุมมอง: จัดการรายการ",
+        "สร้างรายการแล้ว: รายการทดสอบ"
+      ],
+      "assertive": [],
+      "hit": true
+    }
+  ],
+  "notes": []
+}

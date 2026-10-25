@@ -1,0 +1,52 @@
+# gate failure proofs
+
+### baseline
+exit=0  RESULT: PASS — en/th key sets, values and placeholders are consistent
+  keys: 190 en / 190 th · 71 distinct keys used by 77 literal t() call site(s)
+  RESULT: PASS — en/th key sets, values and placeholders are consistent
+
+### th-missing-key
+exit=1  RESULT: FAIL — 1 violation(s)
+  keys: 190 en / 189 th · 71 distinct keys used by 77 literal t() call site(s)
+  FAIL missing-in-th: "app.name"
+
+### th-extra-key
+exit=1  RESULT: FAIL — 1 violation(s)
+  keys: 190 en / 191 th · 71 distinct keys used by 77 literal t() call site(s)
+  FAIL extra-in-th: "qa.extraKey"
+
+### th-placeholder-mismatch
+exit=1  RESULT: FAIL — 1 violation(s)
+  keys: 190 en / 190 th · 71 distinct keys used by 77 literal t() call site(s)
+  FAIL placeholder-mismatch: "a11y.viewChanged": en {view} vs th {}
+
+### th-empty-value
+exit=1  RESULT: FAIL — 1 violation(s)
+  keys: 190 en / 190 th · 71 distinct keys used by 77 literal t() call site(s)
+  FAIL empty-value: th: "a11y.closeMenu"
+
+### th-malformed-key
+exit=1  RESULT: FAIL — 2 violation(s)
+  keys: 190 en / 191 th · 71 distinct keys used by 77 literal t() call site(s)
+  FAIL extra-in-th: "Bad-Key"
+
+### th-duplicate-key
+exit=1  RESULT: FAIL — 1 violation(s)
+  keys: 190 en / 190 th · 71 distinct keys used by 77 literal t() call site(s)
+  FAIL duplicate-key: th.json: "app.name"
+
+### en-missing-used-key
+exit=1  RESULT: FAIL — 2 violation(s)
+  keys: 189 en / 190 th · 71 distinct keys used by 77 literal t() call site(s)
+  FAIL extra-in-th: "settings.title"
+  FAIL unknown-key: used in src/ but missing from en.json: "settings.title"
+
+== SUMMARY ==
+baseline: exit=0
+th-missing-key: exit=1
+th-extra-key: exit=1
+th-placeholder-mismatch: exit=1
+th-empty-value: exit=1
+th-malformed-key: exit=1
+th-duplicate-key: exit=1
+en-missing-used-key: exit=1

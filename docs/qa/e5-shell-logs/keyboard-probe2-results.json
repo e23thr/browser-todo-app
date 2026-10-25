@@ -1,0 +1,82 @@
+[
+  {
+    "step": "drawer opened (menu button)",
+    "role": "dialog",
+    "ariaModal": "true",
+    "ariaLabel": "Menu",
+    "backgroundHidden": "true",
+    "scrimPresent": true,
+    "active": {
+      "tag": "div",
+      "cls": "drawer",
+      "inDrawer": true
+    }
+  },
+  {
+    "step": "focus trap: 14 tabs",
+    "allInsideDrawer": true,
+    "escapedAt": -1
+  },
+  {
+    "step": "focus trap: 6 shift-tabs",
+    "allInsideDrawer": true,
+    "escapedAt": -1
+  },
+  {
+    "step": "after Esc (menu opener)",
+    "drawerPresent": false,
+    "backgroundHidden": null,
+    "active": {
+      "tag": "button",
+      "cls": "icon-button",
+      "text": "Open navigation menu"
+    }
+  },
+  {
+    "step": "drawer via More tab; after Esc",
+    "openedActive": {
+      "tag": "div",
+      "cls": "drawer",
+      "text": "Menu",
+      "inDrawer": true,
+      "tabindex": "-1"
+    },
+    "closed": {
+      "drawerPresent": false,
+      "active": {
+        "tag": "button",
+        "cls": "tab",
+        "text": "More"
+      }
+    }
+  },
+  {
+    "step": "scrim click at 400px width",
+    "drawerPresent": false
+  },
+  {
+    "step": "route change -> #/all (tab bar)",
+    "active": {
+      "tag": "h1",
+      "tabindex": "-1",
+      "text": "All open"
+    },
+    "polite": "View: All open",
+    "assertive": "",
+    "ariaCurrent": [
+      "All open"
+    ],
+    "hash": "#/all"
+  },
+  {
+    "step": "route change -> #/settings (drawer link, lazy chunk)",
+    "active": {
+      "tag": "h1",
+      "tabindex": "-1",
+      "text": "Settings"
+    },
+    "drawerPresent": false,
+    "polite": "View: Settings",
+    "hash": "#/settings"
+  }
+]

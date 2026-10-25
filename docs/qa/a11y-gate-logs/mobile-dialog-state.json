@@ -1,0 +1,34 @@
+{
+  "after-create-list": {
+    "url": "http://127.0.0.1:4188/browser-todo-app/#/lists",
+    "layerHtml": "",
+    "visibleDialogCount": 0,
+    "visibleDialogClasses": [],
+    "active": "BUTTON.button button-primary",
+    "ariaHiddenBody": null
+  },
+  "after-add-task": {
+    "url": "http://127.0.0.1:4188/browser-todo-app/#/all",
+    "layerHtml": "",
+    "visibleDialogCount": 0,
+    "visibleDialogClasses": [],
+    "active": "BODY.",
+    "ariaHiddenBody": null
+  },
+  "at-settings-hashchange": {
+    "url": "http://127.0.0.1:4188/browser-todo-app/#/settings",
+    "layerHtml": "",
+    "visibleDialogCount": 0,
+    "visibleDialogClasses": [],
+    "active": "H1.view-title",
+    "ariaHiddenBody": null
+  },
+  "at-settings-after-reload": {
+    "url": "http://127.0.0.1:4188/browser-todo-app/#/settings",
+    "layerHtml": "",
+    "visibleDialogCount": 0,
+    "visibleDialogClasses": [],
+    "active": "BODY.",
+    "ariaHiddenBody": null
+  }
+}

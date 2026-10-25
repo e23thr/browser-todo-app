@@ -1,0 +1,78 @@
+{
+  "scans": [
+    {
+      "label": "onboarding[light]",
+      "violations": [],
+      "passes": 11
+    },
+    {
+      "label": "onboarding[dark]",
+      "violations": [],
+      "passes": 11
+    },
+    {
+      "label": "recovery[light]",
+      "violations": [],
+      "passes": 10
+    },
+    {
+      "label": "recovery[dark]",
+      "violations": [],
+      "passes": 10
+    }
+  ],
+  "focusWalks": [
+    {
+      "label": "onboarding",
+      "stops": [
+        "SUMMARY. ring=true name=How backups work",
+        "BUTTON.button button-primary ring=true name=Get started",
+        "BODY",
+        "SUMMARY. ring=true name=How backups work",
+        "BUTTON.button button-primary ring=true name=Get started",
+        "BODY",
+        "SUMMARY. ring=true name=How backups work",
+        "BUTTON.button button-primary ring=true name=Get started",
+        "BODY",
+        "SUMMARY. ring=true name=How backups work",
+        "BUTTON.button button-primary ring=true name=Get started",
+        "BODY",
+        "SUMMARY. ring=true name=How backups work",
+        "BUTTON.button button-primary ring=true name=Get started",
+        "BODY"
+      ]
+    },
+    {
+      "label": "recovery",
+      "stops": [
+        "BUTTON.button button-primary ring=true name=Restore from a backup",
+        "BUTTON.button button-secondary ring=true name=Start fresh",
+        "BODY",
+        "BUTTON.button button-primary ring=true name=Restore from a backup",
+        "BUTTON.button button-secondary ring=true name=Start fresh",
+        "BODY",
+        "BUTTON.button button-primary ring=true name=Restore from a backup",
+        "BUTTON.button button-secondary ring=true name=Start fresh",
+        "BODY",
+        "BUTTON.button button-primary ring=true name=Restore from a backup",
+        "BUTTON.button button-secondary ring=true name=Start fresh",
+        "BODY",
+        "BUTTON.button button-primary ring=true name=Restore from a backup",
+        "BUTTON.button button-secondary ring=true name=Start fresh",
+        "BODY"
+      ]
+    },
+    {
+      "label": "recovery-start-fresh-keyboard",
+      "finalH1": [
+        "Today"
+      ]
+    },
+    {
+      "label": "recovery-start-fresh-keyboard",
+      "finalH1": [
+        "Today"
+      ]
+    }
+  ]
+}

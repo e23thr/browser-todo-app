@@ -1,0 +1,36 @@
+mobile /: clean
+mobile #/all: clean
+mobile #/completed: clean
+mobile #/lists: clean
+mobile #/settings: clean
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/a11y-gate-logs/axe-mobile-list.json
+task-list children: [
+ {
+  "tag": "li",
+  "role": null,
+  "cls": "group-row",
+  "ariaHidden": null,
+  "text": "Home (3)"
+ },
+ {
+  "tag": "li",
+  "role": null,
+  "cls": "task-row",
+  "ariaHidden": null,
+  "text": "Buy milkHomeHome"
+ },
+ {
+  "tag": "li",
+  "role": null,
+  "cls": "task-row",
+  "ariaHidden": null,
+  "text": "Pay electricity billHomeHome"
+ },
+ {
+  "tag": "li",
+  "role": null,
+  "cls": "task-row",
+  "ariaHidden": null,
+  "text": "Send monthly reportHomeHome"
+ }
+]

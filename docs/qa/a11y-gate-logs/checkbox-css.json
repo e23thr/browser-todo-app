@@ -1,0 +1,17 @@
+{
+  "rules": {
+    "found": [],
+    "computed": {
+      "padding": "0px",
+      "margin": "-10px",
+      "width": "24px",
+      "height": "24px",
+      "boxSizing": "content-box"
+    },
+    "rect": {
+      "w": 24,
+      "h": 24
+    },
+    "matchedCbp": true
+  }
+}

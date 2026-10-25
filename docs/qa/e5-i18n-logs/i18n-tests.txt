@@ -1,0 +1,95 @@
+# i18n unit + QA drill tests
+
+ RUN  v5.0.5 /home/ubuntu/workspace/browser-todo-app
+
+ ✓ tests/unit/i18n-check.test.ts > compareCatalogs > passes identical catalogs with identical placeholders 24ms
+ ✓ tests/unit/i18n-check.test.ts > compareCatalogs > flags a key missing from th 1ms
+ ✓ tests/unit/i18n-check.test.ts > compareCatalogs > flags a key extra in th 2ms
+ ✓ tests/unit/i18n-check.test.ts > compareCatalogs > flags placeholder sets that differ 1ms
+ ✓ tests/unit/i18n-check.test.ts > compareCatalogs > flags non-string and empty values 1ms
+ ✓ tests/unit/i18n-check.test.ts > compareCatalogs > flags malformed keys 1ms
+ ✓ tests/unit/i18n-check.test.ts > raw-text checks > detects duplicate keys JSON.parse would silently collapse 1ms
+ ✓ tests/unit/i18n-check.test.ts > raw-text checks > extracts placeholder sets 1ms
+ ✓ tests/unit/i18n-check.test.ts > findKeyUsages > collects single- and double-quoted literal keys 2ms
+ ✓ tests/unit/i18n-check.test.ts > findKeyUsages > reports non-literal call sites by line and ignores look-alike identifiers 1ms
+ ✓ tests/unit/i18n-check.test.ts > checkI18n — fixtures (every failure path proven) > passes a consistent fixture 3ms
+ ✓ tests/unit/i18n-check.test.ts > checkI18n — fixtures (every failure path proven) > fails on a missing key, an extra key and a used-but-undefined key 2ms
+ ✓ tests/unit/i18n-check.test.ts > checkI18n — fixtures (every failure path proven) > fails when th drops a placeholder 1ms
+ ✓ tests/unit/i18n-check.test.ts > checkI18n — fixtures (every failure path proven) > lists dynamic call sites as informational only 1ms
+ ✓ tests/unit/i18n-check.test.ts > checkI18n — fixtures (every failure path proven) > reports raw violations through formatReport 1ms
+ ✓ tests/unit/i18n-check.test.ts > checkI18n — the real catalogs > src/i18n/en.json and th.json are key-complete and every call site resolves 31ms
+ ✓ tests/unit/i18n-format.test.ts > resolveMessage — catalog resolution > prefers the active catalog 18ms
+ ✓ tests/unit/i18n-format.test.ts > resolveMessage — catalog resolution > falls back to English when the active catalog lacks the key 1ms
+ ✓ tests/unit/i18n-format.test.ts > resolveMessage — catalog resolution > returns the key itself when neither catalog has it 1ms
+ ✓ tests/unit/i18n-format.test.ts > resolveMessage — catalog resolution > treats an empty active catalog as pre-boot (English source) 3ms
+ ✓ tests/unit/i18n-format.test.ts > resolveMessage — {name} interpolation > substitutes every placeholder from params 1ms
+ ✓ tests/unit/i18n-format.test.ts > resolveMessage — {name} interpolation > stringifies numbers, including 0 0ms
+ ✓ tests/unit/i18n-format.test.ts > resolveMessage — {name} interpolation > keeps an unknown placeholder literal and reports it 4ms
+ ✓ tests/unit/i18n-format.test.ts > resolveMessage — {name} interpolation > reports every placeholder when params are omitted entirely 1ms
+ ✓ tests/unit/i18n-format.test.ts > resolveMessage — {name} interpolation > reports a repeated missing placeholder only once 1ms
+ ✓ tests/unit/i18n-format.test.ts > resolveMessage — {name} interpolation > leaves templates without placeholders untouched 4ms
+stderr | tests/unit/i18n.test.ts > t() — interpolation and local logging > logs a missing param once and keeps the placeholder visible
+i18n: missing param(s) count for key "view.count"
+
+stderr | tests/unit/i18n.test.ts > t() — interpolation and local logging > logs a key missing from every catalog once and shows the key
+i18n: missing key "no.such.key" in locale "en" and in English — showing the key
+
+ ✓ tests/unit/i18n-reload-qa.test.ts > E5 QA — locale durability across a simulated reload > restores Thai from settings.locale after the reload and does not clobber the row 162ms
+ ✓ tests/unit/i18n-reload-qa.test.ts > E5 QA — locale durability across a simulated reload > diagnostic: the persistence port reads Thai back in session 2 28ms
+ ✓ tests/unit/i18n-reload-qa.test.ts > E5 QA — locale durability across a simulated reload > diagnostic: the settings row is visible to wrapper reads in session 2 (not denylisted) 28ms
+ ✓ tests/unit/i18n.test.ts > locale surface > ships exactly English and Thai at MVP (PO Q9) with a strict guard 19ms
+ ✓ tests/unit/i18n.test.ts > locale surface > keeps the Thai pack unloaded until it is first selected (per-locale lazy load) 2ms
+ ✓ tests/unit/i18n.test.ts > setLocale — switching > applies the Thai catalog, html[lang] and back again 18ms
+ ✓ tests/unit/i18n.test.ts > setLocale — switching > rejects an unsupported locale and leaves the active locale untouched 9ms
+ ✓ tests/unit/i18n.test.ts > t() — interpolation and local logging > interpolates params into the active catalog 1ms
+ ✓ tests/unit/i18n.test.ts > t() — interpolation and local logging > logs a missing param once and keeps the placeholder visible 8ms
+ ✓ tests/unit/i18n.test.ts > t() — interpolation and local logging > logs a key missing from every catalog once and shows the key 1ms
+ ✓ tests/unit/i18n.test.ts > t() — interpolation and local logging > never logs for keys that exist (§7.2 console hygiene) 1ms
+ ✓ tests/unit/i18n.test.ts > initLocale — boot > applies the persisted locale from the port 2ms
+ ✓ tests/unit/i18n.test.ts > initLocale — boot > boots on English when nothing is stored or the stored value is invalid 1ms
+ ✓ tests/unit/i18n.test.ts > initLocale — boot > persists only real user switches, not an unchanged locale 1ms
+stderr | tests/unit/i18n.test.ts > boot resilience against a broken locale pack > falls back to English when the persisted pack fails to load
+i18n: could not load the "th" locale pack Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock
+    at createHelpfulError (file:///home/ubuntu/workspace/browser-todo-app/node_modules/@vitest/mocker/dist/chunk-registry.js:203:16)
+    at ManualMockedModule.resolve (file:///home/ubuntu/workspace/browser-todo-app/node_modules/@vitest/mocker/dist/chunk-registry.js:177:10)
+    at VitestMocker.callFunctionMock (file:///home/ubuntu/workspace/browser-todo-app/node_modules/vitest/dist/chunks/index.CK-t0WMg.js:332:30)
+    ... 5 lines matching cause stack trace ...
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async Promise.all (index 0) {
+  cause: Error: simulated pack failure
+      at /home/ubuntu/workspace/browser-todo-app/tests/unit/i18n.test.ts:192:13
+      at ManualMockedModule.factory (file:///home/ubuntu/workspace/browser-todo-app/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:7388:78)
+      at ManualMockedModule.resolve (file:///home/ubuntu/workspace/browser-todo-app/node_modules/@vitest/mocker/dist/chunk-registry.js:175:19)
+      at VitestMocker.callFunctionMock (file:///home/ubuntu/workspace/browser-todo-app/node_modules/vitest/dist/chunks/index.CK-t0WMg.js:332:30)
+      at file:///home/ubuntu/workspace/browser-todo-app/node_modules/vitest/dist/chunks/index.CK-t0WMg.js:415:23
+      at Traces.$ (file:///home/ubuntu/workspace/browser-todo-app/node_modules/vitest/dist/traces.js:143:27)
+      at VitestMocker.requestWithMockedModule (file:///home/ubuntu/workspace/browser-todo-app/node_modules/vitest/dist/chunks/index.CK-t0WMg.js:380:21)
+      at VitestModuleRunner.cachedRequest (file:///home/ubuntu/workspace/browser-todo-app/node_modules/vitest/dist/chunks/index.CK-t0WMg.js:595:38)
+      at request (file:///home/ubuntu/workspace/browser-todo-app/node_modules/vite/dist/node/module-runner.js:1239:76)
+      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+}
+
+ ✓ tests/unit/i18n.test.ts > initLocale — boot > bounds boot when the persistence backend hangs (never blocks paint) 55ms
+ ✓ tests/unit/i18n.test.ts > boot resilience against a broken locale pack > falls back to English when the persisted pack fails to load 39ms
+stderr | tests/unit/i18n-fallback.test.ts > English fallback for a key the active locale lacks > renders the English string, warns once locally, and stays deduped
+i18n: missing key "nav.settings" in locale "th" — falling back to English
+
+ ✓ tests/unit/i18n-fallback.test.ts > English fallback for a key the active locale lacks > renders the English string, warns once locally, and stays deduped 48ms
+ ✓ tests/unit/i18n-fallback.test.ts > English fallback for a key the active locale lacks > still resolves keys the active locale does have 1ms
+ ✓ tests/unit/i18n-fallback.test.ts > English fallback for a key the active locale lacks > never claims a fallback for a key the active locale has 5ms
+ ✓ tests/unit/i18n-persistence.test.ts > createSettingsLocalePersistence — load > returns null while no settings row exists (first run) 72ms
+ ✓ tests/unit/i18n-persistence.test.ts > createSettingsLocalePersistence — load > returns the stored locale once a row carries one 9ms
+ ✓ tests/unit/i18n-persistence.test.ts > createSettingsLocalePersistence — load > ignores a stored value that is not a shipped locale (C5 future-proofing) 6ms
+ ✓ tests/unit/i18n-persistence.test.ts > createSettingsLocalePersistence — load > degrades to session-only when IndexedDB is unavailable 1ms
+stderr | tests/unit/i18n-persistence.test.ts > createSettingsLocalePersistence — save > logs and returns (never throws) when storage is unavailable
+i18n: locale not persisted (storage unavailable) UNAVAILABLE
+
+ ✓ tests/unit/i18n-persistence.test.ts > createSettingsLocalePersistence — save > creates the settings row with ADR-002 defaults on the first switch 7ms
+ ✓ tests/unit/i18n-persistence.test.ts > createSettingsLocalePersistence — save > touches ONLY the locale field — other settings owners are never clobbered 4ms
+ ✓ tests/unit/i18n-persistence.test.ts > createSettingsLocalePersistence — save > logs and returns (never throws) when storage is unavailable 5ms
+
+ Test Files  6 passed (6)
+      Tests  52 passed (52)
+   Start at  20:48:18
+   Duration  2.16s (environment 78%, setup 11%, tests 6%, import 2%, transform 1%, worker 1%)
+

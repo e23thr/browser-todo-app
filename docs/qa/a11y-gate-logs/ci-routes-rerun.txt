@@ -1,0 +1,9 @@
+/: h1=["Your data lives in this browser"] onboarding=true
+#/today: h1=["Your data lives in this browser"] onboarding=true
+#/week: h1=["Your data lives in this browser"] onboarding=true
+#/all: h1=["Your data lives in this browser"] onboarding=true
+#/completed: h1=["Your data lives in this browser"] onboarding=true
+#/search: h1=["Your data lives in this browser"] onboarding=true
+#/list/01TESTLIST: h1=["Your data lives in this browser"] onboarding=true
+#/settings: h1=["Your data lives in this browser"] onboarding=true
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/a11y-gate-logs/ci-routes-fresh-profile.json

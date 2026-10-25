@@ -1,0 +1,734 @@
+[
+  {
+    "scenario": "explicit light, OS dark",
+    "pref": "light",
+    "os": "dark",
+    "cpuThrottle": 1,
+    "load": 1,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 14,
+    "mutTime": 62.80000001192093,
+    "fcp": 64,
+    "marginMs": 50,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "explicit light, OS dark",
+    "pref": "light",
+    "os": "dark",
+    "cpuThrottle": 1,
+    "load": 2,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 7.399999976158142,
+    "mutTime": 45.5,
+    "fcp": 48,
+    "marginMs": 40.6,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "explicit light, OS dark",
+    "pref": "light",
+    "os": "dark",
+    "cpuThrottle": 1,
+    "load": 3,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 6.5999999940395355,
+    "mutTime": 37.5,
+    "fcp": 40,
+    "marginMs": 33.4,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "explicit light, OS dark",
+    "pref": "light",
+    "os": "dark",
+    "cpuThrottle": 6,
+    "load": 1,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 30,
+    "mutTime": 153.09999999403954,
+    "fcp": 152,
+    "marginMs": 122,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "explicit light, OS dark",
+    "pref": "light",
+    "os": "dark",
+    "cpuThrottle": 6,
+    "load": 2,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 29.5,
+    "mutTime": 147.19999998807907,
+    "fcp": 144,
+    "marginMs": 114.5,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "explicit light, OS dark",
+    "pref": "light",
+    "os": "dark",
+    "cpuThrottle": 6,
+    "load": 3,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 29.599999994039536,
+    "mutTime": 147.89999997615814,
+    "fcp": 148,
+    "marginMs": 118.4,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "explicit dark, OS light",
+    "pref": "dark",
+    "os": "light",
+    "cpuThrottle": 1,
+    "load": 1,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 6.5999999940395355,
+    "mutTime": 40.5,
+    "fcp": 44,
+    "marginMs": 37.4,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "explicit dark, OS light",
+    "pref": "dark",
+    "os": "light",
+    "cpuThrottle": 1,
+    "load": 2,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 6.200000017881393,
+    "mutTime": 44.5,
+    "fcp": 48,
+    "marginMs": 41.8,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "explicit dark, OS light",
+    "pref": "dark",
+    "os": "light",
+    "cpuThrottle": 1,
+    "load": 3,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 6.600000023841858,
+    "mutTime": 36,
+    "fcp": 40,
+    "marginMs": 33.4,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "explicit dark, OS light",
+    "pref": "dark",
+    "os": "light",
+    "cpuThrottle": 6,
+    "load": 1,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 27.69999998807907,
+    "mutTime": 146.5,
+    "fcp": 144,
+    "marginMs": 116.3,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "explicit dark, OS light",
+    "pref": "dark",
+    "os": "light",
+    "cpuThrottle": 6,
+    "load": 2,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 30.69999998807907,
+    "mutTime": 155.59999999403954,
+    "fcp": 152,
+    "marginMs": 121.3,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "explicit dark, OS light",
+    "pref": "dark",
+    "os": "light",
+    "cpuThrottle": 6,
+    "load": 3,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 27.599999994039536,
+    "mutTime": 147.2999999821186,
+    "fcp": 148,
+    "marginMs": 120.4,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "system, OS dark",
+    "pref": "system",
+    "os": "dark",
+    "cpuThrottle": 1,
+    "load": 1,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 6.699999988079071,
+    "mutTime": 35.39999997615814,
+    "fcp": 40,
+    "marginMs": 33.3,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "system, OS dark",
+    "pref": "system",
+    "os": "dark",
+    "cpuThrottle": 1,
+    "load": 2,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 7.199999988079071,
+    "mutTime": 43.29999998211861,
+    "fcp": 48,
+    "marginMs": 40.8,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "system, OS dark",
+    "pref": "system",
+    "os": "dark",
+    "cpuThrottle": 1,
+    "load": 3,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 6,
+    "mutTime": 36.70000001788139,
+    "fcp": 40,
+    "marginMs": 34,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "system, OS dark",
+    "pref": "system",
+    "os": "dark",
+    "cpuThrottle": 6,
+    "load": 1,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 27.5,
+    "mutTime": 143.10000002384186,
+    "fcp": 140,
+    "marginMs": 112.5,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "system, OS dark",
+    "pref": "system",
+    "os": "dark",
+    "cpuThrottle": 6,
+    "load": 2,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 28.700000017881393,
+    "mutTime": 148.7000000178814,
+    "fcp": 148,
+    "marginMs": 119.3,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "system, OS dark",
+    "pref": "system",
+    "os": "dark",
+    "cpuThrottle": 6,
+    "load": 3,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 31.400000005960464,
+    "mutTime": 156.30000001192093,
+    "fcp": 156,
+    "marginMs": 124.6,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "system, OS light",
+    "pref": "system",
+    "os": "light",
+    "cpuThrottle": 1,
+    "load": 1,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 7.800000011920929,
+    "mutTime": 42.599999994039536,
+    "fcp": 48,
+    "marginMs": 40.2,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "system, OS light",
+    "pref": "system",
+    "os": "light",
+    "cpuThrottle": 1,
+    "load": 2,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 6.199999988079071,
+    "mutTime": 46,
+    "fcp": 48,
+    "marginMs": 41.8,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "system, OS light",
+    "pref": "system",
+    "os": "light",
+    "cpuThrottle": 1,
+    "load": 3,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 6.5,
+    "mutTime": 48.29999998211861,
+    "fcp": 52,
+    "marginMs": 45.5,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "system, OS light",
+    "pref": "system",
+    "os": "light",
+    "cpuThrottle": 6,
+    "load": 1,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 31.100000023841858,
+    "mutTime": 155.80000001192093,
+    "fcp": 152,
+    "marginMs": 120.9,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "system, OS light",
+    "pref": "system",
+    "os": "light",
+    "cpuThrottle": 6,
+    "load": 2,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 29.899999976158142,
+    "mutTime": 179,
+    "fcp": 180,
+    "marginMs": 150.1,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "system, OS light",
+    "pref": "system",
+    "os": "light",
+    "cpuThrottle": 6,
+    "load": 3,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 31.69999998807907,
+    "mutTime": 155.69999998807907,
+    "fcp": 156,
+    "marginMs": 124.3,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "absent pref, OS dark",
+    "pref": null,
+    "os": "dark",
+    "cpuThrottle": 1,
+    "load": 1,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 6,
+    "mutTime": 45.400000005960464,
+    "fcp": 48,
+    "marginMs": 42,
+    "flashFree": true,
+    "storageKeys": []
+  },
+  {
+    "scenario": "absent pref, OS dark",
+    "pref": null,
+    "os": "dark",
+    "cpuThrottle": 1,
+    "load": 2,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 5.700000017881393,
+    "mutTime": 37.400000005960464,
+    "fcp": 40,
+    "marginMs": 34.3,
+    "flashFree": true,
+    "storageKeys": []
+  },
+  {
+    "scenario": "absent pref, OS dark",
+    "pref": null,
+    "os": "dark",
+    "cpuThrottle": 1,
+    "load": 3,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 5.800000011920929,
+    "mutTime": 46.599999994039536,
+    "fcp": 52,
+    "marginMs": 46.2,
+    "flashFree": true,
+    "storageKeys": []
+  },
+  {
+    "scenario": "absent pref, OS dark",
+    "pref": null,
+    "os": "dark",
+    "cpuThrottle": 6,
+    "load": 1,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 27.299999982118607,
+    "mutTime": 142.2999999821186,
+    "fcp": 140,
+    "marginMs": 112.7,
+    "flashFree": true,
+    "storageKeys": []
+  },
+  {
+    "scenario": "absent pref, OS dark",
+    "pref": null,
+    "os": "dark",
+    "cpuThrottle": 6,
+    "load": 2,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 29.599999994039536,
+    "mutTime": 149.09999999403954,
+    "fcp": 148,
+    "marginMs": 118.4,
+    "flashFree": true,
+    "storageKeys": []
+  },
+  {
+    "scenario": "absent pref, OS dark",
+    "pref": null,
+    "os": "dark",
+    "cpuThrottle": 6,
+    "load": 3,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 28.299999982118607,
+    "mutTime": 144.2999999821186,
+    "fcp": 144,
+    "marginMs": 115.7,
+    "flashFree": true,
+    "storageKeys": []
+  },
+  {
+    "scenario": "absent pref, OS light",
+    "pref": null,
+    "os": "light",
+    "cpuThrottle": 1,
+    "load": 1,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 5.700000017881393,
+    "mutTime": 45.20000001788139,
+    "fcp": 48,
+    "marginMs": 42.3,
+    "flashFree": true,
+    "storageKeys": []
+  },
+  {
+    "scenario": "absent pref, OS light",
+    "pref": null,
+    "os": "light",
+    "cpuThrottle": 1,
+    "load": 2,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 6,
+    "mutTime": 40.5,
+    "fcp": 44,
+    "marginMs": 38,
+    "flashFree": true,
+    "storageKeys": []
+  },
+  {
+    "scenario": "absent pref, OS light",
+    "pref": null,
+    "os": "light",
+    "cpuThrottle": 1,
+    "load": 3,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 5.800000011920929,
+    "mutTime": 41,
+    "fcp": 44,
+    "marginMs": 38.2,
+    "flashFree": true,
+    "storageKeys": []
+  },
+  {
+    "scenario": "absent pref, OS light",
+    "pref": null,
+    "os": "light",
+    "cpuThrottle": 6,
+    "load": 1,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 31.80000001192093,
+    "mutTime": 151,
+    "fcp": 148,
+    "marginMs": 116.2,
+    "flashFree": true,
+    "storageKeys": []
+  },
+  {
+    "scenario": "absent pref, OS light",
+    "pref": null,
+    "os": "light",
+    "cpuThrottle": 6,
+    "load": 2,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 29.400000005960464,
+    "mutTime": 151.19999998807907,
+    "fcp": 148,
+    "marginMs": 118.6,
+    "flashFree": true,
+    "storageKeys": []
+  },
+  {
+    "scenario": "absent pref, OS light",
+    "pref": null,
+    "os": "light",
+    "cpuThrottle": 6,
+    "load": 3,
+    "expectedTheme": "light",
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "setAttrTime": 26.799999982118607,
+    "mutTime": 141.19999998807907,
+    "fcp": 140,
+    "marginMs": 113.2,
+    "flashFree": true,
+    "storageKeys": []
+  },
+  {
+    "scenario": "invalid pref, OS dark",
+    "pref": "banana",
+    "os": "dark",
+    "cpuThrottle": 1,
+    "load": 1,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 5.800000011920929,
+    "mutTime": 44.80000001192093,
+    "fcp": 48,
+    "marginMs": 42.2,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "invalid pref, OS dark",
+    "pref": "banana",
+    "os": "dark",
+    "cpuThrottle": 1,
+    "load": 2,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 6,
+    "mutTime": 36.80000001192093,
+    "fcp": 40,
+    "marginMs": 34,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "invalid pref, OS dark",
+    "pref": "banana",
+    "os": "dark",
+    "cpuThrottle": 1,
+    "load": 3,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 6.699999988079071,
+    "mutTime": 42.69999998807907,
+    "fcp": 48,
+    "marginMs": 41.3,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "invalid pref, OS dark",
+    "pref": "banana",
+    "os": "dark",
+    "cpuThrottle": 6,
+    "load": 1,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 33.5,
+    "mutTime": 160.30000001192093,
+    "fcp": 160,
+    "marginMs": 126.5,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "invalid pref, OS dark",
+    "pref": "banana",
+    "os": "dark",
+    "cpuThrottle": 6,
+    "load": 2,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 28.099999994039536,
+    "mutTime": 150.80000001192093,
+    "fcp": 148,
+    "marginMs": 119.9,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  },
+  {
+    "scenario": "invalid pref, OS dark",
+    "pref": "banana",
+    "os": "dark",
+    "cpuThrottle": 6,
+    "load": 3,
+    "expectedTheme": "dark",
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "setAttrTime": 26.799999982118607,
+    "mutTime": 142.89999997615814,
+    "fcp": 140,
+    "marginMs": 113.2,
+    "flashFree": true,
+    "storageKeys": [
+      "todo:prefs:v1:theme"
+    ]
+  }
+]

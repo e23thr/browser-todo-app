@@ -1,0 +1,58 @@
+{
+  "geometry": [
+    {
+      "value": "en",
+      "checked": true,
+      "rect": {
+        "x": 29,
+        "y": 454.765625,
+        "w": 18,
+        "h": 18
+      },
+      "display": "block",
+      "visibility": "visible",
+      "opacity": "1",
+      "clip": "auto",
+      "clipPath": "none",
+      "position": "static",
+      "labelRect": {
+        "x": 16,
+        "y": 441.765625,
+        "w": 102.609375,
+        "h": 44
+      },
+      "labelText": "English",
+      "elementAtCentre": "INPUT.",
+      "inViewport": true
+    },
+    {
+      "value": "th",
+      "checked": false,
+      "rect": {
+        "x": 139.609375,
+        "y": 454.765625,
+        "w": 18,
+        "h": 18
+      },
+      "display": "block",
+      "visibility": "visible",
+      "opacity": "1",
+      "clip": "auto",
+      "clipPath": "none",
+      "position": "static",
+      "labelRect": {
+        "x": 126.609375,
+        "y": 441.765625,
+        "w": 73.109375,
+        "h": 44
+      },
+      "labelText": "ไทย",
+      "elementAtCentre": "INPUT.",
+      "inViewport": true
+    }
+  ],
+  "labelCount": 1,
+  "labelClick": "ok",
+  "langAfterLabelClick": "th",
+  "finalLang": "th"
+}

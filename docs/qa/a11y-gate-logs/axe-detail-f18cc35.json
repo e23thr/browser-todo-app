@@ -1,0 +1,123 @@
+{
+  "detail": [
+    {
+      "label": "route:#/all",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "description": "Ensure that lists are structured correctly",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.14/list?application=playwright",
+      "nodes": [
+        {
+          "target": [
+            ".task-list"
+          ],
+          "html": "<ul class=\"task-list\" aria-label=\"All open\">",
+          "failureSummary": "Fix all of the following:\n  List element has direct children that are not allowed: [role=presentation]",
+          "any": [],
+          "all": [],
+          "none": [
+            "List element has direct children that are not allowed: [role=presentation]"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "route:#/all",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "description": "Ensure touch targets have sufficient size and space",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.14/target-size?application=playwright",
+      "nodes": [
+        {
+          "target": [
+            "input[aria-label=\"Mark \\\"Buy milk\\\" as complete\"]"
+          ],
+          "html": "<input type=\"checkbox\" class=\"task-check\" aria-label=\"Mark &quot;Buy milk&quot; as complete\" tabindex=\"0\">",
+          "failureSummary": "Fix any of the following:\n  Target has insufficient size because it is partially obscured (smallest space is 22px by 24px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px.",
+          "any": [
+            "Target has insufficient size because it is partially obscured (smallest space is 22px by 24px, should be at least 24px by 24px)",
+            "Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 22px instead of at least 24px."
+          ],
+          "all": [],
+          "none": []
+        }
+      ]
+    },
+    {
+      "label": "route:#/settings",
+      "id": "label",
+      "impact": "critical",
+      "help": "Form elements must have labels",
+      "description": "Ensure every form element has a label",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.14/label?application=playwright",
+      "nodes": [
+        {
+          "target": [
+            "input[type=\"file\"]"
+          ],
+          "html": "<input type=\"file\" accept=\"application/json,.json\" class=\"visually-hidden\" data-testid=\"import-file-input\">",
+          "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+          "any": [
+            "Element does not have an implicit (wrapped) <label>",
+            "Element does not have an explicit <label>",
+            "aria-label attribute does not exist or is empty",
+            "aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty",
+            "Element has no title attribute",
+            "Element has no placeholder attribute",
+            "Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+          ],
+          "all": [],
+          "none": []
+        }
+      ]
+    }
+  ],
+  "ciBlindSpot": {
+    "onboardingPresentOnFreshProfile": true,
+    "h1s": [
+      "Your data lives in this browser"
+    ],
+    "violations": [],
+    "passes": 11,
+    "doesCiSpecDismissOnboarding": false
+  },
+  "checkboxGeometry": {
+    "rect": {
+      "x": 435,
+      "y": 508.9375,
+      "w": 24,
+      "h": 24
+    },
+    "boxSizing": "content-box",
+    "width": "24px",
+    "height": "24px",
+    "padding": "0px",
+    "margin": "-10px",
+    "titleRect": {
+      "x": 457,
+      "y": 498.9375,
+      "w": 527,
+      "h": 44
+    },
+    "overlapsTitle": true,
+    "hitTarget": "INPUT.task-check",
+    "hitOutside": "MAIN.app-main"
+  },
+  "fileInput": {
+    "ariaLabel": null,
+    "ariaLabelledby": null,
+    "labels": 0,
+    "id": "",
+    "display": "block",
+    "visibility": "visible",
+    "opacity": "1",
+    "clip": "auto",
+    "rect": {
+      "w": 1,
+      "h": 1
+    },
+    "className": "visually-hidden"
+  }
+}

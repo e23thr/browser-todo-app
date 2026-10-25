@@ -1,0 +1,44 @@
+{
+  "detail": [],
+  "ciBlindSpot": {
+    "onboardingPresentOnFreshProfile": true,
+    "h1s": [
+      "Your data lives in this browser"
+    ],
+    "violations": [],
+    "passes": 11,
+    "doesCiSpecDismissOnboarding": false
+  },
+  "checkboxGeometry": {
+    "rect": {
+      "x": 455.5,
+      "y": 508.9375,
+      "w": 24,
+      "h": 24
+    },
+    "boxSizing": "border-box",
+    "width": "24px",
+    "height": "24px",
+    "padding": "0px",
+    "margin": "3px 3px 3px 4px",
+    "titleRect": null,
+    "overlapsTitle": false,
+    "hitTarget": "INPUT.task-check",
+    "hitOutside": "LABEL.task-check-hit"
+  },
+  "fileInput": {
+    "ariaLabel": "Import…",
+    "ariaLabelledby": null,
+    "labels": 0,
+    "id": "",
+    "display": "block",
+    "visibility": "visible",
+    "opacity": "1",
+    "clip": "auto",
+    "rect": {
+      "w": 1,
+      "h": 1
+    },
+    "className": "visually-hidden"
+  }
+}

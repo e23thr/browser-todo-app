@@ -1,0 +1,442 @@
+[
+  {
+    "step": "reduced-motion (light)",
+    "fab": {
+      "transitionDuration": "0.001s",
+      "transform": "none"
+    },
+    "drawer": {
+      "animationDuration": "0.001s",
+      "animationName": "drawer-in",
+      "transform": "none"
+    },
+    "button": {
+      "transitionDuration": "0.001s"
+    },
+    "segment": null,
+    "scrollBehavior": "auto",
+    "htmlScrollBehavior": "auto"
+  },
+  {
+    "step": "baseline motion (light)",
+    "fabTransition": "0.12s, 0.12s",
+    "fabTransformRule": "none"
+  },
+  {
+    "step": "contrast tokens (light)",
+    "dataTheme": "light",
+    "pairs": [
+      {
+        "label": "text/surface",
+        "fg": "#1b1f27",
+        "bg": "#fff",
+        "ratio": 16.51,
+        "spec": 16.5,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "secondary/surface",
+        "fg": "#5a6372",
+        "bg": "#fff",
+        "ratio": 6.07,
+        "spec": 6.1,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "tertiary/surface",
+        "fg": "#626b7b",
+        "bg": "#fff",
+        "ratio": 5.37,
+        "spec": 5.4,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "tertiary/surface-hover",
+        "fg": "#626b7b",
+        "bg": "#e9edf2",
+        "ratio": 4.57,
+        "spec": 4.6,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "accent-text/surface",
+        "fg": "#2b4abf",
+        "bg": "#fff",
+        "ratio": 7.41,
+        "spec": 7.4,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "on-accent/accent",
+        "fg": "#fff",
+        "bg": "#2e4fc4",
+        "ratio": 6.93,
+        "spec": 6.9,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "on-danger/danger",
+        "fg": "#fff",
+        "bg": "#b3261e",
+        "ratio": 6.54,
+        "spec": 6.5,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "border-control/surface",
+        "fg": "#7d8694",
+        "bg": "#fff",
+        "ratio": 3.68,
+        "spec": 3.7,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "focus/surface",
+        "fg": "#2e4fc4",
+        "bg": "#fff",
+        "ratio": 6.93,
+        "spec": 6.9,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "danger-text/danger-tint",
+        "fg": "#a61b14",
+        "bg": "#fdecea",
+        "ratio": 6.59,
+        "spec": 6.6,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "success-text/success-tint",
+        "fg": "#166534",
+        "bg": "#e7f5ec",
+        "ratio": 6.34,
+        "spec": 6.3,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "warning-text/warning-tint",
+        "fg": "#7a4d00",
+        "bg": "#fbf1d9",
+        "ratio": 6.47,
+        "spec": 6.5,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "info-text/info-tint",
+        "fg": "#1d4ed8",
+        "bg": "#e8eefb",
+        "ratio": 5.76,
+        "spec": 5.8,
+        "match": true,
+        "meetsBar": true
+      }
+    ]
+  },
+  {
+    "step": "rendered elements (light)",
+    "elements": [
+      {
+        "label": "view h1",
+        "color": "rgb(27, 31, 39)",
+        "background": "rgba(0, 0, 0, 0)",
+        "fontSize": "30px",
+        "fontWeight": "650"
+      },
+      {
+        "label": "settings h2",
+        "color": "rgb(27, 31, 39)",
+        "background": "rgba(0, 0, 0, 0)",
+        "fontSize": "20px",
+        "fontWeight": "650"
+      },
+      {
+        "label": "field label",
+        "color": "rgb(27, 31, 39)",
+        "background": "rgba(0, 0, 0, 0)",
+        "fontSize": "14px",
+        "fontWeight": "500"
+      },
+      {
+        "label": "tab label",
+        "missing": true
+      },
+      {
+        "label": "primary button",
+        "missing": true
+      },
+      {
+        "label": "segment label",
+        "color": "rgb(43, 74, 191)",
+        "background": "rgb(242, 244, 247)",
+        "fontSize": "14px",
+        "fontWeight": "650"
+      }
+    ]
+  },
+  {
+    "step": "compact chrome elements (light)",
+    "chrome": [
+      {
+        "label": "tab label (active)",
+        "color": "rgb(43, 74, 191)",
+        "background": "rgba(0, 0, 0, 0)",
+        "ratio": 2.83
+      },
+      {
+        "label": "tab label (inactive)",
+        "missing": true
+      },
+      {
+        "label": "primary button",
+        "color": "rgb(255, 255, 255)",
+        "background": "rgb(46, 79, 196)",
+        "ratio": 6.93
+      },
+      {
+        "label": "FAB",
+        "color": "rgb(255, 255, 255)",
+        "background": "rgb(46, 79, 196)",
+        "ratio": 6.93
+      },
+      {
+        "label": "app bar",
+        "color": "rgb(27, 31, 39)",
+        "background": "rgb(255, 255, 255)",
+        "ratio": 16.51
+      }
+    ]
+  },
+  {
+    "step": "reduced-motion (dark)",
+    "fab": {
+      "transitionDuration": "0.001s",
+      "transform": "none"
+    },
+    "drawer": {
+      "animationDuration": "0.001s",
+      "animationName": "drawer-in",
+      "transform": "none"
+    },
+    "button": {
+      "transitionDuration": "0.001s"
+    },
+    "segment": null,
+    "scrollBehavior": "auto",
+    "htmlScrollBehavior": "auto"
+  },
+  {
+    "step": "baseline motion (dark)",
+    "fabTransition": "0.12s, 0.12s",
+    "fabTransformRule": "none"
+  },
+  {
+    "step": "contrast tokens (dark)",
+    "dataTheme": "dark",
+    "pairs": [
+      {
+        "label": "text/surface",
+        "fg": "#e9ecf2",
+        "bg": "#171b21",
+        "ratio": 14.6,
+        "spec": 14.6,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "secondary/surface",
+        "fg": "#a9b2bf",
+        "bg": "#171b21",
+        "ratio": 8.07,
+        "spec": 8.1,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "tertiary/surface",
+        "fg": "#949dab",
+        "bg": "#171b21",
+        "ratio": 6.31,
+        "spec": 6.3,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "tertiary/surface-hover",
+        "fg": "#949dab",
+        "bg": "#293039",
+        "ratio": 4.87,
+        "spec": 4.9,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "accent-text/surface",
+        "fg": "#8ea8ff",
+        "bg": "#171b21",
+        "ratio": 7.57,
+        "spec": 7.6,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "on-accent/accent",
+        "fg": "#0f1216",
+        "bg": "#5b7cfa",
+        "ratio": 5.1,
+        "spec": 5.1,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "on-danger/danger",
+        "fg": "#0f1216",
+        "bg": "#e2564d",
+        "ratio": 5.07,
+        "spec": 5.1,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "border-control/surface",
+        "fg": "#727c8c",
+        "bg": "#171b21",
+        "ratio": 4.1,
+        "spec": 4.1,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "focus/surface",
+        "fg": "#8ea8ff",
+        "bg": "#171b21",
+        "ratio": 7.57,
+        "spec": 7.6,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "danger-text/danger-tint",
+        "fg": "#ff8a82",
+        "bg": "#2c1a18",
+        "ratio": 7.26,
+        "spec": 7.3,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "success-text/success-tint",
+        "fg": "#5fc98a",
+        "bg": "#15251b",
+        "ratio": 7.78,
+        "spec": 7.8,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "warning-text/warning-tint",
+        "fg": "#e0b25c",
+        "bg": "#2a2213",
+        "ratio": 8,
+        "spec": 8,
+        "match": true,
+        "meetsBar": true
+      },
+      {
+        "label": "info-text/info-tint",
+        "fg": "#8ea8ff",
+        "bg": "#1a2136",
+        "ratio": 6.99,
+        "spec": 7,
+        "match": true,
+        "meetsBar": true
+      }
+    ]
+  },
+  {
+    "step": "rendered elements (dark)",
+    "elements": [
+      {
+        "label": "view h1",
+        "color": "rgb(233, 236, 242)",
+        "background": "rgba(0, 0, 0, 0)",
+        "fontSize": "30px",
+        "fontWeight": "650"
+      },
+      {
+        "label": "settings h2",
+        "color": "rgb(233, 236, 242)",
+        "background": "rgba(0, 0, 0, 0)",
+        "fontSize": "20px",
+        "fontWeight": "650"
+      },
+      {
+        "label": "field label",
+        "color": "rgb(233, 236, 242)",
+        "background": "rgba(0, 0, 0, 0)",
+        "fontSize": "14px",
+        "fontWeight": "500"
+      },
+      {
+        "label": "tab label",
+        "missing": true
+      },
+      {
+        "label": "primary button",
+        "missing": true
+      },
+      {
+        "label": "segment label",
+        "color": "rgb(233, 236, 242)",
+        "background": "rgb(23, 27, 33)",
+        "fontSize": "14px",
+        "fontWeight": "400"
+      }
+    ]
+  },
+  {
+    "step": "compact chrome elements (dark)",
+    "chrome": [
+      {
+        "label": "tab label (active)",
+        "color": "rgb(142, 168, 255)",
+        "background": "rgba(0, 0, 0, 0)",
+        "ratio": 9.2
+      },
+      {
+        "label": "tab label (inactive)",
+        "missing": true
+      },
+      {
+        "label": "primary button",
+        "color": "rgb(15, 18, 22)",
+        "background": "rgb(91, 124, 250)",
+        "ratio": 5.1
+      },
+      {
+        "label": "FAB",
+        "color": "rgb(15, 18, 22)",
+        "background": "rgb(91, 124, 250)",
+        "ratio": 5.1
+      },
+      {
+        "label": "app bar",
+        "color": "rgb(233, 236, 242)",
+        "background": "rgb(23, 27, 33)",
+        "ratio": 14.6
+      }
+    ]
+  }
+]

@@ -1,0 +1,58 @@
+{
+  "steps": [
+    {
+      "label": "fresh",
+      "url": "http://127.0.0.1:4188/browser-todo-app/",
+      "h1": [
+        "Your data lives in this browser"
+      ],
+      "onboarding": true,
+      "recovery": false,
+      "lsStep": null
+    },
+    {
+      "label": "after-onboarding",
+      "url": "http://127.0.0.1:4188/browser-todo-app/",
+      "h1": [
+        "Today"
+      ],
+      "onboarding": false,
+      "recovery": false,
+      "lsStep": "done"
+    },
+    {
+      "label": "reload-1 (no data created)",
+      "url": "http://127.0.0.1:4188/browser-todo-app/",
+      "h1": [
+        "We couldn't find your tasks"
+      ],
+      "onboarding": false,
+      "recovery": true,
+      "lsStep": "done"
+    },
+    {
+      "label": "reload-2",
+      "url": "http://127.0.0.1:4188/browser-todo-app/",
+      "h1": [
+        "We couldn't find your tasks"
+      ],
+      "onboarding": false,
+      "recovery": true,
+      "lsStep": "done"
+    }
+  ],
+  "meta": {
+    "dbs": [
+      {
+        "name": "local-first-todo",
+        "version": 1
+      }
+    ],
+    "ls": [
+      [
+        "todo:prefs:v1:onboardingStep",
+        "done"
+      ]
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "incomplete": [
+    {
+      "rule": "color-contrast",
+      "impact": "serious",
+      "label": "row-menu-open[dark]",
+      "nodes": 1,
+      "sample": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+    }
+  ]
+}

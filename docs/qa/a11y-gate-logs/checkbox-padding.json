@@ -1,0 +1,58 @@
+{
+  "result": {
+    "base": {
+      "padding": "0px",
+      "margin": "-10px",
+      "appearance": "auto",
+      "rect": {
+        "w": 24,
+        "h": 24
+      },
+      "x": 435,
+      "y": 508.9375
+    },
+    "inlineP": {
+      "padding": "0px",
+      "margin": "-10px",
+      "appearance": "auto",
+      "rect": {
+        "w": 24,
+        "h": 24
+      },
+      "x": 435,
+      "y": 508.9375
+    },
+    "appearanceNone": {
+      "padding": "10px",
+      "margin": "-10px",
+      "appearance": "none",
+      "rect": {
+        "w": 44,
+        "h": 44
+      },
+      "x": 435,
+      "y": 498.9375
+    },
+    "restored": {
+      "padding": "0px",
+      "margin": "-10px",
+      "appearance": "auto",
+      "rect": {
+        "w": 24,
+        "h": 24
+      },
+      "x": 435,
+      "y": 508.9375
+    },
+    "title": {
+      "x": 457,
+      "w": 527,
+      "h": 44,
+      "left": 457
+    },
+    "checkboxRight": 459,
+    "overlapPx": 2,
+    "hitAtLeft": "INPUT.task-check",
+    "hitAtRight": "INPUT.task-check"
+  }
+}

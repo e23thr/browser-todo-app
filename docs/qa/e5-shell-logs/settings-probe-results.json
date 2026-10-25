@@ -1,0 +1,128 @@
+[
+  {
+    "step": "boot state",
+    "localStorage": {},
+    "dataTheme": "light",
+    "colorScheme": "light",
+    "themeChecked": "system",
+    "weekStartChecked": "0",
+    "defaultListValue": "",
+    "defaultListDisabled": true,
+    "defaultListOptions": [
+      "No lists yet"
+    ],
+    "politeText": ""
+  },
+  {
+    "step": "boot idb settings record",
+    "record": {
+      "id": "settings",
+      "theme": "system",
+      "locale": "en",
+      "weekStart": 0,
+      "defaultListId": null,
+      "notificationsEnabled": false,
+      "lastBackupAt": null
+    }
+  },
+  {
+    "step": "after UI changes",
+    "localStorage": {
+      "todo:prefs:v1:theme": "dark"
+    },
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "themeChecked": "dark",
+    "weekStartChecked": "1",
+    "defaultListValue": "",
+    "defaultListDisabled": true,
+    "defaultListOptions": [
+      "No lists yet"
+    ],
+    "politeText": "Dark theme applied"
+  },
+  {
+    "step": "after UI changes idb record",
+    "record": {
+      "id": "settings",
+      "theme": "dark",
+      "locale": "en",
+      "weekStart": 1,
+      "defaultListId": null,
+      "notificationsEnabled": false,
+      "lastBackupAt": null
+    }
+  },
+  {
+    "step": "after reload",
+    "localStorage": {
+      "todo:prefs:v1:theme": "dark"
+    },
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "themeChecked": "dark",
+    "weekStartChecked": "1",
+    "defaultListValue": "",
+    "defaultListDisabled": true,
+    "defaultListOptions": [
+      "No lists yet"
+    ],
+    "politeText": ""
+  },
+  {
+    "step": "after reload idb record",
+    "record": {
+      "id": "settings",
+      "theme": "dark",
+      "locale": "en",
+      "weekStart": 1,
+      "defaultListId": null,
+      "notificationsEnabled": false,
+      "lastBackupAt": null
+    }
+  },
+  {
+    "step": "mirror poisoned to light (idb still dark)",
+    "localStorage": {
+      "todo:prefs:v1:theme": "light"
+    },
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "themeChecked": "dark",
+    "weekStartChecked": "1",
+    "defaultListValue": "",
+    "defaultListDisabled": true,
+    "defaultListOptions": [
+      "No lists yet"
+    ],
+    "politeText": ""
+  },
+  {
+    "step": "after reload w/ poisoned mirror",
+    "localStorage": {
+      "todo:prefs:v1:theme": "dark"
+    },
+    "dataTheme": "dark",
+    "colorScheme": "dark",
+    "themeChecked": "dark",
+    "weekStartChecked": "1",
+    "defaultListValue": "",
+    "defaultListDisabled": true,
+    "defaultListOptions": [
+      "No lists yet"
+    ],
+    "politeText": ""
+  },
+  {
+    "step": "live system tracking",
+    "before": "light",
+    "afterDark": "dark",
+    "afterLight": "light"
+  },
+  {
+    "step": "localStorage total bytes",
+    "bytes": 25,
+    "budget": 4096,
+    "ok": true
+  }
+]

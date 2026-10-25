@@ -1,0 +1,39 @@
+# M13-B1 verification — live-region announcement probe (kanban t_419ace90)
+
+Date:   2026-10-25 (+07)
+HEAD:   5b1fdbb  (fix commit 86709cc "fix(a11y): land the first task-add announcement
+        beside the E3 persistence notice (M13-B1)")
+Build:  BASE_PATH=/browser-todo-app/ npm run build
+Serve:  BASE_PATH=/browser-todo-app/ npx vite preview --port 4188 --strictPort
+        ^ BASE_PATH has to be set for the PREVIEW too: without it vite preview mounts the
+          artifact at "/" while index.html points at /browser-todo-app/assets/*, so every
+          asset 404s and the page stays blank (the probe then stalls in createLists).
+Run:    EVIDIR=$PWD/docs/qa/a11y-gate-logs/m13-b1 \
+          node docs/qa/a11y-gate-logs/probes/probe-announcements.mjs
+
+Note on the probe: its `matches()` template matcher was broken (the placeholder pass ran
+AFTER the regex-escape pass and never matched), so route-change and search-results always
+reported MISS — the original gate papered over that with the post-hoc "recheck" block in
+docs/qa/a11y-gate-logs/announcements-gate.json (raw 6/12 -> corrected 10/12 at 9689037).
+The matcher is fixed in place (same file, untracked like the rest of docs/qa/), so the
+count printed below is the count the gate counts. Raw run at 9689037 with the old matcher
+was 6/12; with the B1 fix it is 12/12 (task-added no longer MISS in either locale).
+
+preview=200
+5b1fdbb chore(sw): regenerate the precache manifest after the M13-B1 fix (ADR-005 Decision 2)
+en task-added: HIT — polite=["View: All open","Task added: Announce add","This browser did not grant extra protection."]
+en task-completed: HIT — polite=["Task completed"]
+en task-reopened: HIT — polite=["View: Completed","Task reopened"]
+en route-change: HIT — polite=["View: Next 7 days"]
+en search-results: HIT — polite=["View: Search","1 results for \"a\""]
+en list-created: HIT — polite=["View: Manage lists","List created: Announce list"]
+th task-added: HIT — polite=["มุมมอง: ทั้งหมดที่ยังไม่เสร็จ","เพิ่มงานแล้ว: เพิ่มงานใหม่","เบราว์เซอร์นี้ไม่ได้ให้การปกป้องเพิ่มเติม"]
+th task-completed: HIT — polite=["เสร็จงานแล้ว"]
+th task-reopened: HIT — polite=["มุมมอง: เสร็จแล้ว","เปิดงานอีกครั้ง"]
+th route-change: HIT — polite=["มุมมอง: 7 วันข้างหน้า"]
+th search-results: HIT — polite=["มุมมอง: ค้นหา","0 ผลลัพธ์สำหรับ \"a\""]
+th list-created: HIT — polite=["มุมมอง: จัดการรายการ","สร้างรายการแล้ว: รายการทดสอบ"]
+
+[evidence] docs/qa/a11y-gate-logs/m13-b1/announcements-gate.json
+
+HITS: 12/12

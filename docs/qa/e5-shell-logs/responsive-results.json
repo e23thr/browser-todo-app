@@ -1,0 +1,1053 @@
+[
+  {
+    "viewport": "base-320",
+    "pattern": "compact",
+    "route": "#/today",
+    "shot": "/home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e5-shell-qa/probes/shots/base-320-today.png",
+    "targets": [
+      {
+        "tag": "button",
+        "cls": "icon-button",
+        "label": "Open navigation menu",
+        "w": 44,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "icon-button appbar-search",
+        "label": "Search tasks",
+        "w": 44,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "button",
+        "cls": "button button-primary",
+        "label": "Add task",
+        "w": 90.9,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Today",
+        "w": 64,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Next 7 days",
+        "w": 64,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "All open",
+        "w": 64,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Completed",
+        "w": 64,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "button",
+        "cls": "tab",
+        "label": "More",
+        "w": 64,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "button",
+        "cls": "fab",
+        "label": "Add task",
+        "w": 56,
+        "h": 56,
+        "tooSmall": false
+      }
+    ],
+    "chrome": {
+      "appbar": {
+        "w": 320,
+        "h": 56,
+        "x": 0
+      },
+      "tabbar": {
+        "w": 320,
+        "h": 57,
+        "x": 0
+      },
+      "fab": {
+        "w": 56,
+        "h": 56,
+        "x": 248
+      },
+      "sidebar": null,
+      "drawerButton": {
+        "w": 44,
+        "h": 44,
+        "x": 8
+      },
+      "shell": {
+        "w": 320,
+        "h": 568,
+        "x": 0
+      },
+      "appMain": {
+        "w": 320,
+        "h": 512,
+        "x": 0
+      }
+    },
+    "settings": {}
+  },
+  {
+    "viewport": "base-320",
+    "pattern": "compact",
+    "route": "#/settings",
+    "shot": "/home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e5-shell-qa/probes/shots/base-320-settings.png",
+    "targets": [
+      {
+        "tag": "button",
+        "cls": "icon-button",
+        "label": "Open navigation menu",
+        "w": 44,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "icon-button appbar-search",
+        "label": "Search tasks",
+        "w": 44,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Light",
+        "w": 111.3,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Dark",
+        "w": 109.3,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "System",
+        "w": 128.8,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "English",
+        "w": 102.6,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "ไทย",
+        "w": 73.1,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Monday",
+        "w": 105.4,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Sunday",
+        "w": 103.4,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "select",
+        "cls": "select",
+        "label": "No lists yet",
+        "w": 288,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Today",
+        "w": 64,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Next 7 days",
+        "w": 64,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "All open",
+        "w": 64,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Completed",
+        "w": 64,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "button",
+        "cls": "tab",
+        "label": "More",
+        "w": 64,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "button",
+        "cls": "fab",
+        "label": "Add task",
+        "w": 56,
+        "h": 56,
+        "tooSmall": false
+      }
+    ],
+    "chrome": {
+      "appbar": {
+        "w": 320,
+        "h": 56,
+        "x": 0
+      },
+      "tabbar": {
+        "w": 320,
+        "h": 57,
+        "x": 0
+      },
+      "fab": {
+        "w": 56,
+        "h": 56,
+        "x": 248
+      },
+      "sidebar": null,
+      "drawerButton": {
+        "w": 44,
+        "h": 44,
+        "x": 8
+      },
+      "shell": {
+        "w": 320,
+        "h": 1102.9,
+        "x": 0
+      },
+      "appMain": {
+        "w": 320,
+        "h": 1046.9,
+        "x": 0
+      }
+    },
+    "settings": {
+      "sectionCount": 5,
+      "gridColumns": "288px",
+      "selectDisabled": true
+    }
+  },
+  {
+    "viewport": "md-768",
+    "pattern": "compact",
+    "route": "#/today",
+    "shot": "/home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e5-shell-qa/probes/shots/md-768-today.png",
+    "targets": [
+      {
+        "tag": "button",
+        "cls": "icon-button",
+        "label": "Open navigation menu",
+        "w": 44,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "icon-button appbar-search",
+        "label": "Search tasks",
+        "w": 44,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "button",
+        "cls": "button button-primary",
+        "label": "Add task",
+        "w": 90.9,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Today",
+        "w": 153.6,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Next 7 days",
+        "w": 153.6,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "All open",
+        "w": 153.6,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Completed",
+        "w": 153.6,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "button",
+        "cls": "tab",
+        "label": "More",
+        "w": 153.6,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "button",
+        "cls": "fab",
+        "label": "Add task",
+        "w": 56,
+        "h": 56,
+        "tooSmall": false
+      }
+    ],
+    "chrome": {
+      "appbar": {
+        "w": 768,
+        "h": 56,
+        "x": 0
+      },
+      "tabbar": {
+        "w": 768,
+        "h": 57,
+        "x": 0
+      },
+      "fab": {
+        "w": 56,
+        "h": 56,
+        "x": 696
+      },
+      "sidebar": null,
+      "drawerButton": {
+        "w": 44,
+        "h": 44,
+        "x": 8
+      },
+      "shell": {
+        "w": 768,
+        "h": 1024,
+        "x": 0
+      },
+      "appMain": {
+        "w": 768,
+        "h": 968,
+        "x": 0
+      }
+    },
+    "settings": {}
+  },
+  {
+    "viewport": "md-768",
+    "pattern": "compact",
+    "route": "#/settings",
+    "shot": "/home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e5-shell-qa/probes/shots/md-768-settings.png",
+    "targets": [
+      {
+        "tag": "button",
+        "cls": "icon-button",
+        "label": "Open navigation menu",
+        "w": 44,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "icon-button appbar-search",
+        "label": "Search tasks",
+        "w": 44,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Light",
+        "w": 111.3,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Dark",
+        "w": 109.3,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "System",
+        "w": 128.8,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "English",
+        "w": 102.6,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "ไทย",
+        "w": 73.1,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Monday",
+        "w": 105.4,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Sunday",
+        "w": 103.4,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "select",
+        "cls": "select",
+        "label": "No lists yet",
+        "w": 320,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Today",
+        "w": 153.6,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Next 7 days",
+        "w": 153.6,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "All open",
+        "w": 153.6,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "tab",
+        "label": "Completed",
+        "w": 153.6,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "button",
+        "cls": "tab",
+        "label": "More",
+        "w": 153.6,
+        "h": 56,
+        "tooSmall": false
+      },
+      {
+        "tag": "button",
+        "cls": "fab",
+        "label": "Add task",
+        "w": 56,
+        "h": 56,
+        "tooSmall": false
+      }
+    ],
+    "chrome": {
+      "appbar": {
+        "w": 768,
+        "h": 56,
+        "x": 0
+      },
+      "tabbar": {
+        "w": 768,
+        "h": 57,
+        "x": 0
+      },
+      "fab": {
+        "w": 56,
+        "h": 56,
+        "x": 696
+      },
+      "sidebar": null,
+      "drawerButton": {
+        "w": 44,
+        "h": 44,
+        "x": 8
+      },
+      "shell": {
+        "w": 768,
+        "h": 1024,
+        "x": 0
+      },
+      "appMain": {
+        "w": 768,
+        "h": 968,
+        "x": 0
+      }
+    },
+    "settings": {
+      "sectionCount": 5,
+      "gridColumns": "348px 348px",
+      "selectDisabled": true
+    }
+  },
+  {
+    "viewport": "lg-1024",
+    "pattern": "wide",
+    "route": "#/today",
+    "shot": "/home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e5-shell-qa/probes/shots/lg-1024-today.png",
+    "targets": [
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Search",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Today",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Next 7 days",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "All open",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Completed",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Settings",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "button",
+        "cls": "button button-primary",
+        "label": "Add task",
+        "w": 90.9,
+        "h": 44,
+        "tooSmall": false
+      }
+    ],
+    "chrome": {
+      "appbar": null,
+      "tabbar": null,
+      "fab": null,
+      "sidebar": {
+        "w": 256,
+        "h": 768,
+        "x": 0
+      },
+      "drawerButton": null,
+      "shell": {
+        "w": 1024,
+        "h": 768,
+        "x": 0
+      },
+      "appMain": {
+        "w": 720,
+        "h": 408.2,
+        "x": 280
+      }
+    },
+    "settings": {}
+  },
+  {
+    "viewport": "lg-1024",
+    "pattern": "wide",
+    "route": "#/settings",
+    "shot": "/home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e5-shell-qa/probes/shots/lg-1024-settings.png",
+    "targets": [
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Search",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Today",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Next 7 days",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "All open",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Completed",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Settings",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Light",
+        "w": 111.3,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Dark",
+        "w": 109.3,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "System",
+        "w": 128.8,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "English",
+        "w": 102.6,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "ไทย",
+        "w": 73.1,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Monday",
+        "w": 105.4,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Sunday",
+        "w": 103.4,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "select",
+        "cls": "select",
+        "label": "No lists yet",
+        "w": 320,
+        "h": 44,
+        "tooSmall": false
+      }
+    ],
+    "chrome": {
+      "appbar": null,
+      "tabbar": null,
+      "fab": null,
+      "sidebar": {
+        "w": 256,
+        "h": 768,
+        "x": 0
+      },
+      "drawerButton": null,
+      "shell": {
+        "w": 1024,
+        "h": 768,
+        "x": 0
+      },
+      "appMain": {
+        "w": 720,
+        "h": 651.4,
+        "x": 280
+      }
+    },
+    "settings": {
+      "sectionCount": 5,
+      "gridColumns": "324px 324px",
+      "selectDisabled": true
+    }
+  },
+  {
+    "viewport": "xl-1440",
+    "pattern": "wide",
+    "route": "#/today",
+    "shot": "/home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e5-shell-qa/probes/shots/xl-1440-today.png",
+    "targets": [
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Search",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Today",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Next 7 days",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "All open",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Completed",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Settings",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "button",
+        "cls": "button button-primary",
+        "label": "Add task",
+        "w": 90.9,
+        "h": 44,
+        "tooSmall": false
+      }
+    ],
+    "chrome": {
+      "appbar": null,
+      "tabbar": null,
+      "fab": null,
+      "sidebar": {
+        "w": 256,
+        "h": 900,
+        "x": 0
+      },
+      "drawerButton": null,
+      "shell": {
+        "w": 1440,
+        "h": 900,
+        "x": 0
+      },
+      "appMain": {
+        "w": 720,
+        "h": 408.2,
+        "x": 488
+      }
+    },
+    "settings": {}
+  },
+  {
+    "viewport": "xl-1440",
+    "pattern": "wide",
+    "route": "#/settings",
+    "shot": "/home/ubuntu/.hermes/profiles/h_reviewer/cache/scratch/e5-shell-qa/probes/shots/xl-1440-settings.png",
+    "targets": [
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Search",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Today",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Next 7 days",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "All open",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Completed",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "a",
+        "cls": "",
+        "label": "Settings",
+        "w": 231,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Light",
+        "w": 111.3,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Dark",
+        "w": 109.3,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "System",
+        "w": 128.8,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "English",
+        "w": 102.6,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "ไทย",
+        "w": 73.1,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Monday",
+        "w": 105.4,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "input",
+        "cls": "segment",
+        "label": "Sunday",
+        "w": 103.4,
+        "h": 44,
+        "tooSmall": false
+      },
+      {
+        "tag": "select",
+        "cls": "select",
+        "label": "No lists yet",
+        "w": 320,
+        "h": 44,
+        "tooSmall": false
+      }
+    ],
+    "chrome": {
+      "appbar": null,
+      "tabbar": null,
+      "fab": null,
+      "sidebar": {
+        "w": 256,
+        "h": 900,
+        "x": 0
+      },
+      "drawerButton": null,
+      "shell": {
+        "w": 1440,
+        "h": 900,
+        "x": 0
+      },
+      "appMain": {
+        "w": 720,
+        "h": 651.4,
+        "x": 488
+      }
+    },
+    "settings": {
+      "sectionCount": 5,
+      "gridColumns": "324px 324px",
+      "selectDisabled": true
+    }
+  },
+  {
+    "viewport": "base-320",
+    "route": "skip-link-focused",
+    "skipLink": {
+      "text": "Skip to main content",
+      "isSkipLink": true,
+      "w": 180.9,
+      "h": 43.6,
+      "outlineWidth": "3px"
+    }
+  }
+]

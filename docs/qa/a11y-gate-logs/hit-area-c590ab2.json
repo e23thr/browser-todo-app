@@ -1,0 +1,80 @@
+{
+  "checkbox": {
+    "input": {
+      "w": 24,
+      "h": 24
+    },
+    "hit": {
+      "w": 44,
+      "h": 44,
+      "cls": "task-check-hit"
+    },
+    "hitAtLeftEdge": "LABEL.task-check-hit",
+    "hitAtRightEdge": "LABEL.task-check-hit",
+    "hitAtTopEdge": "LABEL.task-check-hit",
+    "hitAtBottomEdge": "LABEL.task-check-hit",
+    "sameHitTarget": true
+  },
+  "radios": [
+    {
+      "name": "settings-theme",
+      "input": {
+        "w": 18,
+        "h": 18
+      },
+      "label": {
+        "w": 111,
+        "h": 44
+      },
+      "labelActivates": true
+    },
+    {
+      "name": "settings-theme",
+      "input": {
+        "w": 18,
+        "h": 18
+      },
+      "label": {
+        "w": 109,
+        "h": 44
+      },
+      "labelActivates": true
+    },
+    {
+      "name": "settings-theme",
+      "input": {
+        "w": 18,
+        "h": 18
+      },
+      "label": {
+        "w": 129,
+        "h": 44
+      },
+      "labelActivates": true
+    },
+    {
+      "name": "settings-locale",
+      "input": {
+        "w": 18,
+        "h": 18
+      },
+      "label": {
+        "w": 103,
+        "h": 44
+      },
+      "labelActivates": true
+    },
+    {
+      "name": "settings-locale",
+      "input": {
+        "w": 18,
+        "h": 18
+      },
+      "label": {
+        "w": 73,
+        "h": 44
+      },
+      "labelActivates": true
+    }
+  ]
+}

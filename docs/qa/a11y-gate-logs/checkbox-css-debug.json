@@ -1,0 +1,36 @@
+{
+  "result": {
+    "sheets": [
+      {
+        "i": 0,
+        "href": "http://127.0.0.1:4188/browser-todo-app/assets/index-nMDkf4M6.css",
+        "rules": 299
+      }
+    ],
+    "matches": [
+      {
+        "sel": ".task-check",
+        "css": "box-sizing: content-box; width: 24px; height: 24px; accent-color: var(--color-accent); flex: 0 0 auto; margin: -10px; padding: 10px;"
+      },
+      {
+        "sel": "*, ::before, ::after",
+        "css": "box-sizing: border-box;"
+      },
+      {
+        "sel": "button, input, select, textarea",
+        "css": "font: inherit; letter-spacing: 0px; color: inherit;"
+      }
+    ],
+    "total": 299,
+    "err": null,
+    "computed": {
+      "padding": "0px",
+      "margin": "-10px",
+      "width": "24px",
+      "boxSizing": "content-box"
+    },
+    "rawHit": [
+      ".task-check { box-sizing: content-box; width: 24px; height: 24px; accent-color: var(--color-accent); flex: 0 0 auto; margin: -10px; padding: 10px; }"
+    ]
+  }
+}

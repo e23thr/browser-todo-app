@@ -1,0 +1,11 @@
+# i18n:check (working tree 2026-10-23T13:48:17Z)
+
+> browser-todo-app@0.1.0 i18n:check
+> node scripts/check-i18n.mjs
+
+i18n catalog check — src/i18n/en.json vs src/i18n/th.json
+  keys: 190 en / 190 th · 71 distinct keys used by 77 literal t() call site(s)
+  note: 2 t() call site(s) with a non-literal key (not statically verifiable):
+    app/Shell.tsx:173
+    app/Shell.tsx:246
+RESULT: PASS — en/th key sets, values and placeholders are consistent

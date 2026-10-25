@@ -1,0 +1,26 @@
+{
+  "steps": [
+    {
+      "title": "First task",
+      "polite": [
+        "View: All open",
+        "This browser did not grant extra protection."
+      ],
+      "assertive": []
+    },
+    {
+      "title": "Second task",
+      "polite": [
+        "Task added: Second task"
+      ],
+      "assertive": []
+    },
+    {
+      "title": "Third task",
+      "polite": [
+        "Task added: Third task"
+      ],
+      "assertive": []
+    }
+  ]
+}

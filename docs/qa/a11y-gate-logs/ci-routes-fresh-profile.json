@@ -1,0 +1,68 @@
+{
+  "routes": [
+    {
+      "route": "/",
+      "h1": [
+        "Your data lives in this browser"
+      ],
+      "onboarding": true,
+      "theme": "light"
+    },
+    {
+      "route": "#/today",
+      "h1": [
+        "Your data lives in this browser"
+      ],
+      "onboarding": true,
+      "theme": "light"
+    },
+    {
+      "route": "#/week",
+      "h1": [
+        "Your data lives in this browser"
+      ],
+      "onboarding": true,
+      "theme": "light"
+    },
+    {
+      "route": "#/all",
+      "h1": [
+        "Your data lives in this browser"
+      ],
+      "onboarding": true,
+      "theme": "light"
+    },
+    {
+      "route": "#/completed",
+      "h1": [
+        "Your data lives in this browser"
+      ],
+      "onboarding": true,
+      "theme": "light"
+    },
+    {
+      "route": "#/search",
+      "h1": [
+        "Your data lives in this browser"
+      ],
+      "onboarding": true,
+      "theme": "light"
+    },
+    {
+      "route": "#/list/01TESTLIST",
+      "h1": [
+        "Your data lives in this browser"
+      ],
+      "onboarding": true,
+      "theme": "light"
+    },
+    {
+      "route": "#/settings",
+      "h1": [
+        "Your data lives in this browser"
+      ],
+      "onboarding": true,
+      "theme": "light"
+    }
+  ]
+}

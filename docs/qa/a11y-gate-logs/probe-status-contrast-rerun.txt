@@ -1,0 +1,11 @@
+badges light/en: 6 sampled, 0 below 4.5
+axe status-state light/en: clean
+badges light/th: 6 sampled, 0 below 4.5
+axe status-state light/th: clean
+badges dark/en: 6 sampled, 0 below 4.5
+axe status-state dark/en: clean
+badges dark/th: 6 sampled, 0 below 4.5
+axe status-state dark/th: clean
+[evidence] /home/ubuntu/workspace/browser-todo-app/docs/qa/a11y-gate-logs/status-contrast.json
+
+status contrast: 24 sampled, 0 below 4.5:1

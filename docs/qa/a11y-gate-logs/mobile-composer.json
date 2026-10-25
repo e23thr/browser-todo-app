@@ -1,0 +1,14 @@
+{
+  "all": {
+    "h1": [
+      "All open"
+    ],
+    "composers": 0,
+    "textInputs": [],
+    "buttons": [
+      "Add task"
+    ],
+    "fab": "BUTTON.fab label=Add task",
+    "mainHtml": "<div class=\"data-safety-host\" data-quota-percent=\"0\"><div class=\"banner-stack\"></div><div class=\"toast-stack\"></div></div><section class=\"view\"><h1 class=\"view-title\" data-view-title=\"\" tabindex=\"-1\">All open</h1><p class=\"view-count\">0 tasks</p></section><div class=\"empty-state\"><svg class=\"icon empty-state-icon\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><use href=\"#i-file-text\"></use></svg><h2 class=\"empty-state-title\">No open tasks</h2><p class=\"empty-state-body\">Tasks you add will show up here.</p><button type=\"button\" class=\"button button-primary\">Add task</button></di"
+  }
+}

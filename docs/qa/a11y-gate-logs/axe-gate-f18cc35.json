@@ -1,0 +1,1097 @@
+{
+  "appUrl": "http://127.0.0.1:4188/browser-todo-app/",
+  "tags": [
+    "wcag2a",
+    "wcag2aa",
+    "wcag21a",
+    "wcag21aa",
+    "wcag22aa"
+  ],
+  "scans": [
+    {
+      "label": "onboarding/light",
+      "violations": [],
+      "passes": 11,
+      "incomplete": 0
+    },
+    {
+      "label": "onboarding/dark",
+      "violations": [],
+      "passes": 11,
+      "incomplete": 0
+    },
+    {
+      "label": "route:/[light/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/today[light/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/week[light/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/all[light/en]",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK3F5W68C1MQR7RFZ7MZR5\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 26,
+      "incomplete": 1
+    },
+    {
+      "label": "route:#/completed[light/en]",
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": ".task-check"
+        }
+      ],
+      "passes": 27,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/search[light/en]",
+      "violations": [],
+      "passes": 25,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/lists[light/en]",
+      "violations": [],
+      "passes": 23,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/list/REPLACE[light/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/settings[light/en]",
+      "violations": [
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodes": 1,
+          "target": "input[type=\"file\"]"
+        }
+      ],
+      "passes": 28,
+      "incomplete": 0
+    },
+    {
+      "label": "light/en/row-menu-open",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK3F5W68C1MQR7RFZ7MZR5\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 28,
+      "incomplete": 2
+    },
+    {
+      "label": "light/en/move-to-list-dialog",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK3F5W68C1MQR7RFZ7MZR5\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 26,
+      "incomplete": 1
+    },
+    {
+      "label": "light/en/delete-confirm-dialog",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK3F5W68C1MQR7RFZ7MZR5\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 26,
+      "incomplete": 1
+    },
+    {
+      "label": "light/en/composer-expanded",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK3F5W68C1MQR7RFZ7MZR5\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 27,
+      "incomplete": 1
+    },
+    {
+      "label": "route:/[light/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/today[light/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/week[light/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/all[light/th]",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK4XRYXXWC437ZGKR8K8Y6\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 26,
+      "incomplete": 1
+    },
+    {
+      "label": "route:#/completed[light/th]",
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": ".task-check"
+        }
+      ],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/search[light/th]",
+      "violations": [],
+      "passes": 25,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/lists[light/th]",
+      "violations": [],
+      "passes": 23,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/list/REPLACE[light/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/settings[light/th]",
+      "violations": [
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodes": 1,
+          "target": "input[type=\"file\"]"
+        }
+      ],
+      "passes": 28,
+      "incomplete": 0
+    },
+    {
+      "label": "light/th/row-menu-open",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK4XRYXXWC437ZGKR8K8Y6\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 28,
+      "incomplete": 2
+    },
+    {
+      "label": "light/th/move-to-list-dialog",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK4XRYXXWC437ZGKR8K8Y6\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 26,
+      "incomplete": 1
+    },
+    {
+      "label": "light/th/delete-confirm-dialog",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK4XRYXXWC437ZGKR8K8Y6\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 26,
+      "incomplete": 1
+    },
+    {
+      "label": "light/th/composer-expanded",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK4XRYXXWC437ZGKR8K8Y6\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 27,
+      "incomplete": 1
+    },
+    {
+      "label": "route:/[dark/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/today[dark/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/week[dark/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/all[dark/en]",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK6D2X6SPWXN0D75SNFEGB\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 26,
+      "incomplete": 1
+    },
+    {
+      "label": "route:#/completed[dark/en]",
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": ".task-check"
+        }
+      ],
+      "passes": 27,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/search[dark/en]",
+      "violations": [],
+      "passes": 25,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/lists[dark/en]",
+      "violations": [],
+      "passes": 23,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/list/REPLACE[dark/en]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/settings[dark/en]",
+      "violations": [
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodes": 1,
+          "target": "input[type=\"file\"]"
+        }
+      ],
+      "passes": 28,
+      "incomplete": 0
+    },
+    {
+      "label": "dark/en/row-menu-open",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK6D2X6SPWXN0D75SNFEGB\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 28,
+      "incomplete": 2
+    },
+    {
+      "label": "dark/en/move-to-list-dialog",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK6D2X6SPWXN0D75SNFEGB\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 26,
+      "incomplete": 1
+    },
+    {
+      "label": "dark/en/delete-confirm-dialog",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK6D2X6SPWXN0D75SNFEGB\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 26,
+      "incomplete": 1
+    },
+    {
+      "label": "dark/en/composer-expanded",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK6D2X6SPWXN0D75SNFEGB\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 27,
+      "incomplete": 1
+    },
+    {
+      "label": "route:/[dark/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/today[dark/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/week[dark/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/all[dark/th]",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK7VD4DP5FDE3J8BEZRQM8\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 26,
+      "incomplete": 1
+    },
+    {
+      "label": "route:#/completed[dark/th]",
+      "violations": [
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": ".task-check"
+        }
+      ],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/search[dark/th]",
+      "violations": [],
+      "passes": 25,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/lists[dark/th]",
+      "violations": [],
+      "passes": 23,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/list/REPLACE[dark/th]",
+      "violations": [],
+      "passes": 26,
+      "incomplete": 0
+    },
+    {
+      "label": "route:#/settings[dark/th]",
+      "violations": [
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodes": 1,
+          "target": "input[type=\"file\"]"
+        }
+      ],
+      "passes": 28,
+      "incomplete": 0
+    },
+    {
+      "label": "dark/th/row-menu-open",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK7VD4DP5FDE3J8BEZRQM8\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 28,
+      "incomplete": 2
+    },
+    {
+      "label": "dark/th/move-to-list-dialog",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK7VD4DP5FDE3J8BEZRQM8\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 26,
+      "incomplete": 1
+    },
+    {
+      "label": "dark/th/delete-confirm-dialog",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK7VD4DP5FDE3J8BEZRQM8\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 26,
+      "incomplete": 1
+    },
+    {
+      "label": "dark/th/composer-expanded",
+      "violations": [
+        {
+          "id": "list",
+          "impact": "serious",
+          "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+          "nodes": 1,
+          "target": ".task-list"
+        },
+        {
+          "id": "target-size",
+          "impact": "serious",
+          "help": "All touch targets must be 24px large, or leave sufficient space",
+          "nodes": 1,
+          "target": "li[data-task-id=\"01M5QK7VD4DP5FDE3J8BEZRQM8\"] > .row-main > .task-check[type=\"checkbox\"]"
+        }
+      ],
+      "passes": 27,
+      "incomplete": 1
+    }
+  ],
+  "blocking": [
+    {
+      "label": "route:#/all[light/en]",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "route:#/all[light/en]",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK3F5W68C1MQR7RFZ7MZR5\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "route:#/completed[light/en]",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": ".task-check"
+    },
+    {
+      "label": "route:#/settings[light/en]",
+      "id": "label",
+      "impact": "critical",
+      "help": "Form elements must have labels",
+      "nodes": 1,
+      "target": "input[type=\"file\"]"
+    },
+    {
+      "label": "light/en/row-menu-open",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "light/en/row-menu-open",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK3F5W68C1MQR7RFZ7MZR5\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "light/en/move-to-list-dialog",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "light/en/move-to-list-dialog",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK3F5W68C1MQR7RFZ7MZR5\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "light/en/delete-confirm-dialog",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "light/en/delete-confirm-dialog",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK3F5W68C1MQR7RFZ7MZR5\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "light/en/composer-expanded",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "light/en/composer-expanded",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK3F5W68C1MQR7RFZ7MZR5\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "route:#/all[light/th]",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "route:#/all[light/th]",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK4XRYXXWC437ZGKR8K8Y6\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "route:#/completed[light/th]",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": ".task-check"
+    },
+    {
+      "label": "route:#/settings[light/th]",
+      "id": "label",
+      "impact": "critical",
+      "help": "Form elements must have labels",
+      "nodes": 1,
+      "target": "input[type=\"file\"]"
+    },
+    {
+      "label": "light/th/row-menu-open",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "light/th/row-menu-open",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK4XRYXXWC437ZGKR8K8Y6\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "light/th/move-to-list-dialog",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "light/th/move-to-list-dialog",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK4XRYXXWC437ZGKR8K8Y6\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "light/th/delete-confirm-dialog",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "light/th/delete-confirm-dialog",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK4XRYXXWC437ZGKR8K8Y6\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "light/th/composer-expanded",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "light/th/composer-expanded",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK4XRYXXWC437ZGKR8K8Y6\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "route:#/all[dark/en]",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "route:#/all[dark/en]",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK6D2X6SPWXN0D75SNFEGB\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "route:#/completed[dark/en]",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": ".task-check"
+    },
+    {
+      "label": "route:#/settings[dark/en]",
+      "id": "label",
+      "impact": "critical",
+      "help": "Form elements must have labels",
+      "nodes": 1,
+      "target": "input[type=\"file\"]"
+    },
+    {
+      "label": "dark/en/row-menu-open",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "dark/en/row-menu-open",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK6D2X6SPWXN0D75SNFEGB\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "dark/en/move-to-list-dialog",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "dark/en/move-to-list-dialog",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK6D2X6SPWXN0D75SNFEGB\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "dark/en/delete-confirm-dialog",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "dark/en/delete-confirm-dialog",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK6D2X6SPWXN0D75SNFEGB\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "dark/en/composer-expanded",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "dark/en/composer-expanded",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK6D2X6SPWXN0D75SNFEGB\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "route:#/all[dark/th]",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "route:#/all[dark/th]",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK7VD4DP5FDE3J8BEZRQM8\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "route:#/completed[dark/th]",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": ".task-check"
+    },
+    {
+      "label": "route:#/settings[dark/th]",
+      "id": "label",
+      "impact": "critical",
+      "help": "Form elements must have labels",
+      "nodes": 1,
+      "target": "input[type=\"file\"]"
+    },
+    {
+      "label": "dark/th/row-menu-open",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "dark/th/row-menu-open",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK7VD4DP5FDE3J8BEZRQM8\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "dark/th/move-to-list-dialog",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "dark/th/move-to-list-dialog",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK7VD4DP5FDE3J8BEZRQM8\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "dark/th/delete-confirm-dialog",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "dark/th/delete-confirm-dialog",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK7VD4DP5FDE3J8BEZRQM8\"] > .row-main > .task-check[type=\"checkbox\"]"
+    },
+    {
+      "label": "dark/th/composer-expanded",
+      "id": "list",
+      "impact": "serious",
+      "help": "<ul> and <ol> must only directly contain <li>, <script> or <template> elements",
+      "nodes": 1,
+      "target": ".task-list"
+    },
+    {
+      "label": "dark/th/composer-expanded",
+      "id": "target-size",
+      "impact": "serious",
+      "help": "All touch targets must be 24px large, or leave sufficient space",
+      "nodes": 1,
+      "target": "li[data-task-id=\"01M5QK7VD4DP5FDE3J8BEZRQM8\"] > .row-main > .task-check[type=\"checkbox\"]"
+    }
+  ],
+  "notes": [],
+  "summary": {
+    "totalScans": 54,
+    "scansWithViolations": 28,
+    "blockingCount": 48,
+    "allViolationIds": [
+      "serious:list",
+      "serious:target-size",
+      "critical:label"
+    ]
+  }
+}
