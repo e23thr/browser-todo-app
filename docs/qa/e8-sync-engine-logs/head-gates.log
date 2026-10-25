@@ -1,0 +1,21 @@
+=== clean clone of HEAD — four gates, measured 2026-10-26T04:08:38+07:00 ===
+HEAD: 3261721 docs(qa): e8-sync-engine — merge/LWW/failure-injection QA: 1 blocking defect E8-D1 (reverse-order silent loss) + probe suite (t_beed2e01)
+
+--- npm test ---
+exit=0
+ Test Files  106 passed (106)
+      Tests  1166 passed | 2 expected fail (1168)
+
+--- npm run lint ---
+exit=0
+error_lines=0
+
+--- npm run typecheck ---
+exit=0
+tsc_errors=0
+
+--- prettier --check . ---
+exit=1
+[warn] src/domain/model.ts
+[warn] vite.config.ts
+[warn] Code style issues found in 2 files. Run Prettier with --write to fix.

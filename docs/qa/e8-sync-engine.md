@@ -8,8 +8,10 @@ matrices of the impl card (t_00d7f17b, commit `fed96f5`).
 scripts — and FAIL in the one delivery order that matrix does not script. 1 blocking defect
 (E8-D1): in the reverse order (loser pushes before pulling) a concurrent edit is discarded with
 no "Conflict copy" and no notice — silent data loss against PROJECT_ANALYSIS §6.2.** A second
-blocking item is integration-level (E8-D2: `fed96f5` is not a green tree — `format:check` and
-`typecheck` fail on the commit's own content). Everything else — LWW fidelity, conflict-copy
+blocking item is integration-level (E8-D2): `format:check` still fails **at HEAD** on two files
+whose Prettier drift was introduced by `fed96f5` — `npm run ci`'s first gate, so no push until
+it is greened (the test/typecheck redness measured at `fed96f5` was resolved by E7's `6370493`,
+re-measured below). Everything else — LWW fidelity, conflict-copy
 shape, tombstone propagation + 90-day purge gate, byte-identical failure injection, opt-in
 boundary, ≥80% merge/conflict coverage — verified first-hand and green.
 
@@ -117,7 +119,8 @@ run; `src/sync` aggregate there: 86.70 / 76.66 / 88.33 / 89.73.
 | New probe suite alone | 14 tests: 12 pass, 2 `it.fails` (D1), eslint `--max-warnings 0` clean, `tsc -b` clean, prettier clean |
 | Full suite (workspace, 03:24) minus the 3 stale storage files | 1141/1141 pass, coverage thresholds green (exit 0) |
 | **Clean clone of `fed96f5`** (04:00, `clean-clone-fed96f5-gates.log`) | `npm test` **RED** — 68 failures / 14 files · `npm run lint` **exit 0** · `npm run typecheck` **RED** — 70 errors · `npm run format:check` **RED** — 3 files |
-| Workspace gates while siblings run (03:54–04:00) | `tsc -b` exit 0; `eslint .` 57 errors, **all in the sync-UI card's uncommitted files** (`src/features/sync/*`, `tests/component/sync-*`); `prettier --check` still red on `src/domain/model.ts` + `vite.config.ts` |
+| **Clean clone of HEAD `3261721`** (04:08, `head-gates.log`) | `npm test` **exit 0** — 106 files / **1166 passed + 2 expected-fail** · `lint` **exit 0** · `typecheck` **exit 0** · **`format:check` exit 1** — `src/domain/model.ts` + `vite.config.ts` (the only gate still red at HEAD, see E8-D2) |
+| Workspace gates while siblings run (03:54–04:08) | moving target by design: `tsc -b` 0 → 21 errors and `eslint .` 0 → 57 errors depending on which sibling WIP is on disk (sync-UI card in flight); committed-state numbers above are the authoritative ones |
 
 ## 5. Defects
 
@@ -170,27 +173,35 @@ re-deciding the §6.2 policy itself.
 They flip to RED the moment the conflict copy comes back — replace `it.fails` with `it` and
 keep the body as the regression test.
 
-### E8-D2 — BLOCKING for push — `fed96f5` is not a green tree (integration)
+### E8-D2 — BLOCKING for push — `format:check` is red at HEAD (integration)
 
-Measured on a clean clone of `fed96f5` (04:00, `clean-clone-fed96f5-gates.log`):
+Measured on clean clones (both logs in §7):
 
-- `npm run format:check` **exit 1** — `src/domain/model.ts`, `src/storage/migrations.ts`,
-  `vite.config.ts` are not Prettier-clean. **Introduced by `fed96f5` itself** (all three were
-  clean at the parent commit), so this is not a sibling-uncommitted-work artifact;
-  `src/storage/migrations.ts` is already clean in the working tree, `model.ts` and
-  `vite.config.ts` are still dirty.
-- `npm run typecheck` **70 errors** — `fed96f5` landed the `Priority = 'P1'|'P2'|'P3'|'P4'`
-  model while `src/features/tasks/{Composer,TaskRow,fields}.tsx` numeric-priority updates and
-  several test fixtures stayed uncommitted (the working tree is `tsc`-clean → the fixes exist,
-  they just are not committed).
-- `npm test` **68 failures / 14 files** — stale schema-version expectations
-  (`boot.test.ts`, `drills-qa.test.ts` still assert target 1/2 vs `APP_SCHEMA_VERSION = 3`) plus
-  the portability/tabSync/repos/validate updates that ride uncommitted in the shared tree.
+- **At `fed96f5` (04:00, `clean-clone-fed96f5-gates.log`)** — four gates red/green:
+  `npm test` **RED** (68 failures / 14 files: stale schema-version expectations
+  `boot.test.ts`/`drills-qa.test.ts` vs `APP_SCHEMA_VERSION = 3`, plus the portability/tabSync/
+  repos/validate updates that rode uncommitted), `npm run typecheck` **RED** (70 errors:
+  `fed96f5` landed `Priority = 'P1'|'P2'|'P3'|'P4'` while the numeric-priority UI updates stayed
+  uncommitted), `npm run lint` exit 0, `npm run format:check` **RED** (3 files).
+- **At HEAD `3261721` (04:08, `head-gates.log`)** — after E7's `6370493`:
+  `npm test` **exit 0** (106 files, 1166 passed + my 2 expected-fail), `lint` **exit 0**,
+  `typecheck` **exit 0** → the test/typecheck half of E8-D2 is **resolved**.
+  **`format:check` is still exit 1** on `src/domain/model.ts` and `vite.config.ts`.
+- **Provenance of the format drift:** both files were Prettier-clean at `fed96f5^` and dirty at
+  `fed96f5` (checked per commit with `prettier --check --stdin-filepath`), i.e. the drift is
+  `fed96f5`'s own landed content (shared co-edit files), not sibling WIP. `npm run ci` runs
+  `format:check` first, so **CI goes red on the first push** while these two stay dirty.
 
-Owner/routing: the E8 **review** card (t_057dcbc6) already routed the test/typecheck staleness
-to E7 (t_b5078638, comment 03:32) and the E8 epic; this card adds the **format:check** finding
-(3 files, commit-attributed) which nobody had measured. Nothing here is a sync-engine logic
-defect — but no push may happen until all four gates are green.
+**Required:** `npx prettier --write src/domain/model.ts vite.config.ts` (sanity: `git diff -w`
+must show no logical change), then the full `npm run ci` green at the push commit. Owner: the
+next writer of those shared files (E8/E7 co-edit, disclosed in `fed96f5`'s message) — this card
+does not edit src (review/QA role). Additionally, the sync-UI card's uncommitted WIP
+(`src/features/sync/*`, `tests/component/sync-*`, 5 files) must be Prettier-cleaned by that card
+before it commits.
+
+**Not pushed for this reason:** this report's commit (`3261721`) sits on top of `fed96f5` +
+`6370493` locally; pushing while `format:check` is red would redden `origin/main`. Push stays
+serialized per the impl card's disclosure.
 
 ### Observations (non-blocking)
 
@@ -230,7 +241,8 @@ defect — but no push may happen until all four gates are green.
 | `probes-sync-scope.log` | 10 files, 99 passed + 2 expected-fail (the two D1 repros), exit 0 |
 | `coverage-sync-scope.log` | full coverage table incl. the §3 numbers; 0 `src/sync` threshold errors |
 | `full-suite-minus-stale-storage.log` | whole-tree run, 1141/1141 green, all coverage gates exit 0 |
-| `clean-clone-fed96f5-gates.log` | the four gates on a clean clone of `fed96f5` (E8-D2 numbers) |
+| `clean-clone-fed96f5-gates.log` | the four gates on a clean clone of `fed96f5` (E8-D2 first measurement) |
+| `head-gates.log` | the four gates on a clean clone of HEAD `3261721` — test/lint/typecheck green, `format:check` red (E8-D2 today) |
 | `d1-reverse-order-trace.log` | raw per-run trace of both D1 scenarios (conflicts/notices/rows/server files) |
 
 Probe suite: `tests/unit/sync/e8-qa-probes.test.ts` (Q1–Q6). Spec refs: PROJECT_ANALYSIS §6.2,
