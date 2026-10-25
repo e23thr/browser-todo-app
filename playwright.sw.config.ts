@@ -10,7 +10,9 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests/e2e',
-  testMatch: /(?:offline|update)(?:-[\w-]+)?\.spec\.ts/u,
+  // The S13 install suite (install.spec.ts) is fixture-based like the offline/update ones and
+  // joins them here (ADR-008 Decision 4).
+  testMatch: /(?:offline|update|install)(?:-[\w-]+)?\.spec\.ts/u,
   globalSetup: './tests/e2e/fixtures/global-setup.mjs',
   fullyParallel: true,
   forbidOnly: process.env['CI'] === 'true',
