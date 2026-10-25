@@ -3,8 +3,9 @@
 **Gate card:** `t_7f1e8f29` · **Compile card:** `t_7998ae0b` (h_reviewer) · **Compiled:** 2026-10-26 (+07)
 **Release HEAD verified:** `0a8702a` — every commit above it was docs/evidence only at report time
 (no `src/`/`tests/`/`scripts/`/`.github/` delta: `git diff --name-only 0a8702a..059c8f9 -- src tests
-scripts .github` is empty). Two routed fixes landed above it afterwards (`1fce11a` generated-manifest
-regen, `4ee55bb` F1 fix), each verified by its own card and re-battery-ed by this gate (§1).
+scripts .github` is empty). Four routed commits landed above it afterwards — the manifest regens
+`1fce11a` and `0b8915d`, the `4ee55bb` F1 fix, and this report's doc flips (`631d347`, `f471556`) —
+each verified by its own card and re-battery-ed by this gate (§1).
 **Evidence commits:** functional `4fe59e0`, a11y `6f0b731`, budgets `b820ad7`, scope-fidelity
 `df331ae`, gate first run `6a3f5ab`.
 
@@ -33,9 +34,13 @@ never verified, never dropped.
    jobs green incl. `precache-freshness` + `deploy`**; live Pages re-checked by this gate — now
    serves `index-BA2njR4y.js` (post-`64c0ee4` build, ≠ `index-CA0Rb68-.js`) → **a11y F-3 closed.**
    It **recurred with `4ee55bb`** (F1 fix changed `src/` without a regen — the repo's 4th ADR-005 D2
-   recurrence): the next push reddens `precache-freshness`/skips `deploy` until the manifest is
-   regenerated. Routing: **`t_31327c08`** (h_junior_coder, regen + push + green-incl-deploy verify;
-   duplicate `t_619b87b9` closed without work). Detail: §5 row 1.
+   recurrence) and was **resolved again at `0b8915d`** (t_31327c08's default-base regen, pushed with
+   this report's closure pass): run
+   [`40220511267`](https://github.com/e23thr/browser-todo-app/actions/runs/40220511267) **all 13
+   jobs green incl. `precache-freshness` + `deploy`**; live re-checked — serves `index-DwWTyqiF.js`
+   (the F1-fixed build; old `index-BA2njR4y.js` → 404). Standing rule: every future `src/` change
+   carries a same-push default-base regen (§5 row 1). Duplicate card `t_619b87b9` closed without
+   work.
 2. **First-ever nightly full-suite run** (`40216306668`, `workflow_dispatch` at `0a8702a`) is red
    on **webkit + firefox** `e2e-full` — webkit: CSP-violation checks (`offline.spec.ts:204`,
    `smoke.spec.ts:89`); firefox: keyboard `tabTo` budget + `persist()` probe; update-toast pair
@@ -66,7 +71,7 @@ never verified, never dropped.
 | Gate first run (this file, previous state) | `t_7f1e8f29` / `6a3f5ab` | First-hand battery at `225a1f3` (local `e584488`): C1/C2/C3/C5 PASS, C4 blocker found → §C4 resolution trail |
 | Release-state re-check by this compile | `t_7998ae0b` @ `0a8702a` | `gh run view/list` (CI + nightly job matrices), live Pages asset hash + `last-modified`, `git ls-remote origin main`, `scripts/perf-budgets.json`, `ci.yml` job graph |
 | C3 / F1 resolution re-check (this card, C3 only) | `t_5586c72b` @ `4ee55bb` (local, on top of `1fce11a`) | `probe-export-restore` **11/11** incl. hard step `post-import-ui-live-without-reload`; unit+component **940/940** (83 files); `e2e:data-safety` **16/16**; format/lint/typecheck/bundle-budget clean |
-| Gate closure battery (this card, final run) @ `4ee55bb` | `t_7f1e8f29` | First-hand: `npm run ci` **exit 0** — format/lint/`--max-warnings 0`/typecheck/i18n 339/339/build/budget 7/7 PASS, **940/940 tests (83 files)**; `e2e:data-safety` **16/16**, `e2e:sw` **16/16**, `e2e:smoke` **8/8**, `e2e:a11y` **2/2**, keyboard core-loop **2/2** + F1 **×3 3/3** (earlier at `059c8f9`: F1 **×5 5/5**); scope greps 0 hits (Q12/Q7/§2-7.2), i18n 339/339, live Pages 200/asset 200/manifest 404, live entry `index-BA2njR4y.js` post-fix; CI runs `40218743233` (budget jobs green) + `40219201521` (all 13 green incl. deploy) |
+| Gate closure battery (this card, final run) @ `4ee55bb` | `t_7f1e8f29` | First-hand: `npm run ci` **exit 0** — format/lint/`--max-warnings 0`/typecheck/i18n 339/339/build/budget 7/7 PASS, **940/940 tests (83 files)**; `e2e:data-safety` **16/16**, `e2e:sw` **16/16**, `e2e:smoke` **8/8**, `e2e:a11y` **2/2**, keyboard core-loop **2/2** + F1 **×3 3/3** (earlier at `059c8f9`: F1 **×5 5/5**); scope greps 0 hits (Q12/Q7/§2-7.2), i18n 339/339, live Pages 200/asset 200/manifest 404, live entry `index-BA2njR4y.js` post-fix at check time and **`index-DwWTyqiF.js` after the final deploy**; CI runs `40218743233` (budget jobs green) + `40219201521` (all 13 green incl. deploy) + `40220511267` (final tip `0b8915d`, all 13 green incl. deploy) |
 
 **Suite-count provenance (the `927` vs `926` question):** the `927/927 (81 files)` figures quoted
 for `0a8702a` come from `npm run ci` executed inside the RC verification copy, which also carried
@@ -229,8 +234,9 @@ jobs re-green in every later run** — `40218743233` (report push, budget jobs g
 INFO (carried): the committed `src/sw/precache-manifest.ts` was already flagged stale by this
 audit at `6a3f5ab` — **it has since become a red CI job at `0a8702a`** (§5 item 1); the deployed
 worker was never affected (CI regenerates), but the repo-state divergence is now release hygiene,
-not a nit. Status at gate closure: fixed once at `1fce11a` (green incl. deploy, run `40219201521`),
-recurred with `4ee55bb`, regeneration + push routed to `t_31327c08` (§5 row 1).
+not a nit. Status at gate closure: fixed at `1fce11a` (green incl. deploy, run `40219201521`),
+recurred with `4ee55bb`, and **resolved again at `0b8915d`** (t_31327c08 default-base regen, run
+`40220511267` all 13 green incl. deploy — §5 row 1).
 
 ## 4. Handoff metadata — what V1 epics may assume is in place
 
@@ -256,22 +262,22 @@ recurred with `4ee55bb`, regeneration + push routed to `t_31327c08` (§5 row 1).
    both green at `0a8702a`. `npm audit` 0 vulnerabilities. `npm run ci` = format/lint/typecheck/
    i18n/coverage(≥80 % domain+storage)/build/budget, exit 0.
 7. **GitHub Pages deploy pipeline** — green-main-only `deploy` job, base path `/browser-todo-app/`
-   wired through `BASE_PATH`; live site re-checked by this gate — serves `index-BA2njR4y.js`
-   (post-`64c0ee4` build) from the green deploy of run `40219201521` (the `4ee55bb` F1 fix deploys
-   on the next green-main run after the manifest regen, §5 row 1).
+   wired through `BASE_PATH`; live site re-checked by this gate twice: `index-BA2njR4y.js` after the
+   green deploy of run `40219201521`, and **`index-DwWTyqiF.js` — the `4ee55bb` F1-fixed build —
+   after run `40220511267`**; each live hash byte-identical to a fresh `BASE_PATH` build of its
+   commit (Q11 row 10 method).
 8. **Scope floor:** no manifest/install surface (**S13 must add it — first V1 item**), no
    attachments, no accounts/backend/telemetry, CSP meta per §7.2.
 9. **NOT in place (do not assume):** (a) the PO's 30-day usage sign-off (PO-deferred ~2026-11-24);
-   (b) the `4ee55bb` F1 fix **deployed to production** (commit local, `deploy` runs with the next
-   green-main push — §5 row 1; the SC 4.1.3 fix itself **is** deployed, §4.7); (c) cross-browser
-   (webkit/firefox) full-suite green — nightly matrix currently red there; (d) mobile LCP under
-   the §9.1 *recommended* 1.5 s (WARN-tracked).
+   (b) cross-browser (webkit/firefox) full-suite green — nightly matrix currently red there
+   (`t_e20c2adb`); (c) mobile LCP under the §9.1 *recommended* 1.5 s (WARN-tracked). *(Both fixes
+   previously listed here — the SC 4.1.3 and F1 deploys — are now live: §4.7.)*
 
 ## 5. Open items and follow-ups
 
 | # | Item | Severity | Routing |
 |---|---|---|---|
-| 1 | `precache-freshness` red at `0a8702a` (stale manifest after `64c0ee4`) → `deploy` skipped → live Pages served the pre-fix build; **RESOLVED at `1fce11a`** — run `40219201521` all 13 jobs green incl. `precache-freshness` + `deploy`, live re-checked by this gate (`index-BA2njR4y.js` ≠ `index-CA0Rb68-.js`, F-3 closed). **RECURRED with `4ee55bb`** (F1 fix changed `src/` without a regen; 4th ADR-005 D2 recurrence) — next push reddens `precache-freshness` and skips `deploy` until regenerated | Release hygiene — blocks shipping the F1 fix, not a Q15 criterion | Fix card **`t_31327c08`** (h_junior_coder, running): default-base `npm run build` (BASE_PATH unset — `ci.yml` pins `BASE_PATH: /` for this job; a Pages-BASE_PATH build yields different hashes), commit **only** `src/sw/precache-manifest.ts` as `chore(sw): regenerate… after 4ee55bb (ADR-005 Decision 2)`, push, verify all 13 jobs green incl. `deploy` + confirm the live entry hash changes (post-F1-fix). Duplicate card `t_619b87b9` closed without work |
+| 1 | `precache-freshness` red at `0a8702a` (stale manifest after `64c0ee4`) → `deploy` skipped → live Pages served the pre-fix build; **RESOLVED at `1fce11a`** — run `40219201521` all 13 jobs green incl. `precache-freshness` + `deploy`, live re-checked by this gate (`index-BA2njR4y.js` ≠ `index-CA0Rb68-.js`, F-3 closed). **RECURRED with `4ee55bb`** (F1 fix changed `src/` without a regen; 4th ADR-005 D2 recurrence) → **RESOLVED again at `0b8915d`** — run `40220511267` all 13 green incl. `precache-freshness` + `deploy`, live re-checked: `index-DwWTyqiF.js` (F1-fixed build, == fresh HEAD `BASE_PATH` build; `index-BA2njR4y.js` → 404) | **Closed** — both recurrences fixed; standing rule: every future `src/` change carries a same-push default-base regen | Landed by **`t_31327c08`** (h_junior_coder, done): default-base `npm run build` (BASE_PATH unset — `ci.yml` pins `BASE_PATH: /` for this job; a Pages-BASE_PATH build yields different hashes), committed **only** `src/sw/precache-manifest.ts` as `chore(sw): regenerate… after 4ee55bb (ADR-005 Decision 2)`, pushed, verified all 13 jobs green incl. `deploy`. First recurrence fixed by `t_27c2b0e8` (`1fce11a`); duplicate card `t_619b87b9` closed without work |
 | 2 | Nightly `e2e-full` red on webkit + firefox at `0a8702a` (webkit: CSP checks; firefox: keyboard `tabTo` + `persist()` probe; update-toast pair flaky on both); chromium + th-TH green | Cross-browser signal (Q10 floor) | Triage card **`t_e20c2adb`** (h_junior_coder) |
 | 3 | F1 post-import UI staleness (no data loss) — **RESOLVED** at `4ee55bb` (probe step `post-import-ui-live-without-reload`, 11/11 PASS — §2 C3) | Moderate → **closed** | Fixed by card **`t_85e19c39`** (h_senior_coder); flipped by `t_5586c72b`. Row kept for the audit trail. |
 | 4 | F-1 route-change focus target deviates from design §5.2 | Non-blocking, decision needed | Design/PO ruling (amend impl or §5.2/F7.2) |
