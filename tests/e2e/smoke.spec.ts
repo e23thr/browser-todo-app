@@ -169,7 +169,7 @@ test('connect-src admits a user-provided WebDAV origin and still blocks plain-HT
   const seen: string[] = [];
   const server: Server = createServer((req, res) => {
     seen.push(
-      `${req.method ?? ''} ${req.url ?? ''} authorization=${req.headers['authorization'] === undefined ? 'no' : 'yes'} origin=${String(req.headers['origin'] ?? '')}`,
+      `${req.method ?? ''} ${req.url ?? ''} authorization=${req.headers['authorization'] === undefined ? 'no' : 'yes'} origin=${req.headers['origin'] ?? ''}`,
     );
     res.setHeader('Access-Control-Allow-Origin', APP_ORIGIN);
     res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, PROPFIND, GET, PUT, DELETE, MKCOL');
