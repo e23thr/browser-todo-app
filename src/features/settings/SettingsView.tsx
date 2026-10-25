@@ -14,6 +14,7 @@ import {
 import { View } from '../../components/View';
 import { StoragePanelContainer } from '../data-safety/StoragePanelContainer';
 import { NotificationsSettings } from '../notifications/NotificationsSettings';
+import { SyncPanel } from '../sync/SyncPanel';
 
 /** One choice inside a radio row. */
 interface Choice {
@@ -192,6 +193,17 @@ export default function SettingsView(): JSX.Element {
         </h2>
         <div data-mount-point="storage-backup">
           <StoragePanelContainer />
+        </div>
+      </section>
+
+      {/* Sync (E8 S9): opt-in WebDAV setup, status and conflict surfacing —
+          the panel renders wizard vs status from the engine's own state. */}
+      <section class="settings-section" aria-labelledby="settings-sync">
+        <h2 class="settings-heading" id="settings-sync">
+          {t('settings.sync')}
+        </h2>
+        <div data-mount-point="sync">
+          <SyncPanel />
         </div>
       </section>
 

@@ -64,9 +64,21 @@ async function start(root: HTMLElement): Promise<void> {
   // Data-safety engine (ADR-004 wiring + boot classification): lazy chunk, right after paint.
   void import('../features/data-safety/boot')
     .then((module) => module.startDataSafety())
-    .catch((error: unknown) => {
-      console.warn('data-safety: boot failed', error);
-    });
+    .then(
+      () =>
+        // Sync engine (ADR-006 / E8): boots ONLY after data-safety has opened the
+        // shared database (its snapshot codec rides on that first boot()), so the
+        // host adopts the bound handle instead of racing it. Lazy chunk — the
+        // engine stays out of the initial JS closure (§9.2).
+        import('../features/sync/syncHost')
+          .then((host) => host.bootSyncEngine())
+          .catch((error: unknown) => {
+            console.warn('sync: engine boot failed', error);
+          }),
+      (error: unknown) => {
+        console.warn('data-safety: boot failed', error);
+      },
+    );
 }
 
 void start(container);

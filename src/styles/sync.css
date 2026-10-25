@@ -1,0 +1,217 @@
+/*
+ * Sync panel (E8 S9) — opt-in setup wizard, status surface and conflict
+ * surfacing inside the Settings Sync section. Tokens only (no raw colours);
+ * focus rings, reduced motion and button chrome come from global/shell/tasks.
+ */
+
+.sync-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.sync-intro {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+}
+
+.sync-status-line {
+  margin: 0;
+  font-weight: var(--weight-medium);
+}
+
+/* ------------------------------- error block ------------------------------- */
+
+.sync-error {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-danger-tint);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  max-width: 40rem;
+}
+
+.sync-error-title,
+.sync-error-body,
+.sync-error-hint,
+.sync-error-detail {
+  margin: 0;
+}
+
+.sync-error-body {
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+}
+
+.sync-error-detail {
+  font-family: var(--font-mono);
+  font-size: var(--font-caption);
+  line-height: var(--line-caption);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.sync-error .button {
+  align-self: flex-start;
+  margin-top: var(--space-1);
+}
+
+/* --------------------------------- wizard --------------------------------- */
+
+.sync-wizard-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.sync-wizard-heading {
+  margin: 0;
+  font-size: var(--font-h3);
+  line-height: var(--line-h3);
+}
+
+.sync-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: sync-step;
+}
+
+.sync-steps li {
+  counter-increment: sync-step;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font-size: var(--font-caption);
+  line-height: var(--line-caption);
+}
+
+.sync-steps li::before {
+  content: counter(sync-step) '. ';
+}
+
+.sync-steps li[aria-current='step'] {
+  border-color: var(--color-accent, var(--color-border-control));
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
+.sync-wizard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* --------------------------------- actions --------------------------------- */
+
+.sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.sync-panel .checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-min);
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+}
+
+.sync-panel .field-hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+}
+
+/* ------------------------------- conflicts --------------------------------- */
+
+.sync-conflicts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-surface-subtle, var(--color-surface));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.sync-conflicts-heading {
+  margin: 0;
+  font-size: var(--font-h3);
+  line-height: var(--line-h3);
+}
+
+.sync-conflicts-body {
+  margin: 0;
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+  color: var(--color-text-secondary);
+}
+
+.sync-conflict-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sync-conflict {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.sync-conflict-title {
+  margin: 0;
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.sync-resolve-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* -------------------------------- notices ---------------------------------- */
+
+.sync-notices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sync-notices-heading {
+  margin: 0;
+  font-size: var(--font-h3);
+  line-height: var(--line-h3);
+}
+
+.sync-notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: var(--font-body-sm);
+  line-height: var(--line-body-sm);
+  color: var(--color-text-secondary);
+}

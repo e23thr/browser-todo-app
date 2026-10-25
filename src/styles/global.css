@@ -5,6 +5,7 @@
 @import './tasks.css';
 @import './search.css';
 @import './commands.css';
+@import './sync.css';
 
 /*
  * Base styles — design §3.2 (typography), §9 (Thai-safe wrapping), §10 (motion),
