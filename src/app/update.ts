@@ -339,6 +339,22 @@ function onControllerChange(): void {
 }
 
 /**
+ * ADR-005 Decision 5 rule 3 (amended, t_f6f3cb6b): `installed` announces a waiting update ONLY
+ * for a real update — a new worker that installs alongside a DIFFERENT, running version
+ * (`registration.active` is another worker). `navigator.serviceWorker.controller` is deliberately
+ * not part of the test: `clients.claim()` from this very worker can give the page a controller
+ * before the `statechange` task is delivered (runner load), which announced a phantom
+ * "Update available" on a first install where no update exists. A first install also parks in
+ * `registration.waiting` for a moment before it activates (active is `null` in exactly that
+ * window), so "a controller exists" and "a waiting worker exists" are both wrong discriminators
+ * on their own — only a *different* active worker proves there is something to update.
+ */
+function isRealUpdate(installing: ServiceWorker): boolean {
+  const current = registration;
+  return current !== null && current.active !== null && current.active !== installing;
+}
+
+/**
  * Wire a registration to the machine: waiting-worker adoption, `updatefound` tracking and
  * `controllerchange` handling. Returns a disposer.
  */
@@ -349,9 +365,13 @@ export function initUpdateFlow(options: {
   registration = options.registration;
   hadController = options.controller;
 
-  // A worker already waiting (applied elsewhere is impossible; a dismissed toast from a previous
-  // session or a browser-initiated download) -> the toast must come back (Decision 5 rule 4).
-  if (registration.waiting !== null) dispatch({ type: 'installed-waiting' });
+  // A worker already waiting behind a running version (a dismissed toast from a previous session
+  // or a browser-initiated download) -> the toast must come back (Decision 5 rule 4). The
+  // `active` guard is the same first-install rule as `isRealUpdate` (t_f6f3cb6b): a first
+  // install's transient `waiting` slot must never announce an update.
+  if (registration.waiting !== null && registration.active !== null) {
+    dispatch({ type: 'installed-waiting' });
+  }
 
   const onUpdateFound = (): void => {
     const installing = registration?.installing;
@@ -359,13 +379,10 @@ export function initUpdateFlow(options: {
     dispatch({ type: 'update-found' });
     installing.addEventListener('statechange', () => {
       if (installing.state === 'installed') {
-        if (navigator.serviceWorker.controller !== null) {
-          // Update: the new version is complete and waiting — safe to apply even offline.
-          dispatch({ type: 'installed-waiting' });
-        } else {
-          // First install: `clients.claim()` takes over quietly, nothing to update.
-          dispatch({ type: 'installed-first' });
-        }
+        // Update: the new version is complete and waiting — safe to apply even offline.
+        if (isRealUpdate(installing)) dispatch({ type: 'installed-waiting' });
+        // First install: `clients.claim()` takes over quietly, nothing to update.
+        else dispatch({ type: 'installed-first' });
       } else if (installing.state === 'redundant') {
         dispatch({ type: 'worker-redundant' });
       }
@@ -457,6 +474,11 @@ export function checkIntervalMs(): number {
  */
 export async function checkForUpdate(options: { readonly force?: boolean } = {}): Promise<boolean> {
   if (registration === null) return false;
+  // No running version yet (first install in progress): `register()` has already fetched the
+  // newest `sw.js` (`updateViaCache: 'none'`), so there is nothing to compare against — and a
+  // forced `update()` racing that first install can only add a duplicate install (t_f6f3cb6b).
+  // Once a version runs, every trigger checks normally.
+  if (registration.active === null) return false;
   if (!navigator.onLine) return false;
 
   const now = Date.now();

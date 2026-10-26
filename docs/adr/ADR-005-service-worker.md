@@ -213,9 +213,12 @@ ADR-002) is identical in every row — offline changes nothing about functionali
 1. `boot` (after `load`) / `visibilitychange`→visible / `online` → `idle` → `checking`, **iff**
    `navigator.onLine` and throttle allows (≥ 30 min since last attempt) → `registration.update()`.
 2. `updatefound` → `checking` → `update-found` (track the installing worker's `statechange`).
-3. `statechange: installed` **with** an existing controller → `update-found` → `update-ready` → show
-   toast. `installed` **without** controller (first install) → `idle` (claim; no toast — nothing to
-   update). `statechange: redundant` before `installed` → `check-failed` (Decision 6).
+3. `statechange: installed` **alongside a different, running version** (`registration.active` is
+   another worker) → `update-found` → `update-ready` → show toast. `installed` as the
+   registration's **first** worker → `idle` (claim; no toast — nothing to update). Whether the
+   page has a controller at handler time is **not** part of the test (Addendum A: `clients.claim()`
+   can beat `statechange` delivery under load). `statechange: redundant` before `installed` →
+   `check-failed` (Decision 6).
 4. `user-dismiss` → `update-ready` → `idle` (toast snoozed in-memory for this session; a *new*
    waiting version re-toasts). No localStorage — ADR-002 restricts it to prefs keys (Decision 7).
 5. `user-apply` → `update-ready` → `reload-pending` **if an edit is in flight** (Decision 7): flush
@@ -235,7 +238,9 @@ ADR-002) is identical in every row — offline changes nothing about functionali
 
 **Trigger policy details:** checks run on `load`, on `visibilitychange`→visible, and on the `online`
 event — throttled to one `registration.update()` per 30 min, never while `navigator.onLine ===
-false`. (The browser performs its own update checks on navigation; harmless, and rare after boot
+false`, and never before the first install has produced a running version (`registration.active ===
+null` — Addendum A: such a check has nothing to compare against and can only race the first
+install). (The browser performs its own update checks on navigation; harmless, and rare after boot
 because hash routing produces no navigations.) Check latency on GitHub Pages is bounded by its CDN
 caching (~10 min) — acceptable: updates are user-applied anyway.
 
@@ -484,3 +489,53 @@ machine reducer (every transition in Decision 5, incl. apply-during-edit failure
 - docs/adr/README.md (ADR index + numbering note)
 - Task t_a7b86d9c (this decision); impl card t_6460ac5a (consumes this handoff); decomposition card
   t_1b9ee0e6
+
+## Addendum A (2026-10-26) — `installed` announces only a real update (first-install race, t_f6f3cb6b)
+
+**Bug.** On a single-build origin (byte-identical `sw.js` — no update possible) the "Update
+available" toast appeared intermittently on FIRST loads (~1/6 under runner load, webkit only in
+Nightly), and the spurious toast broke `offline.spec.ts`'s Decision 6 silence assertion
+(`[data-update-notice]` expected 0, received 1 — e.g. Nightly 40262079123). Rule 3's old
+discriminator — "`statechange: installed` **with** an existing controller" — is a handler-time race.
+
+**Evidence (instrumented fresh-load probe, webkit, load-correlated, reproduced 2×):** the first
+worker's `statechange: installed` reached the app's handler with
+`state: 'installed'`, `controller: <this very worker>` (`clients.claim()` had already run),
+`registration.active: null`, and the first install's transient `registration.waiting` slot still
+set — so "a controller exists" was true on a first install with nothing to update. Both naive
+discriminators fail: `navigator.serviceWorker.controller` is non-null after claim, and
+`registration.waiting !== null` is true during the first install's brief waiting→activating
+window (verified in every engine probed).
+
+**Decision (amended rule 3, normative).** `installed` dispatches `installed-waiting` **iff the
+installing worker is a real update** — `registration.active` is a *different* worker at handler
+time. A first install (`active === null`, or `active === installing` once it has claimed) dispatches
+`installed-first`. The same rule guards the boot-time adoption of an already-waiting worker
+(Decision 5 rule 4): `waiting !== null && active !== null`. Additionally no update check runs while
+`registration.active === null` (Decision 5 trigger policy): there is nothing to compare against
+(the initial `register()` already fetched the freshest `sw.js` with `updateViaCache: 'none'`), and
+the forced boot check could only race the first install.
+
+**Alternatives considered.**
+
+| Option | Why not |
+|---|---|
+| Keep `controller !== null` (status quo) | Races `clients.claim()`; proven misfire (above) |
+| `registration.waiting === installing` | First install parks in `waiting` transiently — false positives |
+| Byte-diff handshake (page asks active + waiting workers for `SHELL_VERSION` over `MessageChannel`) | Only exact way to catch a duplicate byte-identical install; adds a cross-thread protocol and failure modes for a case the spec's newest-worker byte-compare already prevents — rejected as over-engineering |
+| Hide the toast for N seconds / debounce | Masks the race; the state machine would still announce a version that does not exist |
+
+**Consequences.**
+
+- Positive: first installs are silent on every engine regardless of event-delivery order; a real
+  update (new worker alongside a running version) still toasts, offline-safe Apply unchanged;
+  `offline.spec.ts` Decision 6 is deterministic.
+- Negative/limits: a hypothetical byte-identical *duplicate* install (browser-internal update
+  check racing `register()`) would still be announced as an update — indistinguishable from the
+  page; the app-side trigger for that race is now closed by the `active === null` check gate.
+  An update whose `statechange` arrives after a sibling tab already applied it announces
+  `applied-elsewhere` instead of a stale toast (considered correct).
+- Tests: `tests/unit/update-flow-runtime.test.ts` (classification contract, incl. the captured
+  interleaving) and `tests/e2e/update-first-install.spec.ts` (deterministic real-browser
+  reproduction of the claim-before-delivery interleaving; fails on the pre-fix code with the exact
+  offline:128 signature).
