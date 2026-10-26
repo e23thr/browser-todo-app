@@ -28,7 +28,7 @@
       "bootLocale": "en",
       "manifestKeyPattern": "^src/i18n/",
       "fileNamePattern": "(^|/)locale-",
-      "description": "en+th locale packs: FAIL > 24 KB gz combined, FAIL if a locale pack is inside the initial JS closure (they must be lazy). 24 KB (was 20): ADR-007 §7.3 mandates the C1 copy catalog (59 keys × 2 locales) — the E10 budget predates the binding ADR; packs stay lazy (locales-lazy gate unchanged)."
+      "description": "en+th locale packs: FAIL > 24 KB gz combined, FAIL if a locale pack is inside the initial JS closure (they must be lazy). 24 KB (was 20): ADR-007 §7.3 mandates the C1 copy catalog (59 keys × 2 locales) — the E10 budget predates the binding ADR; packs stay lazy (locales-lazy gate unchanged). RATIFIED at 24 KB by h_pm (PO delegate) 2026-10-26, decision card t_3faa5d95 — PROJECT_ANALYSIS §9.2 updated to match; deviation #11 of docs/dev/encryption-api.md §4 accepted."
     },
     "no-external-refs": {
       "allowedUrlPrefixes": [

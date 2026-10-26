@@ -22,7 +22,8 @@ Binding constraints (NOT re-decidable here — copied verbatim in intent from th
    CSS px, 200% text zoom reflow without loss (§8).
 2. Zero third-party requests at runtime (§7.2): no hosted fonts, no remote icons, no CDNs.
    Everything self-hosted or system-provided.
-3. Bundle budgets (§9.2): CSS ≤ 20 KB gzip; locale strings en+th ≤ 20 KB gzip total, lazy
+3. Bundle budgets (§9.2): CSS ≤ 20 KB gzip; locale strings en+th ≤ 24 KB gzip total
+   (ratified 2026-10-26, t_3faa5d95; 20 KB at design time), lazy
    per-locale; no webfont bytes at all (Thai uses the system font stack).
 4. English is the source-of-truth locale; Thai strings are PO-validated content (§12 Q9).
 5. Mobile-first responsive, one codebase, touch targets ≥ 44 px (M8).
@@ -754,7 +755,8 @@ Autosave is out of scope for MVP design: explicit Save button, dirty-state guard
 - Dates/numbers: `Intl.DateTimeFormat` / `Intl.NumberFormat` with the active locale. Thai
   Buddhist-era dates: format with `locale: 'th-TH-u-ca-buddhist'` for Thai, Gregorian for
   English (this is a formatter choice, not extra strings).
-- Locale strings budget (§9.2): en + th ≤ 20 KB gzip, lazy per-locale load. Layout must tolerate
+- Locale strings budget (§9.2): en + th ≤ 24 KB gzip (ratified 2026-10-26, t_3faa5d95; 20 KB at
+  design time), lazy per-locale load. Layout must tolerate
   Thai strings being ~1.3–2× the English width/height without clipping (buttons: min-width not
   fixed-width; nav labels wrap to 2 lines max in sidebar).
 
@@ -865,7 +867,8 @@ re-running the check.
 ### 12.3 Handoff — what implementation cards must build
 
 Constraints that apply to ALL of these cards: WCAG 2.2 AA release gate (§11), zero third-party
-runtime requests (§7.2), CSS ≤ 20 KB gzip total (§9.2), locale strings ≤ 20 KB gzip (§9.2),
+runtime requests (§7.2), CSS ≤ 20 KB gzip total (§9.2), locale strings ≤ 24 KB gzip (§9.2,
+ratified 2026-10-26, t_3faa5d95),
 no webfonts (§9.1), touch targets ≥ 44 px (§6), reduced-motion (§10).
 
 1. **Design tokens + base styles** — `tokens.css` exactly per §3 (values are copy-paste ready),
@@ -890,7 +893,7 @@ no webfonts (§9.1), touch targets ≥ 44 px (§6), reduced-motion (§10).
 7. **Search + Settings screens** — §4.8, §4.9 incl. quota bar (§6.15) and the storage/backup
    panel wiring points. → h_junior_coder.
 8. **i18n runtime** — `lang` switching incl. screen-reader language, per-locale lazy load
-   within the 20 KB gzip budget, `Intl` date/number formatting incl. Thai Buddhist-era dates
+   within the §9.2 gzip budget (24 KB, ratified 2026-10-26, t_3faa5d95), `Intl` date/number formatting incl. Thai Buddhist-era dates
    (§9.4). → h_senior_coder (M15 card).
 9. **A11y + Thai QA gate** — axe-core CI checks, keyboard-only test script (10 core flows),
    Thai diacritic/200%-zoom test script (§9.5), NVDA + VoiceOver manual pass checklist.

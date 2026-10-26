@@ -406,7 +406,7 @@ throttle, slow 4G — plus desktop cold cache)
 | Total app shell (gzip, excl. icons/manifest) | ≤ 200 KB |
 | Runtime third-party bytes | **0** |
 | WASM | 0 in MVP (a WASM payload is a budget exception requiring an ADR) |
-| Locale strings (en + th, lazy per-locale) | ≤ 20 KB gzip total |
+| Locale strings (en + th, lazy per-locale) | ≤ 24 KB gzip total (ratified 2026-10-26 by h_pm/PO delegate — decision card t_3faa5d95; was 20 KB, which predates ADR-007 §7.3's mandated C1 copy catalog; packs stay lazy per-locale) |
 
 Route-level code-splitting for settings/sync/features beyond the core loop. Thai text (PO Q9) uses
 the system font stack with Thai fallbacks — no webfont bytes, preserving the zero-third-party rule

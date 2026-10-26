@@ -24,7 +24,7 @@ until the framework, toolchain and CI shape are fixed.
 | Total app shell (gzip, excl. icons/manifest) | ≤ 200 KB |
 | Runtime third-party bytes | **0** |
 | WASM | 0 in MVP (a WASM payload is a budget exception requiring its own ADR) |
-| Locale strings (en + th, lazy per-locale) | ≤ 20 KB gzip total |
+| Locale strings (en + th, lazy per-locale) | ≤ 24 KB gzip total (ratified 2026-10-26, t_3faa5d95; 20 KB at writing) |
 
 Route-level code-splitting is required for settings/features beyond the core loop.
 
@@ -200,7 +200,7 @@ Measurement method (fixed to prevent gate drift): production build via `npm run 
 | Total app shell (gzip, excl. icons/manifest) | ≤ 200 KB | `app-shell` | HTML + initial JS + CSS + service worker + initial locale chunk; lazy route/locale chunks excluded; **FAIL > 200 KB** |
 | Runtime third-party bytes | 0 | `no-external-refs` | **FAIL** on any `http(s)://` external-origin reference in shipped JS/CSS/HTML (runtime backstop: the CSP `connect-src` list — widened once for V1 WebDAV sync to `'self' https: <plain-HTTP loopback>`, see ADR-006 Addendum A; its loopback source expressions are allow-listed as policy text, not fetches) |
 | WASM | 0 in MVP | `no-wasm` | **FAIL** on any `.wasm` asset in `dist/` (any future WASM payload requires its own ADR first) |
-| Locale strings (en + th) | ≤ 20 KB gzip total | `locales` | **FAIL** > 20 KB combined; **FAIL** if any locale pack is found inside the initial JS closure (each locale must be a lazy chunk) |
+| Locale strings (en + th) | ≤ 24 KB gzip total (ratified 2026-10-26, t_3faa5d95; 20 KB at writing) | `locales` | **FAIL** > 24 KB combined; **FAIL** if any locale pack is found inside the initial JS closure (each locale must be a lazy chunk) |
 
 ### 9. Repo layout convention
 

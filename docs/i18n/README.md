@@ -125,7 +125,9 @@ collapse), and any literal `t('…')` key in `src/` that `en.json` does not defi
 
 ## 6. Budget (§9.2)
 
-Locale strings (en + th, lazy per locale) must stay **≤ 20 KB gzip total**. Measured two ways:
+Locale strings (en + th, lazy per locale) must stay **≤ 24 KB gzip total** (PO-ratified
+2026-10-26, decision card t_3faa5d95; the budget was 20 KB when this card delivered — E10's
+ADR-007 §7.3 mandated copy catalog moved it to 24 KB). Measured two ways:
 
 ```sh
 npm run build && npm run budget     # `locales` gate: gzip-9 over the built packs in dist/
@@ -133,6 +135,6 @@ gzip -9 -c src/i18n/en.json | wc -c # source-level: the strings themselves
 ```
 
 Measured on this card's delivery (190 keys each): source gzip-9 = 2,573 B (en) + 3,247 B (th)
-= **5,820 B ≈ 5.7 KB of 20 KB**; built packs = 2.55 KB + 3.25 KB = 5.6 KB on the gate. Later
+= **5,820 B ≈ 5.7 KB of the then-20 KB budget**; built packs = 2.55 KB + 3.25 KB = 5.6 KB on the gate. Later
 cards adding strings consume the remaining headroom — the `locales` gate is the enforcement
 point.

@@ -98,12 +98,21 @@ deviations are additive and listed in §4 — nothing normative was weakened).
 10. **Mixed-key stores** (D3.3): rows no ring key can decrypt surface through
     the QUARANTINE channel (non-destructive, recovery-file downloadable) and
     heal automatically when the other device's key file joins the ring.
-11. **`scripts/bundle-budgets.json` locales gate 20 KB → 24 KB gz**: the
-    PROJECT_ANALYSIS §9.2 budget predates E10/ADR-007, whose §7.3 normative
-    copy catalog adds 59 keys × 2 locales. The packs stay LAZY (the
-    `locales-lazy` gate is unchanged and green) and app-shell/initial-js limits
-    are untouched (104.2/200 KB; initial-js 83.6/100 KB — WARN band from the
-    sibling recurrence/UI work, not the crypto chunk). Flagged for review.
+11. **`scripts/bundle-budgets.json` locales gate 20 KB → 24 KB gz**:
+    **ACCEPTED — RATIFIED by h_pm (PO delegate) 2026-10-26, decision card
+    t_3faa5d95.** PROJECT_ANALYSIS §9.2's row is updated to 24 KB to match, so
+    §9.2 / bundle-budgets.json / this note are mutually consistent. Rationale:
+    the PROJECT_ANALYSIS §9.2 budget predates E10/ADR-007, whose §7.3 normative
+    copy catalog adds 59 keys × 2 locales and cannot be trimmed without cutting
+    mandated verbatim copy. The packs stay LAZY (the `locales-lazy` gate is
+    unchanged and green) and app-shell/initial-js limits are untouched
+    (104.2/200 KB; initial-js 83.6/100 KB — WARN band from the sibling
+    recurrence/UI work, not the crypto chunk). Measured first-hand at review
+    HEAD dce8f40 and again at aca1d4b: `locales 22.3 KB / 24.0 KB` — ~1.7 KB
+    headroom, which covers the D6.1/D6.3.3/D3.2-3.3 rework copy at the measured
+    incremental rate (~10–17 B gz per new key × 2 locales). Any future locale
+    growth beyond 24 KB requires a fresh budget decision here + §9.2, not a
+    gate edit by an impl card.
 12. **Coverage gate for `src/crypto`** (vite.config.ts): strict 80 on
     lines/statements/functions (measured 86.7/81.1/84.2 on the unit+integration
     suites), branches floored at 65 (measured 66.8 — codec guards and typed-error
