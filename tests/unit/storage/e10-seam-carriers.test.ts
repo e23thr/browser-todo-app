@@ -197,6 +197,46 @@ describe('repo layer — stage-then-txRaw under a macrotask seam (ADR-007 D4.6)'
     expect(loaded.ok && loaded.value.tasks.map((t) => t.title)).toEqual(['water plants']);
   });
 
+  it('setArchived (S6) survives the seam — legal-pair guard re-runs on the fresh row', async () => {
+    const db = await openDb('seam-archive');
+    const calls: SeamCall[] = [];
+    setRowCryptoSeam(macrotaskSeam({ calls }));
+
+    const deps = repoDeps(db);
+    const tasks = new TaskRepo(deps);
+    const list = await new ListRepo(deps).create({ name: 'Archive list', color: '#336699' });
+    if (!list.ok) throw new Error('seed list failed');
+    const created = await tasks.create(draft(list.value.id, 'ship it'));
+    if (!created.ok) throw new Error('seed task failed');
+
+    // Illegal pair first: archiving an OPEN task writes nothing.
+    const illegal = await tasks.setArchived(created.value.id, true);
+    expect(illegal.ok).toBe(false);
+    if (!illegal.ok)
+      expect(isRuleError(illegal.error) && illegal.error.rule).toBe('TASK_STATUS_INVALID');
+    const untouched = await db.readUnfiltered('tasks');
+    expect(untouched.ok && untouched.value).toHaveLength(1);
+    expect((untouched.ok ? untouched.value[0] : undefined) as { sealedBySeam?: string }).toEqual(
+      expect.objectContaining({ sealedBySeam: created.value.id }),
+    );
+
+    const done = await tasks.setDone(created.value.id, true);
+    if (!done.ok) throw new Error('setDone failed');
+    const archived = await tasks.setArchived(created.value.id, true);
+    expect(archived.ok, `setArchived failed: ${JSON.stringify(archived)}`).toBe(true);
+    if (archived.ok) {
+      expect(archived.value.status).toBe('archived');
+      expect(archived.value.completedAt).toBe(done.value.completedAt); // preserved verbatim
+    }
+
+    // The archived row was staged outside and committed verbatim in txRaw.
+    const raw = await db.readUnfiltered('tasks');
+    expect(raw.ok && raw.value).toHaveLength(1);
+    expect((raw.ok ? raw.value[0] : undefined) as { sealedBySeam?: string }).toEqual(
+      expect.objectContaining({ sealedBySeam: created.value.id }),
+    );
+  });
+
   it('move (single-row RMW) and the rebalance hatch survive the seam', async () => {
     const db = await openDb('seam-move');
     const calls: SeamCall[] = [];
