@@ -75,8 +75,12 @@ function shippedFiles(distDir: string): string[] {
  */
 async function armThemeFeedbackProbe(page: Page): Promise<void> {
   await page.evaluate(() => {
-    const state = window as unknown as { __themeFeedbackAt: number | null };
+    const state = window as unknown as {
+      __themeFeedbackAt: number | null;
+      __themeDispatchAt: number | null;
+    };
     state.__themeFeedbackAt = null;
+    state.__themeDispatchAt = null;
     const observer = new MutationObserver(() => {
       if (
         state.__themeFeedbackAt === null &&
@@ -89,6 +93,28 @@ async function armThemeFeedbackProbe(page: Page): Promise<void> {
       attributes: true,
       attributeFilter: ['data-theme'],
     });
+    // Click-dispatch timestamp sampled IN the page at dispatch time (capture phase, so it
+    // precedes the app's own handlers) — event.timeStamp shares the performance.now() clock
+    // with the MutationObserver above, making `mutation - dispatch` the APP's own optimistic
+    // feedback. The old probe sampled `clickedAt` in the test process BEFORE page.check(),
+    // which counted Playwright's actionability round-trip as app latency: measured 44-80 ms
+    // locally while dispatch->mutation stays 2-3 ms on chromium AND webkit
+    // (scripts/diag-feedback-split.mjs) — on loaded runners that tool overhead alone pushed
+    // this budget test past its 100 ms line (run 40242355014: 114-177 ms).
+    document.addEventListener(
+      'click',
+      (event) => {
+        const target = event.target;
+        if (
+          state.__themeDispatchAt === null &&
+          target instanceof Element &&
+          target.closest('[role="radiogroup"]') !== null
+        ) {
+          state.__themeDispatchAt = event.timeStamp;
+        }
+      },
+      true,
+    );
   });
 }
 
@@ -96,6 +122,14 @@ async function themeFeedbackAt(page: Page): Promise<number> {
   return page.evaluate(() => {
     const state = window as unknown as { __themeFeedbackAt: number | null };
     return state.__themeFeedbackAt ?? -1;
+  });
+}
+
+/** Page-clock timestamp of the radio click's dispatch (0 when the click never happened). */
+async function themeDispatchAt(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const state = window as unknown as { __themeDispatchAt: number | null };
+    return state.__themeDispatchAt ?? 0;
   });
 }
 
@@ -111,12 +145,18 @@ test('degraded network (2 s per response): local writes stay optimistic and dura
     ).toBeVisible();
 
     // A local write must not wait for the network: with every response delayed 2 s, the
-    // optimistic feedback budget (§9.1: add → visible < 100 ms) is still met.
+    // optimistic feedback budget (§9.1: add → visible < 100 ms) is still met. The clock runs
+    // from the CLICK's dispatch inside the page to the data-theme mutation — never from the
+    // test process, or Playwright's own click round-trip would count as app latency (see
+    // armThemeFeedbackProbe).
     await armThemeFeedbackProbe(page);
-    const clickedAt = await page.evaluate(() => performance.now());
     await page.getByRole('radio', { name: 'Dark', exact: true }).check();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-    const feedbackMs = (await themeFeedbackAt(page)) - clickedAt;
+    const dispatchAt = await themeDispatchAt(page);
+    // Precondition: the dispatch probe must have seen the click (a missed probe would read 0
+    // and silently turn this into an absolute-navigation-time assertion).
+    expect(dispatchAt).toBeGreaterThan(0);
+    const feedbackMs = (await themeFeedbackAt(page)) - dispatchAt;
     test.info().annotations.push({
       type: 'degraded',
       description: `optimistic write feedback with 2 s network latency: ${feedbackMs.toFixed(1)} ms (budget 100 ms)`,
