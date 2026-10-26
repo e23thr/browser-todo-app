@@ -81,9 +81,11 @@ deviations are additive and listed in §4 — nothing normative was weakened).
      read-modify-writes (patch/setDone/move/rename/recolor) commit via
      `guardedSealedPut` — seal outside, ONE `txRaw` put, guarded by the
      envelope-level `updatedAt` stamp (mismatch → typed retryable
-     `RULE: STALE_WRITE`; a concurrent write is never silently lost); bulk
-     writes (remove cascade, rebalance hatch, sweepTag, upsertImported) stage
-     every row (`stageAll`) and commit verbatim in one `txRaw`.
+     `RULE: STALE_WRITE`; an advanced-stamp concurrent write is never silently
+     lost — an equal-stamp collision is the documented residual, open question
+     on t_a155ebf2); bulk writes (remove cascade, rebalance hatch, sweepTag,
+     upsertImported) stage every row (`stageAll`) and commit verbatim in one
+     `txRaw`.
    - `purge.ts`: `txRaw` — the pass only reads envelope-level fields (`id`,
      `deletedAt` — plaintext in both row shapes), so behaviour is identical.
    - the boot migration chain: steps run over at-rest rows via `txRaw` (the

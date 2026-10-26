@@ -19,8 +19,11 @@ import { err, ok, ruleError, type AppError, type Result } from '../../domain/ker
 import type { List, Settings, Task, TaskDraft, TaskPatch } from '../../domain/model';
 import { DEFAULT_SETTINGS } from '../../domain/model';
 import type {
+  CompleteRecurringOutcome,
   MoveTarget,
   MoveOutcome,
+  RestoreOutcome,
+  TaskOccurrenceDraft,
   TaskPort,
   TaskRemoveDisposition,
   TaskRemoveOutcome,
@@ -36,6 +39,7 @@ import {
   neighborsAround,
   sealRow,
   stageAll,
+  staleWrite,
   taskGroupRows,
   taskMissing,
   txAppRaw,
@@ -120,7 +124,8 @@ export class TaskRepo implements TaskPort {
     if (patch.tags !== undefined) merged.tags = [...patch.tags];
     if (patch.reminderAtUnset === true) delete merged.reminderAt;
     else if (patch.reminderAt !== undefined) merged.reminderAt = patch.reminderAt;
-    if (patch.recurrence !== undefined) merged.recurrence = patch.recurrence;
+    if (patch.recurrenceUnset === true) delete merged.recurrence;
+    else if (patch.recurrence !== undefined) merged.recurrence = patch.recurrence;
     if (patch.dueDateUnset === true) delete merged.dueDate;
     else if (patch.dueDate !== undefined) merged.dueDate = patch.dueDate;
     const stamped: Task = { ...merged, updatedAt: clock(), deviceId: db.deviceId };
@@ -152,6 +157,121 @@ export class TaskRepo implements TaskPort {
     const put = await guardedSealedPut(db, 'tasks', stamped, row.updatedAt);
     if (!put.ok) return put;
     return ok(stamped);
+  }
+
+  /**
+   * S4 recurring completion: mark the task done AND create its next occurrence
+   * in ONE transaction (a half-applied pair — done without a successor — is
+   * exactly the data-loss shape this repo's one-transaction rule exists to
+   * prevent). The completed row is written exactly like `setDone` writes it:
+   * "recurrence never mutates past occurrences". ADR-007 D4.6: both rows are
+   * staged outside the tx; the read-modify-write half is stamp-guarded exactly
+   * like `setDone`, and the insert half has no prior version to guard.
+   */
+  async completeRecurring(
+    id: string,
+    next: TaskOccurrenceDraft,
+  ): Promise<Result<CompleteRecurringOutcome, AppError>> {
+    const { clock, ids, db } = this.#deps;
+    const current = await db.get('tasks', id);
+    if (!current.ok) return err(current.error);
+    const row = current.value;
+    if (row === undefined || row.deletedAt !== null) return err(taskMissing(id));
+    const now = clock();
+    const done: Task = {
+      ...row,
+      status: 'done',
+      completedAt: now,
+      updatedAt: now,
+      deviceId: db.deviceId,
+    };
+    const doneValidated = this.#validate(done);
+    if (!doneValidated.ok) return doneValidated;
+
+    const group: SiblingGroup = {
+      listId: next.listId,
+      parentTaskId: next.parentTaskId ?? null,
+    };
+    const depth = await this.#checkParent(group.parentTaskId);
+    if (!depth.ok) return depth;
+    const rows = await taskGroupRows(db, group);
+    if (!rows.ok) return rows;
+    const base: Task = {
+      id: next.id ?? ids(),
+      listId: next.listId,
+      title: next.title,
+      notes: next.notes,
+      status: 'open',
+      priority: next.priority,
+      ...(next.dueDate !== undefined ? { dueDate: next.dueDate } : {}),
+      ...(next.reminderAt !== undefined ? { reminderAt: next.reminderAt } : {}),
+      ...(next.recurrence !== undefined ? { recurrence: next.recurrence } : {}),
+      tags: [...next.tags],
+      ...(next.parentTaskId !== undefined ? { parentTaskId: next.parentTaskId } : {}),
+      sortOrder: 'h',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+      deviceId: db.deviceId,
+    };
+    const created: Task = { ...base, sortOrder: this.#keyAtEnd(rows.value) };
+    const createdValidated = this.#validate(created);
+    if (!createdValidated.ok) return createdValidated;
+    const stagedDone = await sealRow(db, 'tasks', done);
+    if (!stagedDone.ok) return stagedDone;
+    const stagedCreated = await sealRow(db, 'tasks', created);
+    if (!stagedCreated.ok) return stagedCreated;
+    return txAppRaw(db, ['tasks'], 'readwrite', async (t) => {
+      // Same optimistic stamp rule as setDone (ADR-007 D4.6): a concurrent
+      // write to the completed row aborts as STALE_WRITE instead of being
+      // silently overwritten.
+      const latest = await t.get('tasks', id);
+      if (latest === undefined || latest.updatedAt !== row.updatedAt) {
+        return err(staleWrite('tasks', id));
+      }
+      await t.put('tasks', stagedDone.value);
+      await t.put('tasks', stagedCreated.value); // one transaction: never done without its successor
+      return ok({ done, created });
+    });
+  }
+
+  /**
+   * S7 undo (see `TaskPort.restore`): the captured rows come back with every
+   * FIELD verbatim — `sortOrder`, `listId`, `parentTaskId`, `status`,
+   * `completedAt`, `dueDate`, `recurrence`… — and only the stamps are
+   * re-applied, like every other write here. A verbatim `updatedAt` would hide
+   * the restore from the tab-sync watermark sweep (`changedSince` queries by
+   * `updatedAt`) and let per-record LWW treat the undo as pre-delete state.
+   * ADR-007 D4.6 bulk pattern: every row staged outside, ONE txRaw commits
+   * restores + tombstones together.
+   */
+  async restore(rows: Task[], removeIds: string[]): Promise<Result<RestoreOutcome, AppError>> {
+    const { clock, db } = this.#deps;
+    const now = clock();
+    const restored: Task[] = [];
+    for (const row of rows) {
+      const next: Task = { ...row, updatedAt: now, deviceId: db.deviceId };
+      const validated = this.#validate(next);
+      if (!validated.ok) return validated;
+      restored.push(next);
+    }
+    const tombstoned: Task[] = [];
+    for (const id of removeIds) {
+      const current = await db.get('tasks', id);
+      if (!current.ok) return err(current.error);
+      const row = current.value;
+      if (row === undefined || row.deletedAt !== null) continue; // idempotent
+      const tomb: Task = { ...row, deletedAt: now, updatedAt: now, deviceId: db.deviceId };
+      const validated = this.#validate(tomb);
+      if (!validated.ok) return validated;
+      tombstoned.push(tomb);
+    }
+    const staged = await stageAll(db, 'tasks', [...restored, ...tombstoned]);
+    if (!staged.ok) return staged;
+    return txAppRaw(db, ['tasks'], 'readwrite', async (t) => {
+      for (const row of staged.value) await t.put('tasks', row);
+      return ok({ restored, tombstoned });
+    });
   }
 
   async move(id: string, target: MoveTarget): Promise<Result<MoveOutcome<Task>, AppError>> {

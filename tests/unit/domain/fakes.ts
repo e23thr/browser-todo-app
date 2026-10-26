@@ -8,13 +8,16 @@
 import { err, ok, type AppError, type Result } from '../../../src/domain/kernel';
 import type { List, Settings, Task, TaskDraft, TaskPatch } from '../../../src/domain/model';
 import type {
+  CompleteRecurringOutcome,
   ListPort,
   ListPosition,
   ListRemoveDisposition,
   ListRemoveOutcome,
   MoveOutcome,
   MoveTarget,
+  RestoreOutcome,
   SettingsPort,
+  TaskOccurrenceDraft,
   TaskPort,
   TaskRemoveDisposition,
   TaskRemoveOutcome,
@@ -143,6 +146,17 @@ export class FakeTaskPort implements TaskPort {
 
   setDone(id: string, done: boolean): Promise<Result<Task, AppError>> {
     return this.rec.record<Task>('setDone', [id, done]);
+  }
+
+  completeRecurring(
+    id: string,
+    next: TaskOccurrenceDraft,
+  ): Promise<Result<CompleteRecurringOutcome, AppError>> {
+    return this.rec.record<CompleteRecurringOutcome>('completeRecurring', [id, next]);
+  }
+
+  restore(rows: Task[], removeIds: string[]): Promise<Result<RestoreOutcome, AppError>> {
+    return this.rec.record<RestoreOutcome>('restore', [rows, removeIds]);
   }
 
   move(id: string, target: MoveTarget): Promise<Result<MoveOutcome<Task>, AppError>> {

@@ -12,7 +12,7 @@ import type { JSX } from 'preact';
 
 import { t, getLocale } from '../../app/i18n';
 import { Icon } from '../../app/icons';
-import type { Priority } from '../../domain/model';
+import type { Priority, Recurrence } from '../../domain/model';
 
 /** `YYYY-MM-DD` → a localized medium date (never `toISOString`, E6). */
 export function formatDueDate(dateStr: string): string {
@@ -187,6 +187,123 @@ export function PriorityField({ value, onChange }: PriorityFieldProps): JSX.Elem
         ))}
       </div>
     </fieldset>
+  );
+}
+
+export interface RecurrenceFieldProps {
+  readonly value: Recurrence | undefined;
+  /** `null` clears the rule ("Repeat: Never"). */
+  readonly onChange: (value: Recurrence | null) => void;
+}
+
+const REPEAT_OPTIONS: readonly { readonly value: Recurrence['freq']; readonly labelKey: string }[] =
+  [
+    { value: 'daily', labelKey: 'repeat.daily' },
+    { value: 'weekly', labelKey: 'repeat.weekly' },
+    { value: 'monthly', labelKey: 'repeat.monthly' },
+    { value: 'weekdays', labelKey: 'repeat.weekdays' },
+  ];
+
+/** `interval` stays an integer >= 1 (the RESERVED recurrence format, ADR-002 §3). */
+function clampInterval(value: string): number {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.min(365, Math.max(1, parsed));
+}
+
+/**
+ * S4 repeat field: the RRULE-lite rule (`{ freq, interval >= 1, until? }`) —
+ * a frequency select, an interval, and an OPTIONAL end date. No exceptions and
+ * no end-count (R4: out of V1). "Never" clears the field entirely.
+ */
+export function RecurrenceField({ value, onChange }: RecurrenceFieldProps): JSX.Element {
+  const id = useId();
+  const freq = value?.freq ?? '';
+  const interval = value?.interval ?? 1;
+  const until = value?.until ?? null;
+
+  const emit = (next: {
+    freq: Recurrence['freq'];
+    interval: number;
+    until: string | null;
+  }): void => {
+    onChange({
+      freq: next.freq,
+      interval: next.interval,
+      ...(next.until !== null ? { until: next.until } : {}),
+    });
+  };
+
+  return (
+    <div class="field">
+      <label class="field-label" htmlFor={`${id}-repeat`}>
+        {t('composer.label.repeat')}
+      </label>
+      <select
+        id={`${id}-repeat`}
+        class="select"
+        data-testid="repeat-freq"
+        value={freq}
+        onChange={(event) => {
+          const next = event.currentTarget.value;
+          if (next === '') {
+            onChange(null);
+            return;
+          }
+          emit({ freq: next as Recurrence['freq'], interval, until });
+        }}
+      >
+        <option value="">{t('repeat.never')}</option>
+        {REPEAT_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {t(option.labelKey)}
+          </option>
+        ))}
+      </select>
+      {freq !== '' ? (
+        <>
+          <label class="field-label" htmlFor={`${id}-interval`}>
+            {t('repeat.every')}
+          </label>
+          <input
+            id={`${id}-interval`}
+            class="input"
+            type="number"
+            inputmode="numeric"
+            min={1}
+            max={365}
+            data-testid="repeat-interval"
+            value={String(interval)}
+            onInput={(event) => {
+              emit({
+                freq,
+                interval: clampInterval(event.currentTarget.value),
+                until,
+              });
+            }}
+          />
+          <label class="field-label" htmlFor={`${id}-until`}>
+            {t('repeat.until')}
+          </label>
+          <input
+            id={`${id}-until`}
+            class="input"
+            type="date"
+            data-testid="repeat-until"
+            value={until ?? ''}
+            onChange={(event) => {
+              const next = event.currentTarget.value;
+              emit({
+                freq,
+                interval,
+                until: next === '' ? null : next,
+              });
+            }}
+          />
+          <p class="field-hint">{t('repeat.hint')}</p>
+        </>
+      ) : null}
+    </div>
   );
 }
 

@@ -80,11 +80,14 @@ import {
 } from '../../src/domain/model';
 import { MutationRunner } from '../../src/domain/pipeline';
 import type {
+  CompleteRecurringOutcome,
   ListPort,
   ListRemoveOutcome,
   MoveOutcome,
   MoveTarget,
+  RestoreOutcome,
   SettingsPort,
+  TaskOccurrenceDraft,
   TaskPort,
   TaskRemoveDisposition,
   TaskRemoveOutcome,
@@ -1467,6 +1470,35 @@ function makeQuotaRunner(): {
       const current = tasks.get(id);
       if (current === undefined) return err({ code: 'RULE', rule: 'TASK_MISSING', message: id });
       return ok({ ...current, status: done ? 'done' : 'open' });
+    },
+    async completeRecurring(
+      id: string,
+      next: TaskOccurrenceDraft,
+    ): Promise<Result<CompleteRecurringOutcome, AppError>> {
+      const current = tasks.get(id);
+      if (current === undefined) return err({ code: 'RULE', rule: 'TASK_MISSING', message: id });
+      const done: Task = { ...current, status: 'done' };
+      tasks.set(id, done);
+      seq += 1;
+      const created = makeTask({
+        id: next.id ?? `QATASK${String(seq)}`,
+        listId: next.listId,
+        title: next.title,
+        ...(next.dueDate !== undefined ? { dueDate: next.dueDate } : {}),
+      });
+      tasks.set(created.id, created);
+      return ok({ done, created });
+    },
+    async restore(rows: Task[], removeIds: string[]): Promise<Result<RestoreOutcome, AppError>> {
+      for (const row of rows) tasks.set(row.id, row);
+      const tombstoned: Task[] = [];
+      for (const id of removeIds) {
+        const current = tasks.get(id);
+        if (current === undefined) continue;
+        tasks.delete(id);
+        tombstoned.push(current);
+      }
+      return ok({ restored: [...rows], tombstoned });
     },
     async move(id: string, target: MoveTarget): Promise<Result<MoveOutcome<Task>, AppError>> {
       const current = tasks.get(id);

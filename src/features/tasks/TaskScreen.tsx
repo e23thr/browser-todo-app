@@ -31,7 +31,7 @@ import { Composer } from './Composer';
 import { BootErrorPanel } from './BootErrorPanel';
 import { MoveToListDialog } from './MoveToListDialog';
 import type { MoveDelta } from './TaskRow';
-import { TaskDeleteDialog } from './TaskDeleteDialog';
+import { needsDeleteDisposition, TaskDeleteDialog } from './TaskDeleteDialog';
 import { TaskEditor } from './TaskEditor';
 import { TaskList } from './TaskList';
 import { TagsManageDialog } from './TagsManageDialog';
@@ -200,14 +200,7 @@ export function TaskScreen({
     setEditing({ id, task });
   };
 
-  const onDelete = (id: string): void => {
-    setConfirmingId(id);
-  };
-
-  const confirmDelete = (disposition: TaskRemoveDisposition): void => {
-    const task = confirmingTask;
-    setConfirmingId(null);
-    if (task === undefined) return;
+  const runDelete = (task: Task, disposition: TaskRemoveDisposition): void => {
     // Drop any retention immediately: the row is gone for good.
     const timer = timers.current.get(task.id);
     if (timer !== undefined) {
@@ -219,6 +212,26 @@ export function TaskScreen({
     void deleteTask(task.id, disposition).then((result) => {
       if (result.ok) announce(t('a11y.taskDeleted'));
     });
+  };
+
+  const onDelete = (id: string): void => {
+    // S7.1 binding (t_1b9ee0e6): the confirm dialog is REPLACED by the 10 s undo
+    // toast — the dialog survives only where a disposition must be chosen (live
+    // subtasks: promote vs cascade).
+    if (needsDeleteDisposition(id)) {
+      setConfirmingId(id);
+      return;
+    }
+    const task = storeState.tasks.get(id);
+    if (task === undefined) return;
+    runDelete(task, { mode: 'cascade' });
+  };
+
+  const confirmDelete = (disposition: TaskRemoveDisposition): void => {
+    const task = confirmingTask;
+    setConfirmingId(null);
+    if (task === undefined) return;
+    runDelete(task, disposition);
   };
 
   /* ------------------------------- reorder (M6) ------------------------------- */

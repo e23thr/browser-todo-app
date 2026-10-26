@@ -232,7 +232,7 @@ describe('§9.1 row focus model + row menu (§9.2)', () => {
     });
   });
 
-  it('Enter opens the editor, Delete opens the confirm, Escape returns to the row', async () => {
+  it('Enter opens the editor and Escape cancels; Delete removes the row immediately (S7.1)', async () => {
     await seed({
       lists: [makeList({ id: 'L1', name: 'Personal' })],
       tasks: [
@@ -260,15 +260,19 @@ describe('§9.1 row focus model + row menu (§9.2)', () => {
       expect(screen.queryByRole('dialog', { name: 'Edit task' })).toBeNull();
     });
 
-    // Delete opens the S7.1 confirm; Escape closes it and returns focus.
+    // S7.1 binding (t_1b9ee0e6): Delete removes the row immediately — the undo
+    // toast replaces the confirm dialog (undo/toast matrices: t_a056b19f).
     first.focus();
     fireEvent.keyDown(first, { key: 'Delete' });
-    await screen.findByRole('dialog', { name: 'Delete task?' });
-    fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Delete task?' })).toBeNull();
     await waitFor(() => {
-      expect(screen.queryByRole('dialog', { name: 'Delete task?' })).toBeNull();
+      expect(state.value.tasks.has('T1')).toBe(false);
     });
-    expect(state.value.tasks.has('T1')).toBe(true);
+    // The cursor's row vanished, so focus moves along — never dropped on the document.
+    await waitFor(() => {
+      const active = document.activeElement as HTMLElement | null;
+      expect(active?.dataset['taskId']).toBe('T2');
+    });
   });
 
   it('keeps inner controls out of the Tab order until the cursor reaches the row', async () => {
@@ -316,7 +320,7 @@ describe('§9.1 row focus model + row menu (§9.2)', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
-  it('deletes via the row menu confirm and moves focus to the next row (F4)', async () => {
+  it('deletes via the row menu immediately and moves focus to the next row (F4)', async () => {
     await seed({
       lists: [makeList({ id: 'L1', name: 'Personal' })],
       tasks: [
@@ -331,9 +335,9 @@ describe('§9.1 row focus model + row menu (§9.2)', () => {
     const menu = await screen.findByRole('menu');
     fireEvent.click(within(menu).getByRole('menuitem', { name: 'Delete' }));
 
-    const confirm = await screen.findByRole('dialog', { name: 'Delete task?' });
-    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
-
+    // S7.1 binding (t_1b9ee0e6): the confirm dialog is replaced by the undo toast —
+    // the delete lands immediately.
+    expect(screen.queryByRole('dialog', { name: 'Delete task?' })).toBeNull();
     await waitFor(() => {
       expect(state.value.tasks.has('T1')).toBe(false);
     });

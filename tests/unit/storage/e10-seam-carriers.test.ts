@@ -149,6 +149,54 @@ describe('repo layer — stage-then-txRaw under a macrotask seam (ADR-007 D4.6)'
     expect(loaded.value.lists.map((l) => l.name)).toEqual(['Seam list renamed']);
   });
 
+  it('completeRecurring (done + successor) and restore (S7 undo) survive the seam', async () => {
+    const db = await openDb('seam-recurring');
+    const calls: SeamCall[] = [];
+    setRowCryptoSeam(macrotaskSeam({ calls }));
+
+    const deps = repoDeps(db);
+    const tasks = new TaskRepo(deps);
+    const list = await new ListRepo(deps).create({ name: 'Recur list', color: '#336699' });
+    if (!list.ok) throw new Error('seed list failed');
+    const created = await tasks.create(draft(list.value.id, 'water plants'));
+    if (!created.ok) throw new Error('seed task failed');
+
+    // S4: done + successor in ONE transaction, both rows staged outside.
+    const rec = await tasks.completeRecurring(created.value.id, {
+      ...draft(list.value.id, 'water plants (next)'),
+      recurrence: { freq: 'weekly', interval: 1 },
+    });
+    expect(rec.ok, `completeRecurring failed: ${JSON.stringify(rec)}`).toBe(true);
+    if (!rec.ok) return;
+    expect(rec.value.done.status).toBe('done');
+    expect(rec.value.created.status).toBe('open');
+    expect(rec.value.created.title).toBe('water plants (next)');
+    expect(rec.value.created.recurrence).toEqual({ freq: 'weekly', interval: 1 });
+
+    const both = await db.readUnfiltered('tasks');
+    expect(both.ok && both.value).toHaveLength(2);
+    for (const row of both.ok ? both.value : []) {
+      expect((row as { sealedBySeam?: string }).sealedBySeam).toBe(row.id);
+    }
+
+    // S7 undo: the captured before-image comes back, the occurrence is
+    // tombstoned — ONE transaction, every row staged outside.
+    const undone = await tasks.restore([created.value], [rec.value.created.id]);
+    expect(undone.ok, `restore failed: ${JSON.stringify(undone)}`).toBe(true);
+    if (!undone.ok) return;
+    expect(undone.value.restored.map((t) => t.id)).toEqual([created.value.id]);
+    expect(undone.value.tombstoned.map((t) => t.id)).toEqual([rec.value.created.id]);
+
+    const after = await db.readUnfiltered('tasks');
+    expect(after.ok && after.value).toHaveLength(2);
+    for (const row of after.ok ? after.value : []) {
+      expect((row as { sealedBySeam?: string }).sealedBySeam).toBe(row.id);
+    }
+    // Domain view: exactly the restored task is live again.
+    const loaded = await tasks.loadAll();
+    expect(loaded.ok && loaded.value.tasks.map((t) => t.title)).toEqual(['water plants']);
+  });
+
   it('move (single-row RMW) and the rebalance hatch survive the seam', async () => {
     const db = await openDb('seam-move');
     const calls: SeamCall[] = [];

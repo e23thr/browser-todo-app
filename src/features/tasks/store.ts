@@ -33,11 +33,12 @@ import { noteFirstMeaningfulWrite } from '../data-safety/persistGate';
 import { noteTaskCreated } from '../install/installPrompt';
 import { msUntilNextLocalMidnight, todayStr } from '../../domain/dates';
 import { err, ok, type AppError, type Result } from '../../domain/kernel';
-import type { List, Priority, Settings, Task } from '../../domain/model';
-import { MutationRunner } from '../../domain/pipeline';
+import type { List, Priority, Recurrence, Settings, Task } from '../../domain/model';
+import { MutationRunner, type SetDoneOutcome } from '../../domain/pipeline';
 import type {
   ListRemoveDisposition,
   ListPosition,
+  RestoreOutcome,
   TaskPosition,
   TaskRemoveDisposition,
 } from '../../domain/ports';
@@ -282,6 +283,7 @@ export function bindRunnerForTest(r: MutationRunner): void {
 export function resetTaskStore(): void {
   for (const timer of reportTimers) clearTimeout(timer);
   reportTimers.clear();
+  dropUndoOffer(); // the S7 undo window must not outlive its store (or test)
   unsubscribe?.();
   unsubscribe = null;
   runner = null;
@@ -411,6 +413,107 @@ async function guard<T>(
   return result;
 }
 
+/* ------------------------------ S7 undo (toast) ------------------------------ */
+
+/**
+ * Undo window (S7, binding decision on t_1b9ee0e6): ONE single-step undo per
+ * toast, offered for 10 s. The newest offer replaces the previous one (no
+ * stack, no redo in V1), and an undo writes the exact prior rows back through
+ * `MutationRunner.restoreTasks` — `sortOrder`, `listId`, `parentTaskId`,
+ * `status` and `completedAt` included.
+ */
+export const UNDO_WINDOW_MS = 10_000;
+
+type UndoOffer = {
+  readonly toastId: string;
+  readonly tasks: readonly Task[];
+  readonly drop: readonly string[];
+};
+
+let undoOffer: UndoOffer | null = null;
+let undoTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Drop the offer on the table (expiry, replacement, toast dismissal, store reset). */
+function dropUndoOffer(): void {
+  if (undoTimer !== null) {
+    clearTimeout(undoTimer);
+    undoTimer = null;
+  }
+  const offer = undoOffer;
+  // Clear BEFORE dismissing: the undo toast's `onDismiss` is this very function
+  // (any dismissal route drops the offer), so the re-entry must see no offer.
+  undoOffer = null;
+  if (offer !== null) dismissToast(offer.toastId);
+}
+
+/** The single undo currently offered (test seam; at most one by construction). */
+export function currentUndoOffer(): { tasks: readonly Task[]; drop: readonly string[] } | null {
+  return undoOffer === null ? null : { tasks: undoOffer.tasks, drop: undoOffer.drop };
+}
+
+/**
+ * Offer the undo toast for a destructive op whose prior images were captured
+ * BEFORE the optimistic apply. `drop` lists ids the op created (a recurring
+ * completion's successor) — an undo tombstones them again.
+ */
+function offerUndo(
+  messageKey: string,
+  params: Readonly<Record<string, string | number>>,
+  tasks: readonly Task[],
+  drop: readonly string[] = [],
+): void {
+  dropUndoOffer(); // single-step: the newest offer replaces any previous one
+  const id = newToastId();
+  undoOffer = { toastId: id, tasks, drop };
+  // The store owns the 10 s window so the offer expires even when no ToastHost
+  // is mounted; the toast host dismisses the visual on the same duration.
+  undoTimer = setTimeout(() => {
+    undoTimer = null;
+    undoOffer = null;
+  }, UNDO_WINDOW_MS);
+  pushToast({
+    id,
+    tone: 'info',
+    messageKey,
+    params,
+    durationMs: UNDO_WINDOW_MS,
+    // Any dismissal route (Escape, close, auto-expiry) abandons the offer.
+    onDismiss: dropUndoOffer,
+    action: {
+      key: 'common.undo',
+      run: () => {
+        void undoLastAction();
+      },
+    },
+  });
+  // The toast is never the only channel (§5.5): the SAME message also lands in
+  // the polite region, deferred behind the action's own announcement so both
+  // reach a screen-reader user in order (SC 4.1.3).
+  announce(t(messageKey, params), 'polite', { deferred: true });
+}
+
+/**
+ * Apply the offered undo: write the captured rows back, tombstone what the op
+ * created, and dismiss the toast. Single-step — a second call within the window
+ * is a no-op.
+ */
+export function undoLastAction(): Promise<Result<RestoreOutcome, AppError> | null> {
+  const offer = undoOffer;
+  undoOffer = null;
+  if (undoTimer !== null) {
+    clearTimeout(undoTimer);
+    undoTimer = null;
+  }
+  if (offer === null) return Promise.resolve(null);
+  dismissToast(offer.toastId);
+  const r = runner;
+  if (r === null) return Promise.resolve(null);
+  return guard(() => r.restoreTasks(offer.tasks, offer.drop)).then((result) => {
+    if (result.ok) announce(t('a11y.undoDone'));
+    return result;
+  });
+}
+
 /* ------------------------------- mutations ------------------------------- */
 
 export interface TaskInput {
@@ -428,6 +531,11 @@ export interface TaskInput {
    * it, a number = the `reminderAt` instant (S5 reminder field).
    */
   readonly reminderAt?: number | null;
+  /**
+   * S4 recurrence: `undefined` = leave unchanged, `null` = clear it ("Repeat:
+   * Never"), an object = the RRULE-lite rule (`{freq, interval, until?}`).
+   */
+  readonly recurrence?: Recurrence | null;
 }
 
 function noRunner(): Promise<Result<never, AppError>> {
@@ -486,6 +594,11 @@ export async function saveTask(id: string, input: TaskInput): Promise<Result<voi
       priority: input.priority,
       tags: [...input.tags],
       ...(input.dueDate !== null ? { dueDate: input.dueDate } : { dueDateUnset: true }),
+      ...(input.recurrence === undefined
+        ? {}
+        : input.recurrence !== null
+          ? { recurrence: input.recurrence }
+          : { recurrenceUnset: true as const }),
       ...(input.reminderAt === undefined
         ? {}
         : input.reminderAt !== null
@@ -510,13 +623,36 @@ export async function saveTask(id: string, input: TaskInput): Promise<Result<voi
   return ok(undefined);
 }
 
+/** Prior images a delete touches: the task plus its LIVE direct subtasks. */
+function priorDeleteImages(id: string, s: State = state.value): Task[] {
+  const task = s.tasks.get(id);
+  if (task === undefined) return [];
+  const children = [...s.tasks.values()].filter(
+    (row) => row.parentTaskId === id && row.deletedAt === null,
+  );
+  return [task, ...children];
+}
+
+/**
+ * S7 undo for delete: the captured images are written back exactly, so an undo
+ * reverses EITHER subtask disposition (cascade brings the children back,
+ * promote re-parents them back under the task). The undo toast replaces the
+ * S7.1 confirm on the task path (binding decision) — the subtask disposition
+ * dialog stays because it decides what happens to the CHILDREN, which no toast
+ * can ask.
+ */
 export function deleteTask(
   id: string,
   disposition: TaskRemoveDisposition,
 ): Promise<Result<undefined, AppError>> {
   const r = runner;
   if (r === null) return noRunner();
-  return guard(() => r.removeTask(id, disposition));
+  const prior = priorDeleteImages(id, r.getState());
+  const title = prior[0]?.title ?? '';
+  return guard(() => r.removeTask(id, disposition)).then((result) => {
+    if (result.ok && prior.length > 0) offerUndo('undo.taskDeleted', { title }, prior);
+    return result;
+  });
 }
 
 /**
@@ -562,10 +698,28 @@ export function setTaskReminder(
   );
 }
 
-export function setTaskDone(id: string, done: boolean): Promise<Result<Task, AppError>> {
+/**
+ * Complete / uncomplete. S4: completing a recurring task mints its next
+ * occurrence (the domain decides, over the all-day due date). S7: the success
+ * leg offers the undo toast — undoing reopens the row AND tombstones the
+ * successor the completion created (single step, exact prior state).
+ */
+export function setTaskDone(id: string, done: boolean): Promise<Result<SetDoneOutcome, AppError>> {
   const r = runner;
   if (r === null) return noRunner();
-  return guard(() => r.setDone(id, done));
+  const before = r.getState().tasks.get(id);
+  return guard(() => r.setDone(id, done)).then((result) => {
+    if (result.ok && done && before !== undefined) {
+      const created = result.value.created;
+      offerUndo(
+        'undo.taskCompleted',
+        { title: before.title },
+        [before],
+        created === undefined ? [] : [created.id],
+      );
+    }
+    return result;
+  });
 }
 
 export function addList(input: { name: string; color: string }): Promise<Result<List, AppError>> {
@@ -599,7 +753,18 @@ export function moveTaskTo(
 ): Promise<Result<Task, AppError>> {
   const r = runner;
   if (r === null) return noRunner();
-  return guard(() => r.moveTask(id, { group: { listId, parentTaskId: null }, position }));
+  const before = r.getState().tasks.get(id);
+  return guard(() => r.moveTask(id, { group: { listId, parentTaskId: null }, position })).then(
+    (result) => {
+      // S7: a move (reorder, drag, move-to-list) is undoable too — the undo
+      // writes the prior row back, so the exact `sortOrder` AND the source list
+      // return, not just "some position near it".
+      if (result.ok && before !== undefined) {
+        offerUndo('undo.taskMoved', { title: before.title }, [before]);
+      }
+      return result;
+    },
+  );
 }
 
 /** `delta` = ±1 along the list order; boundary moves reject so callers can announce. */

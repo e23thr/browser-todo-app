@@ -7,7 +7,7 @@
  */
 
 import type { AppError, Result } from './kernel';
-import type { List, Settings, Task, TaskDraft, TaskPatch } from './model';
+import type { List, Recurrence, Settings, Task, TaskDraft, TaskPatch } from './model';
 
 /** Epoch ms UTC — injectable (ADR-002 Decision 5). */
 export type Clock = () => number;
@@ -71,12 +71,49 @@ export type MoveOutcome<T> = { row: T; rebalanced: boolean };
  */
 export type ListRemoveOutcome = { moved: Task[]; tombstoned: Task[] };
 
+/**
+ * Create input for the S4 NEXT OCCURRENCE of a recurring task: a normal
+ * `TaskDraft` plus the two fields the recurrence carries forward (`recurrence`
+ * itself and the reminder instant) — `TaskDraft` stays the composer's shape.
+ */
+export type TaskOccurrenceDraft = TaskDraft & {
+  reminderAt?: number;
+  recurrence?: Recurrence;
+};
+
+/** Rows the S4 `completeRecurring` transaction wrote: the completed row + its successor. */
+export type CompleteRecurringOutcome = { done: Task; created: Task };
+
+/**
+ * Rows the S7 `restore` transaction wrote: `restored` are the rows written back
+ * verbatim (undo of delete/complete/move), `tombstoned` the rows the undo
+ * removed again (the occurrence a completed recurring task had minted).
+ */
+export type RestoreOutcome = { restored: Task[]; tombstoned: Task[] };
+
 export interface TaskPort {
   loadAll(): Promise<Result<{ tasks: Task[]; lists: List[]; settings: Settings }, AppError>>;
   create(draft: TaskDraft): Promise<Result<Task, AppError>>;
   patch(id: string, patch: TaskPatch): Promise<Result<Task, AppError>>;
   /** `completedAt` stamped on done, cleared on uncomplete (ADR-002 Decision 5). */
   setDone(id: string, done: boolean): Promise<Result<Task, AppError>>;
+  /**
+   * S4 recurring completion: mark the task done AND create its next occurrence
+   * in ONE transaction (a half-applied pair — done without a successor — is
+   * exactly the data-loss shape this repo's one-transaction rule exists to
+   * prevent). The completed row is written exactly like `setDone` writes it:
+   * "recurrence never mutates past occurrences".
+   */
+  completeRecurring(
+    id: string,
+    next: TaskOccurrenceDraft,
+  ): Promise<Result<CompleteRecurringOutcome, AppError>>;
+  /**
+   * S7 undo: write `rows` back (fields verbatim, stamps re-applied by the repo
+   * like every other write — see the repo implementation) and tombstone
+   * `removeIds` in ONE transaction. Resolves the rows the transaction wrote.
+   */
+  restore(rows: Task[], removeIds: string[]): Promise<Result<RestoreOutcome, AppError>>;
   /** SINGLE-record write: resolves neighbor keys, one `put` of the moved row. */
   move(id: string, target: MoveTarget): Promise<Result<MoveOutcome<Task>, AppError>>;
   /**

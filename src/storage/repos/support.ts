@@ -91,8 +91,11 @@ export async function stageAll<K extends 'tasks' | 'lists'>(
  * pessimistic single-tx guard is gone, so the tx re-reads the AT-REST row and
  * compares its envelope-level `updatedAt` (plaintext in both row shapes)
  * against the version the merge was based on — a mismatch aborts with the
- * typed retryable `STALE_WRITE` error, so a concurrent write is never silently
- * lost. A vanished base row conflicts too (never a resurrection).
+ * typed retryable `STALE_WRITE` error. A vanished base row conflicts too
+ * (never a resurrection). Residual: a concurrent writer that stamps the SAME
+ * `updatedAt` (same millisecond, or a frozen clock) is invisible to the
+ * comparison — see t_a155ebf2's open question for h_senior_coder (the E5
+ * two-tab merge probe pins it).
  */
 export async function guardedSealedPut<K extends 'tasks' | 'lists'>(
   db: AppDB,

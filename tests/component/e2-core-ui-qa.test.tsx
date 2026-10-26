@@ -28,6 +28,7 @@ import { WeekView } from '../../src/features/week/WeekView';
 import {
   bindRunnerForTest,
   bootError,
+  currentUndoOffer,
   resetTaskStore,
   setTaskDone,
   state,
@@ -504,7 +505,7 @@ describe('M1 editor (F2) — save, focus return, taskGone', () => {
     );
   });
 
-  it('a delete the user confirms from the editor closes it without the taskGone state', async () => {
+  it('a delete from the editor closes it without the taskGone state (S7.1: no confirm)', async () => {
     await seed({
       lists: [makeList({ id: 'L1', name: 'Personal' })],
       tasks: [
@@ -519,8 +520,10 @@ describe('M1 editor (F2) — save, focus return, taskGone', () => {
     fireEvent.input(title, { target: { value: 'Edited right before deleting' } });
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Delete task' }));
-    const confirm = await screen.findByRole('dialog', { name: 'Delete task?' });
-    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
+
+    // S7.1 binding (t_1b9ee0e6): no confirm dialog — the delete lands immediately
+    // and the 10 s undo toast IS the confirmation.
+    expect(screen.queryByRole('dialog', { name: 'Delete task?' })).toBeNull();
 
     // A user-initiated delete is NOT the §14 error state: no "task no longer exists"
     // row and no assertive announcement may fire on the way out (the editor closes
@@ -538,53 +541,43 @@ describe('M1 editor (F2) — save, focus return, taskGone', () => {
 
 /* -------------------------------------------------------------------- M1 F4 */
 
-describe('M1 delete task (F4 / S7.1) — confirm, Escape, announcement', () => {
-  async function openConfirm(): Promise<HTMLElement> {
+describe('M1 delete task (F4 / S7.1) — the undo toast replaces the confirm', () => {
+  async function deleteFromRowMenu(): Promise<void> {
     const menu = await screen.findByRole('button', { name: 'Actions for "Throw away"' });
     fireEvent.click(menu);
     const popup = await screen.findByRole('menu');
     fireEvent.click(within(popup).getByRole('menuitem', { name: 'Delete' }));
-    return screen.findByRole('dialog', { name: 'Delete task?' });
   }
 
-  it('Escape cancels without touching the task and returns focus to the row menu', async () => {
+  it('the row-menu delete lands immediately and offers the undo with the exact prior row', async () => {
     await seed({
       lists: [makeList({ id: 'L1', name: 'Personal' })],
       tasks: [makeTask({ id: 'T1', listId: 'L1', title: 'Throw away' })],
     });
     render(<AllOpenView />);
-    const trigger = await screen.findByRole('button', { name: 'Actions for "Throw away"' });
 
-    const dialog = await openConfirm();
-    expect(
-      within(dialog).getByText('"Throw away" will be deleted. This can\'t be undone.', {
-        exact: true,
-      }),
-    ).toBeTruthy();
-    // S7: initial focus on the safe action.
-    await waitFor(() => {
-      expect((document.activeElement as HTMLButtonElement | null)?.textContent).toBe('Cancel');
-    });
+    await deleteFromRowMenu();
 
-    fireEvent.keyDown(document, { key: 'Escape' });
+    // S7.1 binding (t_1b9ee0e6): no confirm dialog — the delete lands and the 10 s
+    // undo offer IS the confirmation.
+    expect(screen.queryByRole('dialog', { name: 'Delete task?' })).toBeNull();
     await waitFor(() => {
-      expect(screen.queryByRole('dialog', { name: 'Delete task?' })).toBeNull();
+      expect(state.value.tasks.has('T1')).toBe(false);
     });
-    expect(state.value.tasks.has('T1')).toBe(true);
-    await waitFor(() => {
-      expect(document.activeElement).toBe(trigger);
-    });
+    // The offer carries the exact prior row, ready for the single-step undo.
+    const offer = currentUndoOffer();
+    expect(offer?.tasks.map((task) => task.id)).toEqual(['T1']);
+    expect(offer?.tasks[0]?.title).toBe('Throw away');
   });
 
-  it('confirm deletes the task and announces "Task deleted"', async () => {
+  it('deletes the task and announces "Task deleted"', async () => {
     await seed({
       lists: [makeList({ id: 'L1', name: 'Personal' })],
       tasks: [makeTask({ id: 'T1', listId: 'L1', title: 'Throw away' })],
     });
     render(<AllOpenView />);
 
-    const dialog = await openConfirm();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await deleteFromRowMenu();
 
     await waitFor(() => {
       expect(state.value.tasks.has('T1')).toBe(false);

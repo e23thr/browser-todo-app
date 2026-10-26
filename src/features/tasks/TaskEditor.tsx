@@ -13,7 +13,9 @@
  *
  * Interaction: Save persists and returns focus to the originating row (Dialog restores
  * it to the trigger); Cancel/Escape while dirty asks the S7.3 discard confirm; Delete
- * opens the S7.1 confirm. `Enter` saves from single-line inputs, `Ctrl/Cmd+Enter` from
+ * runs immediately under the S7.1 undo toast (binding t_1b9ee0e6 — the confirm dialog
+ * survives only where live subtasks force a disposition choice). `Enter` saves from
+ * single-line inputs, `Ctrl/Cmd+Enter` from
  * the notes textarea (§9.5).
  */
 
@@ -25,12 +27,11 @@ import { t, getLocale } from '../../app/i18n';
 import type { FlushOutcome } from '../../app/update';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Dialog } from '../../components/Dialog';
-import type { List, Priority, Task } from '../../domain/model';
-import { DateField, ListSelect, PriorityField, TagsField } from './fields';
+import type { List, Priority, Recurrence, Task } from '../../domain/model';
+import { DateField, ListSelect, PriorityField, RecurrenceField, TagsField } from './fields';
 import { useEditSession } from './editSession';
 import { ListDialog } from '../lists/ListDialog';
-import { TaskDeleteDialog } from './TaskDeleteDialog';
-import { liveSubtasks } from './TaskDeleteDialog';
+import { liveSubtasks, needsDeleteDisposition, TaskDeleteDialog } from './TaskDeleteDialog';
 import { addList, addTask, deleteTask, saveTask, setTaskDone, state, allTags } from './store';
 
 export interface TaskEditorProps {
@@ -48,6 +49,16 @@ function sameDay(a: string | null, b: string | undefined): boolean {
   return (a ?? undefined) === b;
 }
 
+/** Field-wise comparison — never JSON key order (an imported row's order is arbitrary). */
+function sameRecurrence(
+  a: Recurrence | null | undefined,
+  b: Recurrence | null | undefined,
+): boolean {
+  // null (explicitly cleared) and undefined (never set) both mean "no recurrence".
+  if (a == null || b == null) return a == null && b == null;
+  return a.freq === b.freq && a.interval === b.interval && (a.until ?? null) === (b.until ?? null);
+}
+
 export function TaskEditor({ task, lists, onClose, onNavigate }: TaskEditorProps): JSX.Element {
   const uid = useId();
 
@@ -57,6 +68,7 @@ export function TaskEditor({ task, lists, onClose, onNavigate }: TaskEditorProps
   const [listId, setListId] = useState(task.listId);
   const [priority, setPriority] = useState<Priority>(task.priority);
   const [tags, setTags] = useState<string[]>([...task.tags]);
+  const [recurrence, setRecurrence] = useState<Recurrence | null | undefined>(task.recurrence);
   const [subtaskDraft, setSubtaskDraft] = useState('');
   const [saving, setSaving] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -72,7 +84,8 @@ export function TaskEditor({ task, lists, onClose, onNavigate }: TaskEditorProps
     !sameDay(due, task.dueDate) ||
     listId !== task.listId ||
     priority !== task.priority ||
-    tags.join('\u0000') !== task.tags.join('\u0000');
+    tags.join('\u0000') !== task.tags.join('\u0000') ||
+    !sameRecurrence(recurrence, task.recurrence);
 
   /**
    * Durable commit of the in-flight edit (ADR-005 Decision 7 rule 2): the update flow's
@@ -94,6 +107,9 @@ export function TaskEditor({ task, lists, onClose, onNavigate }: TaskEditorProps
       listId,
       priority,
       tags,
+      // `undefined` = untouched = leave unchanged (TaskInput's contract); the field
+      // only ever emits `null` (clear) or a rule, so this is precise, not defensive.
+      ...(recurrence !== undefined ? { recurrence } : {}),
     });
     return result.ok ? { ok: true } : { ok: false };
   };
@@ -197,7 +213,18 @@ export function TaskEditor({ task, lists, onClose, onNavigate }: TaskEditorProps
         // offer no destructive action at all, alongside the disabled Save.
         disabled={gone}
         onClick={() => {
-          setConfirmingDelete(true);
+          // S7.1 binding (t_1b9ee0e6): the confirm dialog is REPLACED by the
+          // 10 s undo toast — kept only for the subtask disposition choice.
+          if (needsDeleteDisposition(task.id)) {
+            setConfirmingDelete(true);
+            return;
+          }
+          // Close BEFORE the optimistic remove evicts the row — the same
+          // rationale as the dialog's onConfirm below.
+          onClose();
+          void deleteTask(task.id, { mode: 'cascade' }).then((result) => {
+            if (result.ok) announce(t('a11y.taskDeleted'));
+          });
         }}
       >
         {t('editor.delete')}
@@ -380,6 +407,8 @@ export function TaskEditor({ task, lists, onClose, onNavigate }: TaskEditorProps
               </div>
             </fieldset>
           ) : null}
+
+          <RecurrenceField value={recurrence ?? undefined} onChange={setRecurrence} />
 
           {/* Hidden submit so Enter in any single-line field saves (§9.5). */}
           <button type="submit" class="visually-hidden" tabIndex={-1} aria-hidden="true">
