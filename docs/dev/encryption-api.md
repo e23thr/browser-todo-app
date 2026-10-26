@@ -18,8 +18,9 @@ deviations are additive and listed in §4 — nothing normative was weakened).
 | Storage chain | `crypto_state` singleton store at **idbVersion 3 / schemaVersion 4** (`src/storage/{schema,types,migrations,validate}.ts`) |
 | Sync interop | `src/sync/mergeSeam.ts` + `merge.ts` `LOCKED` deferral + encrypted-shape types in `src/sync/{types,hash,engine}.ts` |
 | Portability | export decrypt (plaintext backups, D4.5), import stamp+encrypt, snapshot payload wrap/unwrap (D4.4), enc-aware `canonicalizeRecord` |
-| UX | `src/features/crypto/{EnableWizard,UnlockDialog,LockedScreen,CryptoSection,PreLockToast,wiring}.ts(x)` + the App lock gate + settings section |
-| Tests | `tests/unit/crypto/*` (32 tests), `tests/unit/sync/encrypted-merge.test.ts` (7) |
+| UX | `src/features/crypto/{EnableWizard,UnlockDialog,LockedScreen,CryptoSection,TurnOffDialog,JoinDialog,PreLockToast,wiring}.ts(x)` + the App lock gate + settings section |
+| Blocked-state signal | `src/crypto/foreignData.ts` (shell-safe signal) → the `crypto-blocked` data-safety banner + the join affordance |
+| Tests | `tests/unit/crypto/*` (acceptance suites + E10 QA pins Q1–Q9), `tests/component/{crypto-section,enable-wizard}.test.tsx`, `tests/unit/sync/encrypted-merge.test.ts` |
 
 ## 2. Seam contracts (for the sync UI card t_5f4fe7db and reviewers)
 
@@ -39,7 +40,33 @@ deviations are additive and listed in §4 — nothing normative was weakened).
    works while locked).
 4. **Locked-state reads** return raw at-rest rows (envelope operations keep
    working); the UI is gated to `LockedScreen` before any content paints
-   (ADR-007 D4.3). Plaintext writes while locked are refused (`BLOCKED`).
+   (ADR-007 D4.3). Plaintext writes while locked are refused (`BLOCKED`). A
+   never-enabled store (`status: 'off'`) is the exception that proves the
+   rule: ciphertext it pulls has NO key here, so `readRow` quarantines it
+   (excluded from reads, kept verbatim, recovery file) instead of leaking
+   envelopes as "domain views" — D3.3's honest blocked treatment.
+5. **Migration resume is production-wired (D7.1)**, never test-only:
+   `CryptoVault.unlockWithPassphrase/…KeyFile/…RecoveryCode` resume a
+   `migrating` sweep in-line before resolving, `refreshAfterUnlock` retries via
+   `resumeMigrationFlow` (`src/features/crypto/wiring.ts` — single-flight; a
+   `QUOTA_EXCEEDED` pause opens the data-safety quota dialog once, then retries
+   the sweep), and live progress/paused state rides the `migrationRun` signal
+   (`src/crypto/service.ts`). Sweeps are single-flight process-wide
+   (`sweepOnce`) — an unlock during an in-flight enable awaits the same sweep
+   and re-checks the state before any status flip.
+6. **The blocked-state signal** (`foreignCiphertext`, `src/crypto/foreignData.ts`)
+   is set by the read path (never-enabled ciphertext or a ring that cannot open
+   a row) and cleared by a successful join or a completed disable. The
+   data-safety host arms the `crypto-blocked` banner from it (tier 1, not
+   dismissible — it clears itself when the data becomes readable) and
+   CryptoSection offers the join flow next to the notice.
+7. **`enableEncryption`'s `onRecoveryOffer` seam** (D6.1's structural order):
+   the wizard is called with the seam, receives the generated material BEFORE
+   the sweep, and the recovery slot is persisted only after the `'saved'`
+   acknowledgment — a slot can never exist whose code was never shown.
+   Headless callers (no seam) get their slot issued only after a successful
+   sweep — a failed enable strands none either. `'cancelled'` (wizard closed
+   at the offer) rolls the store back to plaintext per D6.1.
 
 ## 3. Dependency & budget audit (testing contract: "attach to the impl card")
 
@@ -117,6 +144,33 @@ deviations are additive and listed in §4 — nothing normative was weakened).
     lines/statements/functions (measured 86.7/81.1/84.2 on the unit+integration
     suites), branches floored at 65 (measured 66.8 — codec guards and typed-error
     fan-out dominate; same precedent as the sync modules' 70 floor).
+13. **D6.1's offer order is STRUCTURAL now** (review F1c): `enableEncryption`
+    gained the optional `onRecoveryOffer` seam and mints the recovery material
+    WITHOUT the key ring — the slot is written at the acknowledgment (wizard)
+    or after a successful sweep (headless). This resolves the "slot exists +
+    code never delivered + settings claims recoverySaved" strand by
+    construction; a declined offer records `recoveryOfferedAt` at the ring
+    write, and CryptoSection offers `issueRecoveryKey` ("Create a recovery
+    key") whenever an enabled store holds no recovery slot — the repair path
+    for a declined or never-delivered offer.
+14. **The lost-passphrase delete-all escape (D6.3/§7.4) resets `crypto_state`**
+    (review F4): the locked screen's two-step inline confirm wipes the store
+    via `runDeleteAllWithoutDialog` (`actions.ts` — the wipe half of
+    `runDeleteAll`, extracted because the locked screen has no
+    `<DataSafetyHost>` to queue a dialog on) and THEN saves `status: 'off'`
+    with the ring wiped, so the escape can never leave an empty store locked
+    behind a lost passphrase. Note the contrast (review N3, PO-accepted):
+    the SETTINGS delete-all keeps `crypto_state` deliberately (a factory reset
+    of an enabled store stays encrypted-on-empty); only this escape resets it.
+15. **The decrypted-cache boundary is documented, not re-plumbed** (review N4):
+    decrypted views live in memory only (component state, the search-index
+    cache dropped by the `onLockDrop` seam, the AppDB quarantine/denied sets —
+    all in-memory), and the App never clears or swaps a live store today. If a
+    future store-clear/re-init is added it MUST re-run `initCryptoForApp`
+    (attach + seams) and `dropSearchIndex()`; registering store clears in the
+    lock-drop registry was deliberately NOT done here (no production caller
+    exists — a callback with no caller is the same dead-code smell the review
+    flagged for `resumeMigration`).
 
 ## 5. Acceptance criteria → evidence
 
@@ -127,6 +181,10 @@ deviations are additive and listed in §4 — nothing normative was weakened).
 | Encrypted-records + sync convergence | `tests/unit/sync/encrypted-merge.test.ts`: LWW over ciphertext verbatim, exactly one decryptable conflict copy (fresh IV + new-id AAD), delete-vs-edit, zero-copy-locked apply, ≥1-copy LOCKED deferral with idempotent resume, identical-edit degradation, undecryptable-loser bytes preserved |
 | Failure paths degrade without silent data loss | `vault-service.test.ts` quarantine block (tampered ciphertext + oversized decrypted field: excluded from reads, bytes kept verbatim, recovery file, explicit purge only), `migrate.test.ts` (disable refuses to strand unreadable bytes; QUOTA pause resumable; crash-mixed store resumes), `encrypted-merge.test.ts` verbatim-copy fallback |
 | No hand-rolled primitives; no new WASM; audit recorded | §3 above; `package.json` untouched; `no-wasm` gate unchanged; KATs pin the exact primitive parameters |
+| D7.1 resume has a production caller (review F1) | E10-Q1 pin (flipped from `it.fails`): unlock of a crashed migrating store sweeps to `on`; `boot-resume.test.ts`: the same through `initCryptoForApp`/`refreshAfterUnlock` (seams + singleton vault), plus the paused-retry flow |
+| D6.1 order structural; no orphaned slot (review F1c) | E10-Q2 pin (flipped): a sweep failure after a recovery opt-in leaves no slot; `enable-wizard.test.tsx`: code on screen with zero rows encrypted + no slot, slot lands on the ack, decline re-shows the warning verbatim, close-at-offer rolls back to plaintext |
+| D6.2 turn off = passphrase + warning (review F2) | `crypto-section.test.tsx`: one click never disables; wrong passphrase leaves the store `on`; the real passphrase sweeps to `off` with keys wiped |
+| D3.2/3.3 join + honest blocked state (review F4) | E10-Q3 pin (flipped): fresh-store join lands `status: 'on'`; `join-heal.test.tsx`: never-enabled quarantine (excluded, verbatim, signal up), join adopts the key, heals quarantine, clears the signal |
 
 ## 6. Follow-ups (tracked, not blocking)
 

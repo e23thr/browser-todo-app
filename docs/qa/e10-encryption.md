@@ -398,3 +398,18 @@ npx vitest run tests/unit/crypto/e10-qa-probes.test.ts \
 python3 ~/.hermes/profiles/h_reviewer/cache/scratch/e10-kat-verify.py
 npx playwright test --config tests/e2e/e10-encryption.playwright.config.ts
 ```
+
+---
+
+## 9. RESOLVED notes (append-only — fixes landed on card t_758ed741)
+
+The three remaining `it.fails` defect pins were flipped to plain `it(...)` by
+the fix card (same convention as §Q4/Q5's flip). Baseline before the fixes:
+`28 passed | 3 expected fail`; after: **`41 passed (0 expected fail)`** on
+`{e10-qa-probes, vault-service, migrate, vault-edges}`.
+
+| Pin | Fix | Where |
+|---|---|---|
+| **E10-Q1** (D7.1 "resume on next unlock" had no caller) | `unlockWithPassphrase/…KeyFile/…RecoveryCode` resume the migrating sweep in-line before resolving; `refreshAfterUnlock` retries via the single-flight `resumeMigrationFlow` (quota dialog → one retry); progress/paused ride the `migrationRun` signal; sweeps are process-wide single-flight | `src/crypto/{vault,service}.ts`, `src/features/crypto/wiring.ts`; `tests/unit/crypto/boot-resume.test.ts` covers the wiring path (`initCryptoForApp` + unlock/refresh, never `resumeMigration` directly) |
+| **E10-Q2** (sweep failure stranded an undisclosed recovery slot) | The slot is no longer minted into the key ring: headless callers get it issued only after a SUCCESSFUL sweep; the wizard gets the D6.1 order structurally — material disclosed before the sweep, slot persisted only on the "I saved it" ack | `src/crypto/service.ts` (`onRecoveryOffer` seam); `tests/component/enable-wizard.test.tsx` (code on screen with zero rows encrypted + no slot; ack persists it) |
+| **E10-Q3** (fresh-store join left `status: 'off'` — locked screen never shows, writes stay plaintext, reload bricks) | `joinWithKeyFile` flips a fresh store to `status: 'on'` (zero record re-encryption stays D3.2's rule) and calls `clearDecryptQuarantine()` so pre-join foreign rows heal under the adopted key (D3.3, deviation #10's missing caller); the blocked signal clears | `src/crypto/vault.ts`; `tests/unit/crypto/join-heal.test.ts` (quarantine → join → readable + signal cleared) |
