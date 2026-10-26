@@ -208,7 +208,7 @@ the failures are "wrong content accepted" / "content invisible", not corruption 
 
 | id | Sev | Finding |
 |---|---|---|
-| **X1** | **blocking for main** | **The unit job is RED at tip `ad4acc3`**: that commit's locale write swept the in-flight **S7 undo copy** — `confirm.deleteTask.body` changed from `…This can't be undone.` to `…You can undo this for 10 seconds.` — while the committed tests `core-ui-composer.test.tsx` ("deletes through the S7.1 confirm naming the task") and `e2-core-ui-qa.test.tsx` ("Escape cancels…") still assert the old text. Reproduced standalone with my probes removed (`sibling-fail-repro.txt`); the failing files are untouched since `6370493`. Owner: the S7/S5-S8 card (its uncommitted tree carries the updated tests) — land them, or the copy, consistently. |
+| **X1** | **resolved** | **The unit job was RED at tip `ad4acc3`**: that commit's locale write swept the in-flight **S7 undo copy** — `confirm.deleteTask.body` changed from `…This can't be undone.` to `…You can undo this for 10 seconds.` — while the committed tests `core-ui-composer.test.tsx` ("deletes through the S7.1 confirm naming the task") and `e2-core-ui-qa.test.tsx` ("Escape cancels…") still assert the old text. Reproduced standalone with my probes removed (`sibling-fail-repro.txt`); the failing files are untouched since `6370493`. Owner: the S7/S5-S8 card (its uncommitted tree carries the updated tests) — land them, or the copy, consistently. **RESOLVED by `339cf6c`**: the sweep was reverted (the 10-second line had no undo implementation anywhere in `src/`), so the S7.1 no-undo copy is the intended V1 behavior — both tests re-verified PASS 39/39 at `fca1e79` (t_f8f4a6f5). |
 | **X2** | pre-existing, disclosed | `format:check` FAIL at `9ee9669` **and** `ad4acc3` on `src/domain/model.ts` + `vite.config.ts` (Prettier drift; first disclosed in cbf779c). Neither file belongs to E9. First gate of `npm run ci` → no push until greened. |
 | **X3** | resolved | `budget / no-external-refs` FAIL at `9ee9669` (locale packs carry `https://cloud.example/…`, E8 sync copy) → **PASS at `ad4acc3`** (re-measured: 0 hits, locales 20 452/20 480). Recorded so the E9 handoff does not re-cite a fixed red. |
 
@@ -228,3 +228,7 @@ the failures are "wrong content accepted" / "content invisible", not corruption 
    re-run of probe Q17.
 3. X1 must land green before any push of `ad4acc3`+ (the unit gate, together with X2's
    `format:check`, is what currently keeps main's `npm run ci` red).
+   *Update 2026-10-26 (t_f8f4a6f5): X1 green since `339cf6c` (39/39 re-verified at `fca1e79`);
+   X2's named files greened by `869a1f9`, `validate.ts` by `fca1e79` — `format:check` exit 0.
+   The remaining `npm run ci` red is now the `src/storage` branch-coverage threshold from the
+   later crypto commit `c1ed860` — tracked on t_b910527a, not on X1/X2.*
