@@ -8,12 +8,13 @@
  *     discard-confirm over the task editor — from closing together),
  *   - initial focus lands inside (the element carrying `data-autofocus`, else the first
  *     focusable, else the dialog itself),
- *   - on close, focus returns to the exact trigger element that opened the dialog.
+ *   - on close, focus returns to the exact trigger element that opened the dialog —
+ *     unless focus has already moved to a newer target (standard dialog semantics).
  *
  * The scrim is decorative: clicking it runs the same close path as `Escape` (Cancel).
  */
 
-import { useEffect, useRef } from 'preact/hooks';
+import { useLayoutEffect, useRef } from 'preact/hooks';
 import type { ComponentChildren, JSX } from 'preact';
 
 /** Elements that can hold focus, in DOM order. */
@@ -62,8 +63,21 @@ export function Dialog({
   const openerRef = useRef<HTMLElement | null>(null);
   const titleId = useRef(`dialog-title-${String(Math.random()).slice(2, 10)}`).current;
 
+  // Latest-close ref (QA defect D2, t_46fc5a3c): the document keydown listener must
+  // never run a STALE `onClose`. Preact re-registers a changed effect only after the
+  // next paint, so an `Escape` arriving inside that window used to hit the pre-render
+  // closure — in the command palette that swapped stage-back and close. Registering
+  // the listener once and dispatching through this ref (refreshed on every render)
+  // closes the window for every dialog.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   // Capture the trigger before focus moves, then move focus into the dialog.
-  useEffect(() => {
+  // Layout-timed on purpose (D2 mount window, t_46fc5a3c): the stack registration and
+  // initial focus must be live the moment the panel is — the QA probe's Move-to-list
+  // Escape landed ~9 ms after the dialog's commit, inside the frame, and a post-paint
+  // effect had not registered yet.
+  useLayoutEffect(() => {
     openerRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const panel = panelRef.current;
@@ -75,15 +89,31 @@ export function Dialog({
     return () => {
       const at = dialogStack.indexOf(panel);
       if (at >= 0) dialogStack.splice(at, 1);
+      // Focus returns to the exact trigger — but only while focus still belongs to
+      // this dialog (standard dialog semantics, QA defect D1). A close action may
+      // already have handed focus somewhere newer (the palette's "Add a task" focuses
+      // the composer BEFORE the panel unmounts): a newer focus target always wins.
+      // Once the panel is detached, removing its focused node settles focus on `body`
+      // and the restore below still runs. It is also skipped when the opener left the
+      // document (its row was deleted): then the browser keeps focus wherever the
+      // view moved it.
+      const active = document.activeElement;
+      const focusMovedOut =
+        active !== null &&
+        active !== document.body &&
+        active !== document.documentElement &&
+        !panel.contains(active);
+      if (focusMovedOut) return;
       const opener = openerRef.current;
-      // Focus returns to the exact trigger — unless it left the document (its row
-      // was deleted): then the browser keeps focus wherever the view moved it.
       if (opener !== null && document.contains(opener)) opener.focus();
     };
   }, []);
 
   // Escape + Tab trap, active only while this dialog is topmost (§9.6).
-  useEffect(() => {
+  // Registered ONCE, at commit (`[]` + layout timing — D2 above): `onClose` is reached
+  // through the refreshed ref, so a keydown can never run a pre-render closure, and the
+  // listener is live in the very frame the panel mounts.
+  useLayoutEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       const panel = panelRef.current;
       if (panel === null || dialogStack[dialogStack.length - 1] !== panel) return;
@@ -91,7 +121,7 @@ export function Dialog({
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== 'Tab') return;
@@ -113,7 +143,7 @@ export function Dialog({
     return () => {
       document.removeEventListener('keydown', onKeyDown, true);
     };
-  }, [onClose]);
+  }, []);
 
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   const labelledBy = title !== undefined ? titleId : undefined;
