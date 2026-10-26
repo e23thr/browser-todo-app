@@ -9,7 +9,7 @@
  * (the boundary announcement belongs to the keyboard path, §8.2).
  */
 
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { JSX, TargetedEvent } from 'preact';
 
 import { Icon } from '../../app/icons';
@@ -61,8 +61,14 @@ export function RowMenu({ label, items, class: className, tabIndex }: RowMenuPro
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // Focus the first item on open (§9.2).
-  useEffect(() => {
+  // Focus the first item on open (§9.2) — LAYOUT phase, not passive: the passive
+  // flush waits for rAF/35 ms (preact/hooks afterPaint), leaving a 1-36 ms window
+  // after the menu is visible where the trigger still holds focus — a keydown sent
+  // inside it (fast input, automation, assistive tech, key-repeat edge) hits the
+  // trigger's ArrowDown-only handler and is silently dropped (t_9f0b70a4 probe:
+  // End at +14 ms lost; first-item focusin only at +16 ms). Focus lands inside the
+  // commit, before paint, so the window never opens.
+  useLayoutEffect(() => {
     if (!open) return;
     const first = menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
     first?.focus();
