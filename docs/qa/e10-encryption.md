@@ -444,3 +444,37 @@ Evidence (fix branch `fix/e10-import-sealed-tx-t_361487a7`):
 Remaining seamed-in-tx carriers (repo writes/reads via `repos/support.ts` `withTx`,
 `purge.ts`, schema-v3 migration step) are the same hazard and are tracked as a follow-up of
 t_361487a7 (ADR-007 Decision 4.6).
+
+## 11. Remaining carriers carried through — repo layer, purge, migrations (append-only — card t_a155ebf2)
+
+The §10 follow-up is done: every remaining seamed-in-tx carrier runs the seam OUTSIDE the
+transaction. Repo single-row read-modify-writes (patch/setDone/move/rename/recolor/
+setArchived + `completeRecurring`'s done half) go through `repos/support.ts` `rmwSealed`;
+bulk writes stage every row (`stageAll`) and commit verbatim in one `txRaw`; `purge.ts` and
+the boot migration chain run over `txRaw` (v3 structurally unreachable with a live seam).
+
+**Design completion (h_senior_coder's ruling on t_ccdabf50, folded into ADR-007 D4.6):** the
+settled recipe's envelope-`updatedAt` stamp guard was blind to equal-stamp writers (frozen
+clock — exactly what the §10-class E5 two-tab merge probe creates), so it is AMENDED to an
+AT-REST CAS: `AppDB.getWithRaw` returns the decrypted domain view AND its exact at-rest bytes
+from ONE read, and the commit `txRaw` byte-compares the raw row against that base (a re-seal
+always re-randomizes, so no write can masquerade as the base). A conflict triggers a bounded
+(~5 attempts) repo-level re-read + re-apply BELOW the port surface — one mutation stays one
+port call, `src/domain/pipeline.ts` untouched, exhausted retries surface the typed retryable
+`RULE: STALE_WRITE` into the unchanged pipeline 4b rollback.
+
+Evidence (branch `fix/e10-seamed-tx-carriers-t_a155ebf2`, dfe7842 + a1ac91f + ecb48c6):
+
+| Check | Result |
+|---|---|
+| `e10-encryption.spec.ts` × {chromium, firefox, webkit, chromium-th} (incl. the repo-path drill: create + patch + setDone + tombstone into a REAL encrypted store) | **20 passed (0 skipped)** — no engine skips anywhere |
+| unit seam-carrier probes (`tests/unit/storage/e10-seam-carriers.test.ts`, macrotask seam) | 12 passed: repo path, completeRecurring/restore, setArchived (RED-verified: seamed-in-tx setArchived fails it), move, CAS match/race/equal-stamp/exhausted/vanished, purge explicit+auto, boot migration chain |
+| equal-stamp regression (frozen clock, two writers from one base) | CAS-conflicts on BYTES and converges merged — the residual that made the stamp guard blind is gone |
+| E5 probe (`tests/unit/app/e2-qa-tabsync-probes.test.ts` §10 "simultaneous bidirectional edits to ONE record") | **green VERBATIM** (no `it.fails`, no rewrite) — the merge truth survives without pessimistic single-tx serialization |
+| full unit suite | 144 files / 1482 passed (6 timing-budget flakes under a concurrent worker's load, all green on re-run) |
+| lint / `tsc -b` / prettier | clean |
+
+Mid-card integrations: main's S4 `completeRecurring` + S7 `restore` (517f309) and S6
+`setArchived` (5a7ffa7) arrived as NEW carriers of this class and were ported to the same
+`rmwSealed`/`stageAll` pattern in the merge commits — the legal-pair guard of `setArchived`
+now re-runs against the FRESH row on every bounded attempt.
