@@ -245,8 +245,9 @@ export function makeTestRunner(
         id: next.id ?? newUlid(),
         listId: next.listId,
         title: next.title,
-        // notes/priority/tags are REQUIRED on TaskOccurrenceDraft (TaskDraft
-        // shape) — the old conditional spreads here were lint-dead code.
+        // TaskDraft's notes/priority/tags are REQUIRED (model.ts), so they are
+        // passed through directly — the conditional spreads below stay for the
+        // genuinely optional fields (exactOptionalPropertyTypes).
         notes: next.notes,
         priority: next.priority,
         tags: [...next.tags],
