@@ -82,8 +82,9 @@ describe('sync setup wizard (S9)', () => {
     });
     expect(screen.queryByTestId('sync-wizard')).toBeNull();
 
-    // Setup's own request is the OPTIONS probe — that is the whole allowance.
-    expect(rig.fake.state.requests.map((request) => request.method)).toContain('OPTIONS');
+    // Setup's own request is the connection-test probe (PROPFIND Depth:0 on the
+    // configured base — ADR-006 Addendum C) — that is the whole allowance.
+    expect(rig.fake.state.requests.map((request) => request.method)).toContain('PROPFIND');
 
     // Credentials are stored exactly where the contract says: the browser
     // profile's sync_state row (never localStorage, never the server).
@@ -154,8 +155,10 @@ describe('sync setup wizard (S9)', () => {
     expect(state.status).toBe('idle');
     expect(state.status === 'idle' && state.configured).toBe(false);
 
-    // The only request the failed attempt made was the setup probe itself.
-    expect(rig.fake.state.requests.every((request) => request.method === 'OPTIONS')).toBe(true);
+    // The only request the failed attempt made was the setup probe itself —
+    // and the 401 is attributed to the SIGN-IN, never to CORS (E8-UI-D5).
+    expect(rig.fake.state.requests.every((request) => request.method === 'PROPFIND')).toBe(true);
+    expect(error.textContent).not.toContain('The browser blocked the request');
 
     await waitFor(() => {
       expect(regions.assertive?.textContent).toContain('Sign-in rejected');
@@ -184,6 +187,32 @@ describe('sync setup wizard (S9)', () => {
     const row = await stateOf(rig.db);
     expect(row.enabled).toBe(false);
     expect(rig.engine.state().value.status).toBe('idle');
+  });
+
+  it('a dead configured path FAILS the connection test — the typed path is probed, the error is accurate (E8-UI-D5)', async () => {
+    const rig = await makeEngine();
+    bindUnconfigured(rig);
+    // The typed collection does not exist on the host.
+    rig.fake.faults.hidePath = 'deep/missing';
+    render(<SyncPanel />);
+    fillWizard('https://dav.test/base/deep/missing/');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Test connection & enable' }));
+
+    const error = await screen.findByTestId('setup-error');
+    // The probe contacted the TYPED path — never the origin root (E8-UI-D5).
+    expect(rig.fake.state.requests).toEqual([{ method: 'PROPFIND', path: 'deep/missing' }]);
+    // The failure names the MISSING folder — not the CORS/network misattribution copy.
+    expect(error.textContent).toContain('The storage folder is missing');
+    expect(error.textContent).not.toContain('The browser blocked the request');
+
+    // Setup rolled back: still unconfigured, nothing half-enabled.
+    const row = await stateOf(rig.db);
+    expect(row.enabled).toBe(false);
+    expect(rig.engine.state().value.status).toBe('idle');
+    await waitFor(() => {
+      expect(regions.assertive?.textContent ?? '').toContain('The storage folder is missing');
+    });
   });
 
   it('an insecure address is refused locally — step one never advances and the host sees nothing', async () => {
@@ -293,7 +322,7 @@ describe('sync setup wizard (S9)', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Sync now' })).toBeTruthy();
     });
-    expect(rig.fake.state.requests.map((request) => request.method)).toContain('OPTIONS');
+    expect(rig.fake.state.requests.map((request) => request.method)).toContain('PROPFIND');
   });
 
   it('Back returns to the address step with the typed URL kept and focus restored', async () => {

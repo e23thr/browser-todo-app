@@ -91,6 +91,12 @@ export type FakeDavFaults = {
   corruptGet?: Map<string, string>;
   /** Make PROPFIND for a specific path answer 404 (REMOTE_MISSING). */
   hidePath?: string;
+  /**
+   * Require matching Basic credentials — every request except `OPTIONS` (the
+   * preflight is answered unauthenticated, exactly like real WebDAV servers,
+   * which is why an OPTIONS-based probe can never validate a sign-in).
+   */
+  auth?: { user: string; password: string };
 };
 
 const BASE = 'https://dav.test/base/';
@@ -160,6 +166,13 @@ export function makeFakeWebDav(): {
     }
     if (faults.failAfter !== undefined && served > faults.failAfter) {
       return new Response('', { status: faults.failStatusAfter ?? 500 });
+    }
+    if (faults.auth !== undefined && method !== 'OPTIONS') {
+      const expected = `Basic ${btoa(`${faults.auth.user}:${faults.auth.password}`)}`;
+      const headers = (init?.headers ?? {}) as Record<string, string>;
+      if ((headers['Authorization'] ?? '') !== expected) {
+        return new Response('', { status: 401 });
+      }
     }
 
     switch (method) {

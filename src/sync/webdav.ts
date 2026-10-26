@@ -1,11 +1,12 @@
 /**
  * Hand-rolled WebDAV client on `fetch` (ADR-006 Decision 1) — ZERO new deps.
  *
- * Methods: OPTIONS (capability probe), PROPFIND (Depth:1 discovery), GET, PUT,
- * DELETE, MKCOL, MOVE. Multi-status `207` bodies parse with the browser's own
- * `DOMParser`. Basic auth over HTTPS only (`http://` allowed for localhost
- * development). Every PUT is read-back verified (GET + byte compare) — a torn
- * upload is treated as not-written and retried (Decision 1 / Decision 6).
+ * Methods: PROPFIND (Depth:0 capability probe on the CONFIGURED base, Depth:1
+ * discovery), GET, PUT, DELETE, MKCOL, MOVE. Multi-status `207` bodies parse
+ * with the browser's own `DOMParser`. Basic auth over HTTPS only (`http://`
+ * allowed for localhost development). Every PUT is read-back verified (GET +
+ * byte compare) — a torn upload is treated as not-written and retried
+ * (Decision 1 / Decision 6). Probe protocol: ADR-006 Addendum C.
  *
  * CORS (honest constraint, Decision 1): a browser-origin client can only reach
  * a WebDAV server that allows CORS from the app origin. The browser reports
@@ -140,6 +141,13 @@ export class WebDavClient {
   /** Relative artifact path → absolute URL (segments percent-encoded). */
   url(path: string): string {
     const segments = path.split('/').filter((s) => s.length > 0);
+    // The empty path is the configured collection ITSELF (`DavEntry.path` '' =
+    // the base collection). Resolving it as a root-relative reference ('/') —
+    // the pre-Addendum C behavior — silently retargeted every request to the
+    // ORIGIN ROOT (defect E8-UI-D5: the connection test validated a different
+    // endpoint than the run would use). The base's canonical collection URL
+    // (trailing slash, as `baseUrl` exposes it) is returned verbatim.
+    if (segments.length === 0) return this.#base.toString();
     return new URL(segments.map((s) => encodeURIComponent(s)).join('/') + '/', this.#base)
       .toString()
       .replace(/\/$/u, '');
@@ -217,9 +225,24 @@ export class WebDavClient {
     );
   }
 
-  /** OPTIONS capability probe (Decision 5 phase 2). */
+  /**
+   * Capability probe against the CONFIGURED base URL (Decision 5 phase 2,
+   * protocol amended by ADR-006 Addendum C): a `PROPFIND` `Depth: 0` on the
+   * typed collection — the exact endpoint the sync run will use.
+   *
+   * Why not `OPTIONS` on the base (the pre-Addendum C method): WebDAV servers
+   * answer `OPTIONS` UNAUTHENTICATED (a CORS preflight cannot carry
+   * credentials), so it can never validate the sign-in — and many answer it for
+   * paths that do not exist. `PROPFIND` is authenticated and path-exact:
+   * `207` = the collection exists and the credentials work; `401`/`403` → AUTH;
+   * `404` → REMOTE_MISSING (a dead configured path fails the setup test).
+   */
   async probe(): Promise<Result<void, SyncError>> {
-    const res = await this.#request('OPTIONS', '', { expect: [200, 204, 207, 405] });
+    const res = await this.#request('PROPFIND', '', {
+      body: '<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/></d:prop></d:propfind>',
+      headers: { Depth: '0', 'Content-Type': 'application/xml' },
+      expect: [207],
+    });
     if (!res.ok) return res;
     return ok(undefined);
   }

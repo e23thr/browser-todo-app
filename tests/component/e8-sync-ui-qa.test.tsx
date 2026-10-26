@@ -103,8 +103,9 @@ describe('E8 sync-UI QA probes (independent of the impl suites)', () => {
     expect(row.enabled).toBe(true);
     expect(row.remotePassword).toBe('corrected');
     expect(rig.engine.state().value.status).toBe('idle');
-    // Every request this journey made was the setup probe — nothing else.
-    expect(rig.fake.state.requests.every((r) => r.method === 'OPTIONS')).toBe(true);
+    // Every request this journey made was the setup probe (PROPFIND Depth:0 on
+    // the configured base — ADR-006 Addendum C) — nothing else.
+    expect(rig.fake.state.requests.every((r) => r.method === 'PROPFIND')).toBe(true);
   });
 
   it('Q2 double-submit: two rapid submits while busy run exactly ONE probe cycle', async () => {
@@ -120,8 +121,9 @@ describe('E8 sync-UI QA probes (independent of the impl suites)', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Sync now' })).toBeTruthy();
     });
-    // One OPTIONS probe — the busy guard (and disabled button) held.
-    expect(rig.fake.state.requests.filter((r) => r.method === 'OPTIONS')).toHaveLength(1);
+    // One probe request (PROPFIND Depth:0 — ADR-006 Addendum C) — the busy
+    // guard (and disabled button) held.
+    expect(rig.fake.state.requests.filter((r) => r.method === 'PROPFIND')).toHaveLength(1);
   });
 
   it('Q3a step-1 local refusal (insecure URL) is ANNOUNCED in the assertive region [E8-UI-D3 fixed by 339cf6c]', async () => {

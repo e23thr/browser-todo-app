@@ -144,3 +144,115 @@ describe('WebDavClient', () => {
     expect(broken.ok).toBe(false);
   });
 });
+
+/**
+ * E8-UI-D5 fix (ADR-006 Addendum C): the connection test must probe the
+ * CONFIGURED base URL — the exact endpoint the sync run uses — never the
+ * origin root, and it must be AUTH-accurate (an OPTIONS-based probe cannot be:
+ * servers answer OPTIONS unauthenticated for CORS preflight).
+ */
+describe('probe() contacts the CONFIGURED base URL (E8-UI-D5 / Addendum C)', () => {
+  const okBody = '<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"/>';
+
+  it('the probe request URL IS the configured base URL — never "/" or the origin root (deep path)', async () => {
+    const seen: { url: string; method: string; headers: Record<string, string> }[] = [];
+    const client = new WebDavClient(
+      {
+        baseUrl: 'https://dav.test/remote.php/dav/files/alice/todo/',
+        user: 'alice',
+        password: 'pw',
+      },
+      {
+        fetch: async (input, init) => {
+          seen.push({
+            url: input,
+            method: init?.method ?? 'GET',
+            headers: { ...((init?.headers ?? {}) as Record<string, string>) },
+          });
+          return new Response(okBody, { status: 207 });
+        },
+      },
+    );
+
+    const probed = await client.probe();
+    expect(probed.ok).toBe(true);
+    expect(seen).toHaveLength(1);
+    // The constructed URL keeps the FULL typed path (asserted exactly):
+    expect(seen[0]!.url).toBe('https://dav.test/remote.php/dav/files/alice/todo/');
+    expect(seen[0]!.url).toBe(client.baseUrl); // …which is the configured base URL
+    expect(new URL(seen[0]!.url).pathname).toBe('/remote.php/dav/files/alice/todo/');
+    expect(seen[0]!.url).not.toBe('https://dav.test/'); // not the origin root
+    expect(seen[0]!.url).not.toBe('https://dav.test');
+    // The request shape: authenticated PROPFIND Depth:0 (Addendum C).
+    expect(seen[0]!.method).toBe('PROPFIND');
+    expect(seen[0]!.headers['Depth']).toBe('0');
+    expect(seen[0]!.headers['Authorization']).toMatch(/^Basic /u);
+  });
+
+  it('a base typed WITHOUT a trailing slash probes the same collection (normalized)', async () => {
+    const seen: string[] = [];
+    const client = new WebDavClient(
+      { baseUrl: 'https://dav.test/deep/base/path', user: 'u', password: 'p' },
+      {
+        fetch: async (input) => {
+          seen.push(input);
+          return new Response(okBody, { status: 207 });
+        },
+      },
+    );
+    expect((await client.probe()).ok).toBe(true);
+    expect(seen).toEqual(['https://dav.test/deep/base/path/']);
+    expect(seen[0]).toBe(client.baseUrl);
+  });
+
+  it("url('') resolves to the collection itself (the old '/' resolution hit the ORIGIN ROOT)", () => {
+    const client = new WebDavClient(
+      { baseUrl: 'https://dav.test/deep/base/', user: 'u', password: 'p' },
+      { fetch: async () => new Response('', { status: 404 }) },
+    );
+    expect(client.url('')).toBe('https://dav.test/deep/base/');
+    expect(client.url('todo-sync/v1')).toBe('https://dav.test/deep/base/todo-sync/v1');
+  });
+
+  it('a dead configured path FAILS the probe (404 → REMOTE_MISSING) — no false positive', async () => {
+    const fake = makeFakeWebDav();
+    fake.faults.hidePath = ''; // the configured base collection does not exist
+    const client = new WebDavClient(
+      { baseUrl: fake.baseUrl, user: 'alice', password: 'app-password' },
+      { fetch: fake.fetch },
+    );
+    const res = await client.probe();
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.error.code).toBe('REMOTE_MISSING');
+    expect(res.error.retryable).toBe(false);
+  });
+
+  it('wrong credentials FAIL the probe with AUTH — never misattributed to CORS', async () => {
+    const fake = makeFakeWebDav();
+    fake.faults.auth = { user: 'alice', password: 'correct' };
+    const client = new WebDavClient(
+      { baseUrl: fake.baseUrl, user: 'alice', password: 'wrong' },
+      { fetch: fake.fetch },
+    );
+    const res = await client.probe();
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.error.code).toBe('AUTH');
+    expect(res.error.message).toBe('credentials rejected by the WebDAV server');
+    expect(res.error.detail).toContain('401 on PROPFIND');
+  });
+
+  it('passes only when the collection exists AND the credentials work (exactly one request, the base path)', async () => {
+    const fake = makeFakeWebDav();
+    fake.faults.auth = { user: 'alice', password: 'correct' };
+    const client = new WebDavClient(
+      { baseUrl: fake.baseUrl, user: 'alice', password: 'correct' },
+      { fetch: fake.fetch },
+    );
+    const res = await client.probe();
+    expect(res.ok).toBe(true);
+    // '' is the configured collection itself (`DavEntry.path` convention).
+    expect(fake.state.requests).toEqual([{ method: 'PROPFIND', path: '' }]);
+  });
+});

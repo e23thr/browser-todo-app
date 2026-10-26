@@ -353,7 +353,7 @@ describe('probe + memory-only mode (additive seams)', () => {
     engine.dispose();
   });
 
-  it('P2: probe() after configure runs OPTIONS only — zero local writes', async () => {
+  it('P2: probe() after configure runs exactly one PROPFIND on the configured base — zero local writes', async () => {
     const db = await bootDb();
     const fake = makeFakeWebDav();
     const engine = new SyncEngine({ db, fetch: fake.fetch, env: fakeEnv() });
@@ -362,6 +362,7 @@ describe('probe + memory-only mode (additive seams)', () => {
     const before = await stateOf(db);
     const res = await engine.probe();
     expect(res.ok).toBe(true);
+    expect(fake.state.requests.map((r) => r.method)).toEqual(['PROPFIND']); // Addendum C probe
     const after = await stateOf(db);
     expect(after).toEqual(before); // probe is read-only
     engine.dispose();
