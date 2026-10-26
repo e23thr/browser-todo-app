@@ -27,7 +27,7 @@ import {
 } from '../../../src/storage/cryptoSeam';
 import { newUlid } from '../../../src/storage/id';
 import { purgeTombstones, TOMBSTONE_TTL_MS } from '../../../src/storage/purge';
-import { guardedSealedPut } from '../../../src/storage/repos/support';
+import { RMW_ATTEMPTS, type RepoDeps } from '../../../src/storage/repos/support';
 import { ListRepo } from '../../../src/storage/repos/listRepo';
 import { TaskRepo } from '../../../src/storage/repos/taskRepo';
 import type { Task } from '../../../src/storage/types';
@@ -219,87 +219,125 @@ describe('repo layer — stage-then-txRaw under a macrotask seam (ADR-007 D4.6)'
   });
 });
 
-/* -------------- the optimistic stamp guard (single-row RMW) -------------- */
+/* -------------- the at-rest CAS guard (single-row RMW, t_ccdabf50 ruling) -------------- */
 
-describe('optimistic stamp guard — envelope updatedAt compared inside the ONE txRaw', () => {
-  it('a matching stamp writes the sealed row (seam never inside the tx)', async () => {
+describe('at-rest CAS guard — base bytes compared inside the ONE txRaw, bounded repo retry', () => {
+  it('a matching base commits the sealed merge (seam never inside the tx)', async () => {
     const db = await openDb('guard-match');
     const calls: SeamCall[] = [];
     const base = makeTask({ id: newUlid(T0), updatedAt: T0 });
     await db.put('tasks', base); // sealed outside any tx by putWith
 
     setRowCryptoSeam(macrotaskSeam({ calls }));
-    const next: Task = { ...base, title: 'merged', updatedAt: T0 + 1 };
-    const put = await guardedSealedPut(db, 'tasks', next, T0);
-    expect(put.ok, `guarded put failed: ${JSON.stringify(put)}`).toBe(true);
+    const repo = new TaskRepo(repoDeps(db));
+    const patched = await repo.patch(base.id, { title: 'merged' });
+    expect(patched.ok, `guarded put failed: ${JSON.stringify(patched)}`).toBe(true);
 
     const raw = await db.readUnfiltered('tasks');
     const row = raw.ok ? raw.value.find((r) => r.id === base.id) : undefined;
     expect(row).toBeDefined();
     expect((row as { sealedBySeam?: string }).sealedBySeam).toBe(base.id);
     expect((row as unknown as Task).title).toBe('merged');
-    expect((row as unknown as Task).updatedAt).toBe(T0 + 1);
   });
 
-  it('a mismatched stamp aborts with the typed retryable STALE_WRITE — never a lost update', async () => {
-    const db = await openDb('guard-mismatch');
+  it('a concurrent write conflicts; the bounded retry re-applies onto the fresh row', async () => {
+    const db = await openDb('guard-race');
     const calls: SeamCall[] = [];
     const base = makeTask({ id: newUlid(T0), updatedAt: T0 });
     await db.put('tasks', base);
 
-    // A concurrent writer wins the race after the merge was based on `base`.
-    const raced = { ...base, title: 'concurrent', updatedAt: T0 + 5 };
-    setRowCryptoSeam(macrotaskSeam({ calls }));
-    await db.put('tasks', raced);
+    // While patch's ONE read decrypts the base (outside any tx), a concurrent
+    // writer commits a different-field version — the merge below was based on
+    // the pre-write bytes, so the CAS must conflict and re-apply.
+    let raced = false;
+    setRowCryptoSeam(
+      macrotaskSeam({
+        calls,
+        onReadRow: (store, id) => {
+          if (!raced && store === 'tasks' && id === base.id) {
+            raced = true;
+            return db
+              .put('tasks', { ...base, notes: 'raced notes', updatedAt: T0 + 5 })
+              .then(() => undefined);
+          }
+          return undefined;
+        },
+      }),
+    );
 
-    const stale = { ...base, title: 'mine', updatedAt: T0 + 1 };
-    const put = await guardedSealedPut(db, 'tasks', stale, T0);
-    expect(put.ok).toBe(false);
-    if (!put.ok) {
-      expect(put.error.code).toBe('RULE');
-      if (isRuleError(put.error)) expect(put.error.rule).toBe('STALE_WRITE');
-    }
+    const repo = new TaskRepo(repoDeps(db));
+    const patched = await repo.patch(base.id, { title: 'mine' });
+    expect(patched.ok, `patch lost the race: ${JSON.stringify(patched)}`).toBe(true);
 
-    // The concurrent write survives untouched.
-    const raw = await db.readUnfiltered('tasks');
-    const row = raw.ok ? raw.value.find((r) => r.id === base.id) : undefined;
-    expect((row as unknown as Task).title).toBe('concurrent');
-    expect((row as unknown as Task).updatedAt).toBe(T0 + 5);
+    // The retry merged onto the FRESH row: both writes survive, none lost.
+    const loaded = await repo.loadAll();
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    const row = loaded.value.tasks.find((t) => t.id === base.id);
+    expect(row?.title).toBe('mine');
+    expect(row?.notes).toBe('raced notes');
   });
 
-  it('a vanished base row is a conflict, never a silent resurrection', async () => {
-    const db = await openDb('guard-vanished');
-    const calls: SeamCall[] = [];
-    const base = makeTask({ id: newUlid(T0), updatedAt: T0 });
-    await db.put('tasks', base);
-    setRowCryptoSeam(macrotaskSeam({ calls }));
-    await db.delete('tasks', base.id);
-
-    const put = await guardedSealedPut(db, 'tasks', { ...base, title: 'ghost' }, T0);
-    expect(put.ok).toBe(false);
-    if (!put.ok) {
-      expect(put.error.code).toBe('RULE');
-      if (isRuleError(put.error)) expect(put.error.rule).toBe('STALE_WRITE');
-    }
-    const raw = await db.readUnfiltered('tasks');
-    expect(raw.ok && raw.value).toHaveLength(0);
-  });
-
-  it('repo.patch surfaces the conflict as STALE_WRITE when the row changes under the read', async () => {
-    const db = await openDb('guard-repo-race');
+  it('EQUAL-STAMP collision (frozen clock) still CAS-conflicts — never a silent lost update', async () => {
+    const db = await openDb('guard-equal-stamp');
     const calls: SeamCall[] = [];
     const base = makeTask({ id: newUlid(T0), updatedAt: T0 });
     await db.put('tasks', base);
 
-    // While patch's read decrypts the row (outside any tx), a concurrent writer
-    // commits a newer version — the merge below is then based on a stale row.
+    // The concurrent writer stamps the SAME `updatedAt` (frozen clock — the
+    // exact residual that made the old envelope-stamp guard blind: equal
+    // stamps looked "unchanged"). The at-rest CAS compares BYTES, so the
+    // collision is visible regardless of stamps.
+    let raced = false;
+    setRowCryptoSeam(
+      macrotaskSeam({
+        calls,
+        onReadRow: (store, id) => {
+          if (!raced && store === 'tasks' && id === base.id) {
+            raced = true;
+            return db
+              .put('tasks', { ...base, notes: 'from-race', updatedAt: T0 })
+              .then(() => undefined);
+          }
+          return undefined;
+        },
+      }),
+    );
+
+    const frozen: RepoDeps = { db, clock: () => T0, ids: () => newUlid(T0) };
+    const repo = new TaskRepo(frozen);
+    const patched = await repo.patch(base.id, { title: 'mine' });
+    expect(patched.ok, `equal-stamp collision silently lost: ${JSON.stringify(patched)}`).toBe(
+      true,
+    );
+
+    // Both writers stamped T0; the race write's bytes were never dropped.
+    const loaded = await repo.loadAll();
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    const row = loaded.value.tasks.find((t) => t.id === base.id);
+    expect(row?.title).toBe('mine');
+    expect(row?.notes).toBe('from-race');
+    expect(row?.updatedAt).toBe(T0); // the equal stamp stayed equal — bytes did the guarding
+  });
+
+  it('retries exhausted surface the typed retryable STALE_WRITE — the write never lands', async () => {
+    const db = await openDb('guard-exhausted');
+    const calls: SeamCall[] = [];
+    const base = makeTask({ id: newUlid(T0), updatedAt: T0 });
+    await db.put('tasks', base);
+
+    // A writer that conflicts on EVERY attempt (fresh bytes each read): the
+    // bounded loop must stop and surface the typed error, not loop forever.
+    let reads = 0;
     setRowCryptoSeam(
       macrotaskSeam({
         calls,
         onReadRow: (store, id) => {
           if (store === 'tasks' && id === base.id) {
+            reads += 1;
             return db
-              .put('tasks', { ...base, title: 'raced ahead', updatedAt: T0 + 5 })
+              .put('tasks', { ...base, notes: `raced-${String(reads)}`, updatedAt: T0 + reads })
               .then(() => undefined);
           }
           return undefined;
@@ -314,9 +352,34 @@ describe('optimistic stamp guard — envelope updatedAt compared inside the ONE 
       expect(patched.error.code).toBe('RULE');
       if (isRuleError(patched.error)) expect(patched.error.rule).toBe('STALE_WRITE');
     }
+    expect(reads).toBe(RMW_ATTEMPTS); // bounded — exactly the retry budget
+
+    // The racing writer's LAST write survives; ours never landed.
     const raw = await db.readUnfiltered('tasks');
     const row = raw.ok ? raw.value.find((r) => r.id === base.id) : undefined;
-    expect((row as unknown as Task).title).toBe('raced ahead');
+    expect((row as unknown as Task).title).toBe('Write tests');
+    expect((row as unknown as Task).notes).toBe(`raced-${String(RMW_ATTEMPTS)}`);
+  });
+
+  it('a vanished base row never resurrects — the retry re-read fails TASK_MISSING', async () => {
+    const db = await openDb('guard-vanished');
+    const calls: SeamCall[] = [];
+    const base = makeTask({ id: newUlid(T0), updatedAt: T0 });
+    await db.put('tasks', base);
+    setRowCryptoSeam(macrotaskSeam({ calls }));
+    await db.delete('tasks', base.id);
+
+    const repo = new TaskRepo(repoDeps(db));
+    const patched = await repo.patch(base.id, { title: 'ghost' });
+    expect(patched.ok).toBe(false);
+    if (!patched.ok) {
+      expect(patched.error.code).toBe('RULE');
+      // The CAS conflict on the vanished row triggers the bounded re-read,
+      // which finds nothing and fails like every other missing-row op.
+      if (isRuleError(patched.error)) expect(patched.error.rule).toBe('TASK_MISSING');
+    }
+    const raw = await db.readUnfiltered('tasks');
+    expect(raw.ok && raw.value).toHaveLength(0); // no resurrection
   });
 });
 

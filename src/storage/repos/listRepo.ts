@@ -6,9 +6,10 @@
  * either way, never a silent cascade.
  *
  * ADR-007 Decision 4.6 (E10-Q6 carriers, t_a155ebf2): no seam work runs inside
- * a live transaction — reads use the safe surface, single-row RMWs are
- * stamp-guarded verbatim commits in ONE `txRaw`, multi-row writes stage every
- * row first (the `runSweep`/`applyImport` pattern).
+ * a live transaction — reads use the safe surface, single-row RMWs go through
+ * `rmwSealed` (merge outside on the ONE-read base, seal outside, AT-REST CAS
+ * commit in ONE `txRaw` with a bounded re-apply loop), multi-row writes stage
+ * every row first (the `runSweep`/`applyImport` pattern).
  */
 
 import { err, ok, ruleError, type AppError, type Result } from '../../domain/kernel';
@@ -26,9 +27,9 @@ import { OrderKeyError, orderKeyBetween, orderKeyFirst } from '../orderKey';
 import { validateList } from '../validate';
 import {
   evenOrderKeys,
-  guardedSealedPut,
   listGroupRows,
   neighborsAround,
+  rmwSealed,
   sealRow,
   stageAll,
   txAppRaw,
@@ -104,19 +105,22 @@ export class ListRepo implements ListPort {
       return err(ruleError('REORDER_TARGET_NOT_IN_GROUP', `${refId} is not in the list group`));
     }
     try {
-      const { prevKey, nextKey } = neighborsAround(rows.value, position);
-      const moved: List = {
-        ...row,
-        sortOrder: orderKeyBetween(prevKey, nextKey),
-        updatedAt: clock(),
-        deviceId: db.deviceId,
-      };
-      const validated = this.#validate(moved);
-      if (!validated.ok) return validated;
-      // SINGLE-record write, stamp-guarded (D4.6).
-      const put = await guardedSealedPut(db, 'lists', moved, row.updatedAt);
-      if (!put.ok) return put;
-      return ok({ row: moved, rebalanced: false });
+      // SINGLE-record write via `rmwSealed` (D4.6, t_ccdabf50): AT-REST CAS —
+      // a concurrent write to the moved row re-applies the move onto the fresh
+      // row (bounded) instead of being silently overwritten.
+      return await rmwSealed(db, 'lists', id, (base) => {
+        if (base === undefined || base.deletedAt !== null) return err(listMissing(id));
+        const { prevKey, nextKey } = neighborsAround(rows.value, position);
+        const moved: List = {
+          ...base,
+          sortOrder: orderKeyBetween(prevKey, nextKey),
+          updatedAt: clock(),
+          deviceId: db.deviceId,
+        };
+        const validated = this.#validate(moved);
+        if (!validated.ok) return validated;
+        return ok({ puts: [moved], value: { row: moved, rebalanced: false } });
+      });
     } catch (e) {
       if (!(e instanceof OrderKeyError) || e.code !== 'EXHAUSTED') throw e;
       // ADR-003 Decision 4: the list-group rebalance is observable in the local
@@ -228,20 +232,18 @@ export class ListRepo implements ListPort {
     patch: { name?: string; color?: string },
   ): Promise<Result<List, AppError>> {
     const { clock, db } = this.#deps;
-    const current = await db.get('lists', id);
-    if (!current.ok) return err(current.error);
-    const row = current.value;
-    if (row === undefined || row.deletedAt !== null) return err(listMissing(id));
-    const merged: List = { ...row };
-    if (patch.name !== undefined) merged.name = patch.name;
-    if (patch.color !== undefined) merged.color = patch.color;
-    const stamped: List = { ...merged, updatedAt: clock(), deviceId: db.deviceId };
-    const validated = this.#validate(stamped);
-    if (!validated.ok) return validated;
-    // D4.6 single-row RMW: stamp-guarded verbatim commit (STALE_WRITE on conflict).
-    const put = await guardedSealedPut(db, 'lists', stamped, row.updatedAt);
-    if (!put.ok) return put;
-    return ok(stamped);
+    // D4.6 single-row RMW via `rmwSealed` (t_ccdabf50): AT-REST CAS commit,
+    // bounded re-apply on conflict — never a lost update.
+    return rmwSealed(db, 'lists', id, (base) => {
+      if (base === undefined || base.deletedAt !== null) return err(listMissing(id));
+      const merged: List = { ...base };
+      if (patch.name !== undefined) merged.name = patch.name;
+      if (patch.color !== undefined) merged.color = patch.color;
+      const stamped: List = { ...merged, updatedAt: clock(), deviceId: db.deviceId };
+      const validated = this.#validate(stamped);
+      if (!validated.ok) return validated;
+      return ok({ puts: [stamped], value: stamped });
+    });
   }
 
   /** Insert helper: seal outside, write verbatim in ONE txRaw (no prior version to guard). */

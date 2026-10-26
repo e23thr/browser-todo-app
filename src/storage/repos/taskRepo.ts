@@ -8,11 +8,14 @@
  * never runs inside a live IndexedDB transaction — firefox/webkit deactivate a
  * `readwrite` tx across such an await (chromium survives only via microtask
  * scheduling). Reads use the SAFE surface (`db.get`/`db.getAll`/`db.query` —
- * these decrypt AFTER their own tx); single-row read-modify-writes merge
- * outside, seal via `sealForWrite`, and commit verbatim in ONE `txRaw` guarded
- * by the envelope `updatedAt` stamp (`STALE_WRITE` on conflict — never a lost
- * update); bulk writes stage EVERY row first (the `runSweep`/`applyImport`
- * pattern). ONE-transaction atomicity of each write set is unchanged.
+ * these decrypt AFTER their own tx); single-row read-modify-writes go through
+ * `rmwSealed` — read + merge outside (one `getWithRaw` read hands back the
+ * decrypted base AND its at-rest bytes), seal via `sealForWrite`, commit
+ * verbatim in ONE `txRaw` under an AT-REST compare-and-swap with a bounded
+ * re-apply loop (`STALE_WRITE` only when retries are exhausted — never a lost
+ * update, t_ccdabf50 ruling); bulk writes stage EVERY row first (the
+ * `runSweep`/`applyImport` pattern). ONE-transaction atomicity of each write
+ * set is unchanged.
  */
 
 import { err, ok, ruleError, type AppError, type Result } from '../../domain/kernel';
@@ -35,11 +38,10 @@ import { SETTINGS_KEY } from '../schema';
 import { validateTask } from '../validate';
 import {
   evenOrderKeys,
-  guardedSealedPut,
   neighborsAround,
+  rmwSealed,
   sealRow,
   stageAll,
-  staleWrite,
   taskGroupRows,
   taskMissing,
   txAppRaw,
@@ -113,50 +115,47 @@ export class TaskRepo implements TaskPort {
 
   async patch(id: string, patch: TaskPatch): Promise<Result<Task, AppError>> {
     const { clock, db } = this.#deps;
-    const current = await db.get('tasks', id);
-    if (!current.ok) return err(current.error);
-    const row = current.value;
-    if (row === undefined || row.deletedAt !== null) return err(taskMissing(id));
-    const merged: Task = { ...row };
-    if (patch.title !== undefined) merged.title = patch.title;
-    if (patch.notes !== undefined) merged.notes = patch.notes;
-    if (patch.priority !== undefined) merged.priority = patch.priority;
-    if (patch.tags !== undefined) merged.tags = [...patch.tags];
-    if (patch.reminderAtUnset === true) delete merged.reminderAt;
-    else if (patch.reminderAt !== undefined) merged.reminderAt = patch.reminderAt;
-    if (patch.recurrenceUnset === true) delete merged.recurrence;
-    else if (patch.recurrence !== undefined) merged.recurrence = patch.recurrence;
-    if (patch.dueDateUnset === true) delete merged.dueDate;
-    else if (patch.dueDate !== undefined) merged.dueDate = patch.dueDate;
-    const stamped: Task = { ...merged, updatedAt: clock(), deviceId: db.deviceId };
-    const validated = this.#validate(stamped);
-    if (!validated.ok) return validated;
-    // D4.6 single-row RMW: stamp-guarded verbatim commit (STALE_WRITE on conflict).
-    const put = await guardedSealedPut(db, 'tasks', stamped, row.updatedAt);
-    if (!put.ok) return put;
-    return ok(stamped);
+    // D4.6 single-row RMW via `rmwSealed` (t_ccdabf50): merge outside on the
+    // ONE-read base, seal outside, AT-REST CAS commit in ONE txRaw; a
+    // concurrent write re-applies the same patch onto the fresh row (bounded),
+    // so disjoint edits converge instead of clobbering each other.
+    return rmwSealed(db, 'tasks', id, (base) => {
+      if (base === undefined || base.deletedAt !== null) return err(taskMissing(id));
+      const merged: Task = { ...base };
+      if (patch.title !== undefined) merged.title = patch.title;
+      if (patch.notes !== undefined) merged.notes = patch.notes;
+      if (patch.priority !== undefined) merged.priority = patch.priority;
+      if (patch.tags !== undefined) merged.tags = [...patch.tags];
+      if (patch.reminderAtUnset === true) delete merged.reminderAt;
+      else if (patch.reminderAt !== undefined) merged.reminderAt = patch.reminderAt;
+      if (patch.recurrenceUnset === true) delete merged.recurrence;
+      else if (patch.recurrence !== undefined) merged.recurrence = patch.recurrence;
+      if (patch.dueDateUnset === true) delete merged.dueDate;
+      else if (patch.dueDate !== undefined) merged.dueDate = patch.dueDate;
+      const stamped: Task = { ...merged, updatedAt: clock(), deviceId: db.deviceId };
+      const validated = this.#validate(stamped);
+      if (!validated.ok) return validated;
+      return ok({ puts: [stamped], value: stamped });
+    });
   }
 
   async setDone(id: string, done: boolean): Promise<Result<Task, AppError>> {
     const { clock, db } = this.#deps;
-    const current = await db.get('tasks', id);
-    if (!current.ok) return err(current.error);
-    const row = current.value;
-    if (row === undefined || row.deletedAt !== null) return err(taskMissing(id));
-    const now = clock();
-    const stamped: Task = {
-      ...row,
-      status: done ? 'done' : 'open',
-      updatedAt: now,
-      deviceId: db.deviceId,
-    };
-    if (done) stamped.completedAt = now;
-    else delete stamped.completedAt;
-    const validated = this.#validate(stamped);
-    if (!validated.ok) return validated;
-    const put = await guardedSealedPut(db, 'tasks', stamped, row.updatedAt);
-    if (!put.ok) return put;
-    return ok(stamped);
+    return rmwSealed(db, 'tasks', id, (base) => {
+      if (base === undefined || base.deletedAt !== null) return err(taskMissing(id));
+      const now = clock();
+      const stamped: Task = {
+        ...base,
+        status: done ? 'done' : 'open',
+        updatedAt: now,
+        deviceId: db.deviceId,
+      };
+      if (done) stamped.completedAt = now;
+      else delete stamped.completedAt;
+      const validated = this.#validate(stamped);
+      if (!validated.ok) return validated;
+      return ok({ puts: [stamped], value: stamped });
+    });
   }
 
   /**
@@ -164,74 +163,62 @@ export class TaskRepo implements TaskPort {
    * in ONE transaction (a half-applied pair — done without a successor — is
    * exactly the data-loss shape this repo's one-transaction rule exists to
    * prevent). The completed row is written exactly like `setDone` writes it:
-   * "recurrence never mutates past occurrences". ADR-007 D4.6: both rows are
-   * staged outside the tx; the read-modify-write half is stamp-guarded exactly
-   * like `setDone`, and the insert half has no prior version to guard.
+   * "recurrence never mutates past occurrences". ADR-007 D4.6 (t_ccdabf50):
+   * the done half is an `rmwSealed` single-row RMW (AT-REST CAS — a concurrent
+   * write to the completed row conflicts and re-applies instead of being
+   * silently overwritten); the successor rides in the SAME commit `txRaw`, so
+   * a failed attempt writes nothing and the next attempt builds a fresh
+   * successor (new id / sort key) — done without successor can never land.
    */
   async completeRecurring(
     id: string,
     next: TaskOccurrenceDraft,
   ): Promise<Result<CompleteRecurringOutcome, AppError>> {
     const { clock, ids, db } = this.#deps;
-    const current = await db.get('tasks', id);
-    if (!current.ok) return err(current.error);
-    const row = current.value;
-    if (row === undefined || row.deletedAt !== null) return err(taskMissing(id));
-    const now = clock();
-    const done: Task = {
-      ...row,
-      status: 'done',
-      completedAt: now,
-      updatedAt: now,
-      deviceId: db.deviceId,
-    };
-    const doneValidated = this.#validate(done);
-    if (!doneValidated.ok) return doneValidated;
+    return rmwSealed(db, 'tasks', id, async (base) => {
+      if (base === undefined || base.deletedAt !== null) return err(taskMissing(id));
+      const now = clock();
+      const done: Task = {
+        ...base,
+        status: 'done',
+        completedAt: now,
+        updatedAt: now,
+        deviceId: db.deviceId,
+      };
+      const doneValidated = this.#validate(done);
+      if (!doneValidated.ok) return doneValidated;
 
-    const group: SiblingGroup = {
-      listId: next.listId,
-      parentTaskId: next.parentTaskId ?? null,
-    };
-    const depth = await this.#checkParent(group.parentTaskId);
-    if (!depth.ok) return depth;
-    const rows = await taskGroupRows(db, group);
-    if (!rows.ok) return rows;
-    const base: Task = {
-      id: next.id ?? ids(),
-      listId: next.listId,
-      title: next.title,
-      notes: next.notes,
-      status: 'open',
-      priority: next.priority,
-      ...(next.dueDate !== undefined ? { dueDate: next.dueDate } : {}),
-      ...(next.reminderAt !== undefined ? { reminderAt: next.reminderAt } : {}),
-      ...(next.recurrence !== undefined ? { recurrence: next.recurrence } : {}),
-      tags: [...next.tags],
-      ...(next.parentTaskId !== undefined ? { parentTaskId: next.parentTaskId } : {}),
-      sortOrder: 'h',
-      createdAt: now,
-      updatedAt: now,
-      deletedAt: null,
-      deviceId: db.deviceId,
-    };
-    const created: Task = { ...base, sortOrder: this.#keyAtEnd(rows.value) };
-    const createdValidated = this.#validate(created);
-    if (!createdValidated.ok) return createdValidated;
-    const stagedDone = await sealRow(db, 'tasks', done);
-    if (!stagedDone.ok) return stagedDone;
-    const stagedCreated = await sealRow(db, 'tasks', created);
-    if (!stagedCreated.ok) return stagedCreated;
-    return txAppRaw(db, ['tasks'], 'readwrite', async (t) => {
-      // Same optimistic stamp rule as setDone (ADR-007 D4.6): a concurrent
-      // write to the completed row aborts as STALE_WRITE instead of being
-      // silently overwritten.
-      const latest = await t.get('tasks', id);
-      if (latest === undefined || latest.updatedAt !== row.updatedAt) {
-        return err(staleWrite('tasks', id));
-      }
-      await t.put('tasks', stagedDone.value);
-      await t.put('tasks', stagedCreated.value); // one transaction: never done without its successor
-      return ok({ done, created });
+      const group: SiblingGroup = {
+        listId: next.listId,
+        parentTaskId: next.parentTaskId ?? null,
+      };
+      const depth = await this.#checkParent(group.parentTaskId);
+      if (!depth.ok) return depth;
+      const rows = await taskGroupRows(db, group);
+      if (!rows.ok) return rows;
+      const baseRow: Task = {
+        id: next.id ?? ids(),
+        listId: next.listId,
+        title: next.title,
+        notes: next.notes,
+        status: 'open',
+        priority: next.priority,
+        ...(next.dueDate !== undefined ? { dueDate: next.dueDate } : {}),
+        ...(next.reminderAt !== undefined ? { reminderAt: next.reminderAt } : {}),
+        ...(next.recurrence !== undefined ? { recurrence: next.recurrence } : {}),
+        tags: [...next.tags],
+        ...(next.parentTaskId !== undefined ? { parentTaskId: next.parentTaskId } : {}),
+        sortOrder: 'h',
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+        deviceId: db.deviceId,
+      };
+      const created: Task = { ...baseRow, sortOrder: this.#keyAtEnd(rows.value) };
+      const createdValidated = this.#validate(created);
+      if (!createdValidated.ok) return createdValidated;
+      // ONE transaction: the CAS-guarded done half + its unguarded insert.
+      return ok({ puts: [done, created], value: { done, created } });
     });
   }
 
@@ -298,8 +285,6 @@ export class TaskRepo implements TaskPort {
     if (refId !== null && !rows.value.some((r) => r.id === refId)) {
       return err(ruleError('REORDER_TARGET_NOT_IN_GROUP', `${refId} is not in the declared group`));
     }
-    const now = clock();
-    const stamp = { updatedAt: now, deviceId: db.deviceId } as const;
 
     const insertAt =
       position === 'first'
@@ -311,18 +296,21 @@ export class TaskRepo implements TaskPort {
             : rows.value.findIndex((r) => r.id === position.beforeId);
 
     try {
-      const { prevKey, nextKey } = neighborsAround(rows.value, position);
-      const moved: Task = this.#withGroup(row, group, {
-        sortOrder: orderKeyBetween(prevKey, nextKey),
-        ...stamp,
+      // SINGLE-record write via `rmwSealed` (D4.6, t_ccdabf50): AT-REST CAS —
+      // a concurrent write to the moved row re-applies the move onto the fresh
+      // row (bounded) instead of being silently overwritten.
+      return await rmwSealed(db, 'tasks', id, (base) => {
+        if (base === undefined || base.deletedAt !== null) return err(taskMissing(id));
+        const { prevKey, nextKey } = neighborsAround(rows.value, position);
+        const moved: Task = this.#withGroup(base, group, {
+          sortOrder: orderKeyBetween(prevKey, nextKey),
+          updatedAt: clock(),
+          deviceId: db.deviceId,
+        });
+        const validated = this.#validate(moved);
+        if (!validated.ok) return validated;
+        return ok({ puts: [moved], value: { row: moved, rebalanced: false } });
       });
-      const validated = this.#validate(moved);
-      if (!validated.ok) return validated;
-      // SINGLE-record write, stamp-guarded (D4.6): a concurrent write to the
-      // moved row aborts as STALE_WRITE instead of being silently overwritten.
-      const put = await guardedSealedPut(db, 'tasks', moved, row.updatedAt);
-      if (!put.ok) return put;
-      return ok({ row: moved, rebalanced: false });
     } catch (e) {
       if (!(e instanceof OrderKeyError) || e.code !== 'EXHAUSTED') throw e;
       // ADR-002 rebalance hatch: fresh evenly-spaced keys for the whole

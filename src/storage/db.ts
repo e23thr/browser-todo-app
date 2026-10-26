@@ -131,6 +131,20 @@ export interface AppDB {
   ) => Promise<Result<Row<K>[], StorageError>>;
 
   /**
+   * Single-key AT-REST read (ADR-007 Decision 4.6 follow-up, t_a155ebf2): ONE
+   * read hands back the decrypted domain view AND the exact at-rest row it was
+   * decrypted from — the raw base and the merged base MUST come from a single
+   * read, because a `get` + separate raw read pair could straddle a concurrent
+   * write and recreate the lost update through the back door. This pair is the
+   * CAS base for single-row read-modify-writes (`repos/support.ts`
+   * `rmwSealed`). Optional on the interface (same fallback rule as `txRaw`).
+   */
+  getWithRaw?: <K extends StoreName>(
+    store: K,
+    key: string,
+  ) => Promise<Result<{ row: Row<K> | undefined; raw: Row<K> | undefined }, StorageError>>;
+
+  /**
    * Stage ONE domain row to its at-rest form WITHOUT any transaction open
    * (ADR-007 Decision 4.6). Optional on the interface (`AppDBImpl` implements
    * it; test doubles may omit it — callers treat the seal as identity, which is
@@ -384,14 +398,27 @@ export class AppDBImpl implements AppDB {
     store: K,
     key: string,
   ): Promise<Result<Row<K> | undefined, StorageError>> {
+    const paired = await this.getWithRaw(store, key);
+    return paired.ok ? ok(paired.value.row) : err(paired.error);
+  }
+
+  /**
+   * ONE read → domain view + the exact at-rest row it came from (the D4.6 CAS
+   * base for `rmwSealed`). `get` delegates here so the pair can never straddle
+   * a concurrent write. Quarantine/denylist rules are identical to `get`.
+   */
+  async getWithRaw<K extends StoreName>(
+    store: K,
+    key: string,
+  ): Promise<Result<{ row: Row<K> | undefined; raw: Row<K> | undefined }, StorageError>> {
     if (this.#closed) return err(unknownError(new Error('AppDB is closed')));
     const k = store === 'meta' ? META_KEY : key;
-    if (this.#denied.has(denyKey(store, k))) return ok(undefined);
+    if (this.#denied.has(denyKey(store, k))) return ok({ row: undefined, raw: undefined });
     try {
       const value = (await this.#db.get(store, k)) as Row<K> | undefined;
-      if (value === undefined) return ok(undefined);
+      if (value === undefined) return ok({ row: undefined, raw: undefined });
       const seam = store === 'tasks' || store === 'lists' ? rowCryptoSeam() : null;
-      if (seam === null) return ok(value);
+      if (seam === null) return ok({ row: value, raw: value });
       const read = await seam.readRow(store as 'tasks' | 'lists', value);
       if (!read.ok) return err(read.error);
       if (read.value === undefined) {
@@ -401,9 +428,9 @@ export class AppDBImpl implements AppDB {
           record: value,
           issues: ['decrypt failed under the current key — quarantined (ADR-007 Decision 9)'],
         });
-        return ok(undefined);
+        return ok({ row: undefined, raw: undefined });
       }
-      return ok(read.value as Row<K>);
+      return ok({ row: read.value as Row<K>, raw: value });
     } catch (e) {
       return err(classifyUnknown(e));
     }
@@ -570,10 +597,11 @@ class TxImpl implements Tx {
   // so seamed reads/writes through `Tx` are only reliable on engines that
   // resolve WebCrypto in a microtask (chromium). As of t_a155ebf2 NO production
   // carrier awaits seam work through `Tx` anymore: the repo surface stages
-  // outside (`sealForWrite`) and commits verbatim via `txRaw` (stamp-guarded
-  // for single-row RMW), `purge.ts` and the migration steps run over `txRaw`,
-  // and `settings`/`meta`/… are unseamed stores. The seamed `Tx` surface stays
-  // for the app's own single-store reads and as the non-transforming-double
+  // outside (`sealForWrite`) and commits verbatim via `txRaw` (single-row RMW
+  // is CAS-guarded over the at-rest base bytes via `repos/support.ts`
+  // `rmwSealed`), `purge.ts` and the migration steps run over `txRaw`, and
+  // `settings`/`meta`/… are unseamed stores. The seamed `Tx` surface stays for
+  // the app's own single-store reads and as the non-transforming-double
   // fallback — never again a load-bearing path for `tasks`/`lists` writes.
 
   async get<K extends StoreName>(store: K, key: string): Promise<Row<K> | undefined> {

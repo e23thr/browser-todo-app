@@ -5,9 +5,10 @@
  * `put` stays raw.
  */
 
-import { ruleError, type AppError, type Result } from '../../domain/kernel';
+import { isRuleError, ruleError, type AppError, type Result } from '../../domain/kernel';
 import type { Clock, IdFactory } from '../../domain/ports';
 import type { List, Task } from '../../domain/model';
+import { stableStringify } from '../../sync/hash';
 import type { AppDB, QuerySpec, Tx } from '../db';
 import { err, ok, type StorageError } from '../errors';
 import type { ErrorLog } from '../errorLog';
@@ -46,10 +47,12 @@ export function txAppRaw<T>(
 }
 
 /**
- * Typed retryable conflict (ADR-007 Decision 4.6): the optimistic stamp guard
- * re-read the AT-REST row inside the commit transaction and its envelope
- * `updatedAt` no longer matches the version the merge was based on. `RULE` per
- * ADR-003 Decision 8.3 — the caller re-reads and re-applies; nothing was lost.
+ * Typed retryable conflict (ADR-007 Decision 4.6): the at-rest CAS re-read the
+ * AT-REST row inside the commit transaction and its bytes no longer match the
+ * base the merge was built from (ANY intervening write — equal envelope stamps
+ * included, because a re-seal always re-randomizes). `RULE` per ADR-003
+ * Decision 8.3 — `rmwSealed` re-reads and re-applies; when retries are
+ * exhausted the caller sees this error and nothing was lost.
  */
 export function staleWrite(store: StoreName, id: string): AppError {
   return ruleError('STALE_WRITE', `${store} ${id} changed since it was read — retry the write`);
@@ -85,34 +88,100 @@ export async function stageAll<K extends 'tasks' | 'lists'>(
   return ok(out);
 }
 
+/** Bounded retry budget for one single-row RMW (t_ccdabf50 R2: ~5 attempts). */
+export const RMW_ATTEMPTS = 5;
+
 /**
- * Single-row read-modify-write commit (ADR-007 Decision 4.6): the merged row
- * is sealed OUTSIDE the transaction and written VERBATIM in ONE `txRaw`. The
- * pessimistic single-tx guard is gone, so the tx re-reads the AT-REST row and
- * compares its envelope-level `updatedAt` (plaintext in both row shapes)
- * against the version the merge was based on — a mismatch aborts with the
- * typed retryable `STALE_WRITE` error. A vanished base row conflicts too
- * (never a resurrection). Residual: a concurrent writer that stamps the SAME
- * `updatedAt` (same millisecond, or a frozen clock) is invisible to the
- * comparison — see t_a155ebf2's open question for h_senior_coder (the E5
- * two-tab merge probe pins it).
+ * Single-row read-modify-write commit (ADR-007 Decision 4.6, completed by
+ * h_senior_coder's t_ccdabf50 ruling): the pessimistic single-tx guard is gone
+ * by design (the seam never runs inside a live transaction), so the guard is
+ * completed as an AT-REST compare-and-swap with a bounded repo-level retry —
+ * below the port surface, inside the write step's repo call.
+ *
+ * One attempt = read outside via the SAFE surface (`getWithRaw` hands back the
+ * decrypted base AND its exact at-rest bytes from ONE read), apply `plan` (the
+ * whole op re-applies on every attempt — fresh reads, fresh stamps), seal the
+ * planned rows OUTSIDE the transaction (`stageAll`), then ONE `txRaw` whose
+ * commit re-reads the raw row and byte-compares it against the base: any
+ * difference — equal envelope stamps included, because a re-seal always
+ * re-randomizes — aborts as the typed retryable `STALE_WRITE`. On conflict the
+ * loop re-reads and re-applies the SAME op (bounded `attempts`); a vanished
+ * base row conflicts and, on re-read, fails whatever the plan says (typically
+ * `TASK_MISSING`) — never a resurrection. Exhausted retries surface the typed
+ * `STALE_WRITE` → pipeline step 4b `write-failed` + rollback, unchanged.
+ *
+ * The retry lives HERE and not above the port surface deliberately (t_ccdabf50
+ * R2): re-applying is merging the op against the fresh base — the repo already
+ * owns that merge; one mutation stays one port call; and `src/domain/pipeline.ts`
+ * stays untouched.
  */
-export async function guardedSealedPut<K extends 'tasks' | 'lists'>(
+export async function rmwSealed<K extends 'tasks' | 'lists', T>(
   db: AppDB,
   store: K,
-  row: Row<K>,
-  baseUpdatedAt: number,
-): Promise<Result<void, AppError>> {
-  const sealed = await sealRow(db, store, row);
-  if (!sealed.ok) return sealed;
-  return txAppRaw(db, [store], 'readwrite', async (t) => {
-    const current = await t.get(store, row.id);
-    if (current === undefined || current.updatedAt !== baseUpdatedAt) {
-      return err(staleWrite(store, row.id));
-    }
-    await t.put(store, sealed.value);
-    return ok(undefined);
-  });
+  id: string,
+  plan: (
+    base: Row<K> | undefined,
+  ) =>
+    | Result<{ puts: Row<K>[]; value: T }, AppError>
+    | Promise<Result<{ puts: Row<K>[]; value: T }, AppError>>,
+  attempts = RMW_ATTEMPTS,
+): Promise<Result<T, AppError>> {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const base = await readWithRaw(db, store, id);
+    if (!base.ok) return err(base.error);
+    const planned = await plan(base.value.row);
+    if (!planned.ok) return planned;
+    const staged = await stageAll(db, store, planned.value.puts);
+    if (!staged.ok) return staged;
+    const baseRaw = base.value.raw;
+    const commit = await txAppRaw(db, [store], 'readwrite', async (t) => {
+      // The CAS: AT-REST bytes only (`txRaw`), no seam anywhere near the tx.
+      const current = await t.get(store, id);
+      if (!sameAtRest(current, baseRaw)) return err(staleWrite(store, id));
+      for (const row of staged.value) await t.put(store, row);
+      return ok(planned.value.value);
+    });
+    if (commit.ok) return commit;
+    if (!isStaleWrite(commit.error)) return commit;
+    // Conflict → bounded re-read + re-apply of the same op (never a lost update).
+  }
+  return err(staleWrite(store, id));
+}
+
+/** CAS conflict predicate — only our typed retryable error triggers a retry. */
+function isStaleWrite(e: AppError): boolean {
+  return isRuleError(e) && e.rule === 'STALE_WRITE';
+}
+
+/**
+ * ONE read → domain view + at-rest base bytes (`getWithRaw`). Fallback rule
+ * identical to `txRaw`/`sealForWrite`: a double without it is non-transforming,
+ * so its domain view IS its at-rest row.
+ */
+async function readWithRaw<K extends 'tasks' | 'lists'>(
+  db: AppDB,
+  store: K,
+  id: string,
+): Promise<Result<{ row: Row<K> | undefined; raw: Row<K> | undefined }, AppError>> {
+  if (db.getWithRaw !== undefined) {
+    const read = await db.getWithRaw(store, id);
+    return read.ok ? ok(read.value) : err(read.error);
+  }
+  const read = await db.get(store, id);
+  return read.ok ? ok({ row: read.value, raw: read.value }) : err(read.error);
+}
+
+/**
+ * Byte-identical at-rest compare for the CAS. Canonical (key-sorted,
+ * `undefined`-dropping — `stableStringify`, the sync wire helper): both
+ * operands are structured clones of the stored record, so an unwritten row
+ * always compares equal, and ANY write changes the bytes (a re-seal
+ * re-randomizes the envelope; a plaintext re-write of identical content is
+ * semantically a no-op).
+ */
+function sameAtRest(current: unknown, base: unknown): boolean {
+  if (current === undefined || base === undefined) return current === base;
+  return stableStringify(current) === stableStringify(base);
 }
 
 export { err, ok };

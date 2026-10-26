@@ -14,7 +14,7 @@ deviations are additive and listed in §4 — nothing normative was weakened).
 | Area | Modules |
 |---|---|
 | Crypto core | `src/crypto/{bytes,errors,payload,passphrase,recovery,keys,lock,vault,migrate,service,portability}.ts` |
-| Row seam | `src/storage/cryptoSeam.ts` + the `AppDB`/`Tx` read-write transform in `src/storage/db.ts` (`txRaw`/`getAllRaw`/`putRaw` are the at-rest escape hatches; `sealForWrite` stages a row OUTSIDE any tx — ADR-007 Decision 4.6) |
+| Row seam | `src/storage/cryptoSeam.ts` + the `AppDB`/`Tx` read-write transform in `src/storage/db.ts` (`txRaw`/`getAllRaw`/`putRaw` are the at-rest escape hatches; `sealForWrite` stages a row OUTSIDE any tx; `getWithRaw` reads the domain view AND its at-rest bytes from ONE read — the CAS base for single-row RMW, ADR-007 Decision 4.6 + t_ccdabf50) |
 | Storage chain | `crypto_state` singleton store at **idbVersion 3 / schemaVersion 4** (`src/storage/{schema,types,migrations,validate}.ts`) |
 | Sync interop | `src/sync/mergeSeam.ts` + `merge.ts` `LOCKED` deferral + encrypted-shape types in `src/sync/{types,hash,engine}.ts` |
 | Portability | export decrypt (plaintext backups, D4.5), import stamp+encrypt, snapshot payload wrap/unwrap (D4.4), enc-aware `canonicalizeRecord` |
@@ -78,13 +78,24 @@ deviations are additive and listed in §4 — nothing normative was weakened).
    - `applyImport`/`restoreSnapshot` (t_361487a7), and the whole repo surface
      (`repos/support.ts`): reads go through the safe surface (`db.get` /
      `db.getAll` / `db.query` — these decrypt AFTER their own tx); single-row
-     read-modify-writes (patch/setDone/move/rename/recolor) commit via
-     `guardedSealedPut` — seal outside, ONE `txRaw` put, guarded by the
-     envelope-level `updatedAt` stamp (mismatch → typed retryable
-     `RULE: STALE_WRITE`; an advanced-stamp concurrent write is never silently
-     lost — an equal-stamp collision is the documented residual, open question
-     on t_a155ebf2); bulk writes (remove cascade, rebalance hatch, sweepTag,
-     upsertImported) stage every row (`stageAll`) and commit verbatim in one
+     read-modify-writes (patch/setDone/move/rename/recolor, and
+     `completeRecurring`'s done half) go through `rmwSealed` — one
+     `db.getWithRaw` read hands back the decrypted base AND its exact at-rest
+     bytes from a SINGLE read (a `get` + separate raw pair could straddle a
+     concurrent write), the merge seals outside (`stageAll`), and ONE `txRaw`
+     commits under an AT-REST compare-and-swap: the tx re-reads the raw row
+     and byte-compares it against the base (equal envelope stamps included —
+     a re-seal always re-randomizes, so no write can masquerade as the base);
+     any difference aborts as the typed retryable `RULE: STALE_WRITE`, and a
+     bounded repo-level loop (~5 attempts, below the port surface — one
+     mutation stays one port call, `src/domain/pipeline.ts` untouched) re-reads
+     and re-applies the op onto the fresh row. Never a lost update, including
+     the frozen-clock equal-stamp collision that an envelope-stamp guard was
+     blind to (the §10 E5 two-tab same-record merge probe goes green verbatim
+     — h_senior_coder's t_ccdabf50 ruling amended the original
+     "compare envelope-level `updatedAt`" clause to this at-rest CAS);
+     bulk writes (remove cascade, rebalance hatch, sweepTag, upsertImported)
+     stage every row (`stageAll`) and commit verbatim in one
      `txRaw`.
    - `purge.ts`: `txRaw` — the pass only reads envelope-level fields (`id`,
      `deletedAt` — plaintext in both row shapes), so behaviour is identical.

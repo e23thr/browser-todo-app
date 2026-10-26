@@ -418,14 +418,22 @@ Consequences:
   chain no longer run the seam inside a transaction either.** Repo reads use the safe
   surface (`db.get`/`getAll`/`query` — decrypt after their own tx); single-row
   read-modify-writes (patch/setDone/move/rename/recolor, and `completeRecurring`'s done half)
-  commit via `guardedSealedPut` — seal outside, ONE `txRaw` put, guarded by the
-  envelope-level `updatedAt` stamp (mismatch → typed retryable `RULE: STALE_WRITE`); bulk
-  writes (remove cascade, rebalance hatch, sweepTag, upsertImported, `restore`) stage every
-  row and commit verbatim in one `txRaw` — the same pattern as `runSweep`/`applyImport`.
-  Residual (open question on t_a155ebf2): the stamp guard cannot see a writer that stamps the
-  SAME `updatedAt` (same millisecond / frozen clock), and the pessimistic single-tx
-  serialization that produced the §10 E5 two-tab same-record merge is gone by design — the
-  e2 tabsync probe pins the collision for h_senior_coder's ruling. `purge.ts` reads
+  go through `repos/support.ts` `rmwSealed`: ONE `db.getWithRaw` read returns the decrypted
+  base AND its exact at-rest bytes together (a `get` + separate raw pair could straddle a
+  concurrent write and recreate the lost update through the back door), the merge seals
+  outside, and ONE `txRaw` commits under an AT-REST compare-and-swap — the tx re-reads the
+  raw row and byte-compares it against the base (any difference, EQUAL envelope stamps
+  included, since a re-seal always re-randomizes → typed retryable `RULE: STALE_WRITE`; a
+  vanished base row is a conflict, never a resurrection), with a bounded re-read/re-apply
+  loop (~5 attempts) below the port surface (one mutation stays one port call;
+  `src/domain/pipeline.ts` untouched). This guard was completed from the original
+  envelope-`updatedAt` stamp compare by h_senior_coder's ruling on the E5 collision
+  (t_ccdabf50): pessimistic single-tx serialization is gone by design, so the stamp compare
+  was amended to the at-rest CAS — same invariant ("never a lost update"), now actually
+  complete, and the §10 E5 two-tab same-record merge probe passes VERBATIM (the frozen-clock
+  equal-stamp collision is visible in the bytes). Bulk writes (remove cascade, rebalance
+  hatch, sweepTag, upsertImported, `restore`) stage every row and commit verbatim in one
+  `txRaw` — the same pattern as `runSweep`/`applyImport`. `purge.ts` reads
   envelope-level fields only (`id`, `deletedAt` — plaintext in both row shapes), so its pass
   runs over `txRaw` with identical behaviour. The migration chain runs its steps over
   `txRaw` — the "migrations via `txRaw`" half of the `cryptoSeam.ts` contract is now real;
