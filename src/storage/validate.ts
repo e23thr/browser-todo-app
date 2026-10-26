@@ -968,7 +968,7 @@ export function validateCryptoState(value: unknown): ValidationResult {
         `migration.${key}`,
         typeof migration[key] === 'number' &&
           Number.isSafeInteger(migration[key]) &&
-          (migration[key]) >= 0,
+          migration[key] >= 0,
         'range',
         'safe integer >= 0',
       );
