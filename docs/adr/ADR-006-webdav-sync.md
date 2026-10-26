@@ -856,6 +856,98 @@ Coverage (sync-scope run): merge.ts 97.05/95.23/100/97.75, shadow.ts 100/100/100
 batchCodec.ts 83.56/85.89/92.30/88.52, `src/sync` aggregate 87.61/79.88/89.78/90.57 —
 zero `src/sync` threshold errors.
 
+## Addendum C (2026-10-26) — The connection test probes the CONFIGURED base (`PROPFIND Depth: 0`), and a committed sync apply fires the `data-replaced` seam
+
+**Status**: Accepted (sole decider: h_senior_coder; two blocking defects from the sync-UI QA
+card t_98a1b4a5 — E8-UI-D1 and E8-UI-D5 — fix card t_2dec7c9d). PROJECT_ANALYSIS §6.2 is
+untouched: the LWW key `(updatedAt, deviceId)`, tombstone propagation, "never a silent
+overwrite", the conflict-copy/notice shapes and the strictly-opt-in boundary stand verbatim
+(§11 R3 honored).
+
+**Context**: The E8 sync-UI QA (`docs/qa/e8-sync-ui.md`, real-Chromium + component probes)
+proved two blocking gaps at HEAD:
+
+1. **E8-UI-D5 — the connection test validated the WRONG ENDPOINT.** `WebDavClient.probe()`
+   resolved its request through `url('')`, and `url('')` built `new URL('/', base)` — a
+   root-relative reference → the **origin root**. Every "Test connection & enable" therefore
+   OPTIONSed `/`: a *dead configured path* PASSED setup (the root answered; the typed path was
+   never contacted — server log `OPTIONS /`), *wrong credentials were ACCEPTED* (the 401 only
+   surfaced at the first run), and a healthy Nextcloud under
+   `/remote.php/dav/files/<user>/` was judged by whatever its ROOT answered (incl. CORS), not
+   by the endpoint the run would use. Invisible to the impl tests: the fake WebDAV answered
+   per-transport, not per-URL-path.
+2. **E8-UI-D1 — a committed sync apply never refreshed the running store.** The apply
+   transaction is the only local write of phases 2..6 and commits through the engine's own
+   `db.tx`, bypassing `MutationRunner.onCommitted`; `notifyDataReplaced()` fired only from
+   `src/portability/{import,export}.ts`. Pulled rows and materialized `Conflict copy of …`
+   rows landed in IndexedDB but were invisible in the rendered list until a full page reload,
+   and keep-copy/discard-copy resolves failed `TASK_MISSING` in the gap (loud + pending, no
+   data loss) — the E3 finding F1 recurring at the sync seam.
+
+**Decision 1 (probe protocol — supersedes Decision 5 phase 2's "OPTIONS capability probe" and
+the Decision 1 method list)**: the capability probe is a **`PROPFIND` `Depth: 0` against the
+configured base URL** — the typed path (trailing-slash-normalized to its canonical collection
+URL), the exact endpoint the sync run uses. `url('')` now resolves to the collection *itself*
+(its documented `DavEntry.path` meaning) instead of a root-relative reference. The result
+mapping is the existing status map: `207` = pass (the collection exists AND the credentials
+work); `401`/`403` → `AUTH`; `404` → `REMOTE_MISSING` (a dead configured path fails setup
+with the accurate copy); a rejected `fetch` keeps the honest `CORS`/`NETWORK` classification.
+`OPTIONS` cannot be the test: WebDAV servers answer it UNAUTHENTICATED (a CORS preflight
+carries no credentials), so it can never validate a sign-in, and many answer it for paths that
+do not exist. `PROPFIND` is a DAV class-1 MUST — and the run's own discovery verb.
+
+**Decision 2 (sync-apply refresh seam — the E8-UI-D1 fix)**: after the apply transaction
+COMMITS with rows materialized (`plan.puts + plan.copies > 0`), the engine fires the existing
+`notifyDataReplaced()` seam — the same one the portability import/export path uses (ADR-004
+Decision 3) — so `wireDataReplacedRefresh()`'s handlers re-read the dataset into the running
+store and announce the bulk change (other tabs converge via `TabSync.replaceAll()`). The
+notification is fire-and-forget AFTER the commit (it can never fail a committed merge) and a
+no-op merge fires nothing (no UI churn on periodic passes). Going through the handler registry
+— not a direct store call — keeps `src/sync` independent of `src/features/*` (ADR-003
+composition root) and preserves the cross-tab announce path.
+
+**Alternatives considered**
+
+| Option | Pros | Cons | Why not |
+|---|---|---|---|
+| `OPTIONS` on the configured base (fix `url('')` only) | Smallest diff; preflight-safe | Auth-INVISIBLE by design (servers answer `OPTIONS` unauthenticated) — wrong credentials would still pass setup; existence-blind on many servers | Fixes half the acceptance only |
+| `PROPFIND Depth: 1` on the base | Also lists children | Heavier payload; listing is not the test's job (the run discovers `todo-sync/v1/…`) | `Depth: 0` is the minimal path+auth check |
+| `GET` the base / `MKCOL` the layout at setup | Exercises run verbs | `GET` is not a DAV capability test; `MKCOL` WRITES to the user's server before any run (opt-in / zero-write discipline) | Rejected |
+| Refresh via an `onRunApplied` callback wired in `syncHost` | Explicit dependency | Must be threaded through every construction site — the production-wiring probes construct `SyncEngine` directly, so the seam would not fire where it is tested | Rejected: the handler registry IS the documented seam |
+| Direct `refreshAfterDataReplace()` import from `src/sync` | — | Couples the engine to `src/features/tasks/store`; skips the cross-tab announce | Rejected (composition root) |
+| Fire the refresh on EVERY run | Simple | Store reload + announcements every periodic pass with nothing changed | Rejected — materialized-rows guard |
+
+**Consequences**
+
+- Positive: "Test connection & enable" validates the EXACT endpoint the run will use — dead
+  paths fail setup (`REMOTE_MISSING`, accurate copy), wrong credentials fail setup (`AUTH` —
+  "Sign-in rejected", never the CORS misattribution copy), and run phase 2 repeats the same
+  accurate probe. Pulled rows and conflict copies are visible in the running store and rendered
+  list WITHOUT a reload; keep-copy / discard-copy / keep-both all resolve without a reload.
+- Negative / residual: `PROPFIND` is a non-simple CORS request, so the browser preflights
+  `OPTIONS` first — answered unauthenticated by design (a transport requirement, not the
+  test). A server answering `405` to `PROPFIND` fails the probe: it cannot serve the run's
+  discovery either, so the failure is honest. A base typed without a trailing slash is probed
+  at `<base>/` (the canonical collection URL) — server logs show the typed path + `/`.
+- Migration: none — the wire format is untouched (Addendum B `base` stamps unchanged, zero new
+  deps). Test fixtures gained what the QA asked for: the fake WebDAV is now path-sensitive
+  (`hidePath`) and auth-sensitive (`faults.auth`, with `OPTIONS` still answered pre-auth —
+  exactly the real-server behavior that made the old probe auth-blind).
+
+**Verification** (t_2dec7c9d): unit (`tests/unit/sync/webdav.test.ts`, "probe() contacts the
+CONFIGURED base URL"): the constructed probe URL is asserted EXACTLY — full deep path
+`/remote.php/dav/files/alice/todo/`, `=== client.baseUrl`, never the origin root — plus the
+trailing-slash-normalized base, `url('')` semantics, dead path → `REMOTE_MISSING`, wrong
+credentials (auth-checking fake) → `AUTH` with `401 on PROPFIND`, happy path = exactly one
+request to the base path. Component (`tests/component/sync-setup-wizard.test.tsx`): a dead
+typed path FAILS setup with "The storage folder is missing" (never the CORS copy) and the
+server-side request record shows the TYPED PATH; wrong credentials → "Sign-in rejected" +
+rollback. Store gap (`tests/component/e8-sync-ui-storegap.test.tsx`): Q10/Q11a flipped
+`it.fails` → `it` (bodies verbatim), Q11b/Q11c/Q11d prove discard-copy / keep-copy / keep-both
+resolve without a reload (the loud failed-resolve path stays covered by
+`sync-conflicts.test.tsx`). Real-browser re-probe with server-side request logs:
+`docs/qa/e8-ui-d1-d5-fix.md` + `docs/qa/e8-ui-d1-d5-fix-logs/`.
+
 ## Links
 - PROJECT_ANALYSIS.md §6.2 (binding sync/conflict policy + guarantees), §5.2 (storage strategy),
   §11 R3 (scope-creep risk), §2 + §4 WON'T (no server we operate), §12 Q1/Q2 (PO decisions),
@@ -874,3 +966,10 @@ zero `src/sync` threshold errors.
   `src/sync/{merge,shadow,types,batchCodec,engine}.ts` + `src/storage/{types,validate}.ts`;
   regression rows `tests/unit/sync/{e8-qa-probes,merge-matrix,engine}.test.ts` (Q1/Q2 flipped,
   M15–M18, E13/E14); chain t_beed2e01 (E8 QA) → t_5b47f3e1 (this decision + fix)
+- Addendum C: `docs/qa/e8-sync-ui.md` §3 (E8-UI-D1 / E8-UI-D5 defect + real-browser proof) and
+  `docs/qa/e8-ui-d1-d5-fix.md` + `docs/qa/e8-ui-d1-d5-fix-logs/` (fix + re-probe evidence);
+  implementation `src/sync/{webdav,engine}.ts`; regression rows
+  `tests/unit/sync/webdav.test.ts` ("probe() contacts the CONFIGURED base URL"),
+  `tests/component/{e8-sync-ui-storegap,sync-setup-wizard}.test.tsx` (Q10/Q11a flipped,
+  Q11b–Q11d, dead-path/wrong-creds setup); chain t_98a1b4a5 (E8 sync-UI QA) → t_2dec7c9d
+  (this decision + fix)
