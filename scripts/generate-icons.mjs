@@ -6,8 +6,9 @@
  * procedurally from pixel math (rounded-square accent tile + white checkmark — the same mark as
  * `public/favicon.svg`). ZERO third-party bytes and zero image dependencies: the PNG encoder is
  * ~60 lines of `zlib` + CRC-32, and the drawing is antialiased signed-distance math, so the
- * committed bytes are fully deterministic (`tests/unit/generate-icons.test.ts` proves a fresh run
- * reproduces the committed files byte-for-byte).
+ * committed pixels are fully deterministic (`tests/unit/generate-icons.test.ts` proves a fresh run
+ * reproduces the committed PIXELS — decode + compare, not deflate bytes, which differ between
+ * node's patched zlib 1.3.1-e00f703 (CI/setup-node) and the plain zlib 1.3.1 on the dev box).
  *
  * Files (sizes chosen for the installability matrix, ADR-008 Decision 2):
  *   icon-192.png / icon-512.png            purpose `any`      — Chromium installability floor

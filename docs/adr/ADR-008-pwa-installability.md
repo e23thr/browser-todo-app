@@ -45,10 +45,12 @@ tooling, no new dependencies — and the bytes are committed under `public/icons
 | `maskable-192.png`, `maskable-512.png` | 192², 512² | `maskable` — Android adaptive icons (glyph inside the central 80% safe zone) |
 | `apple-touch-icon-180.png` | 180² | iOS Safari home-screen icon (full-bleed, no transparency) |
 
-Determinism is a test invariant (`tests/unit/generate-icons.test.ts` byte-compares committed
-files with fresh generator output), so icons can never drift silently. Icons ride the existing
-budget exclusion (`**/icons/**`, §9.2) and the ADR-005 Decision 2 artifact set (precached like
-every other app artifact). `npm run icons` regenerates.
+Determinism is a test invariant (`tests/unit/generate-icons.test.ts` decodes the committed PNGs
+and compares their pixels with fresh generator output — not the deflate bytes, which differ
+between node's patched zlib 1.3.1-e00f703 in CI and plain zlib 1.3.1 on the dev box), so icons
+can never drift silently. Icons ride the existing budget exclusion (`**/icons/**`, §9.2) and the
+ADR-005 Decision 2 artifact set (precached like every other app artifact). `npm run icons`
+regenerates.
 
 ## Decision 3 — The install offer: one seam, three tiers, permanent dismissal
 
