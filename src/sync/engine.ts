@@ -100,7 +100,14 @@ function toSyncRecord(
 ): SyncRecord {
   const base = shadow[row.id]?.base;
   return {
-    kind: 'title' in row ? 'task' : 'list',
+    // `rowKindOf`, NOT `'title' in row`: an EncryptedTaskRecord has no
+    // top-level `title` (it lives inside the ciphertext), so a field-presence
+    // guess pushes every encrypted task as kind 'list'. The record already
+    // self-describes (`kind` on the encrypted shape) and the apply path
+    // (phase 5/6 below) already derives through `rowKindOf` — the envelope must
+    // agree with it or the peer's second sync round hard-fails CORRUPT_REMOTE
+    // (E10-Q4/Q5).
+    kind: rowKindOf(row),
     record: row,
     ...(base === undefined ? {} : { base }),
   };

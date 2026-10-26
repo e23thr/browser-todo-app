@@ -227,6 +227,13 @@ Run with: `npx playwright test --config tests/e2e/e10-encryption.playwright.conf
 
 *New — not in the review card.*
 
+> **RESOLVED — fix card t_10f00447.** `toSyncRecord` now derives the envelope
+> kind with `rowKindOf(row)`. The pin below was flipped from `it.fails` to a
+> plain `it`, and a new regression suite (`describe 'push envelope — wire kind
+> self-description'` in the same file) decodes a real `runSyncOnce` push and
+> asserts the wire `kind` against the at-rest row's own `kind` for BOTH stores,
+> on the first push and the re-push — the coverage gap named below is closed.
+
 `src/sync/engine.ts:103` (`toSyncRecord`):
 
 ```ts
@@ -255,6 +262,17 @@ second one explodes.
 ### 🔴 E10-Q5 — BLOCKING — second sync round permanently fails (`CORRUPT_REMOTE`, non-retryable)
 
 *New — not in the review card. Consequence of E10-Q4.*
+
+> **RESOLVED — fix card t_10f00447** (same one-line root cause). Two notes for
+> whoever reads the pin: (1) its edit step had spliced a plaintext `title` onto
+> the raw ciphertext row — the write seam stores already-encrypted rows VERBATIM
+> (ADR-007 D4, tombstone-while-locked), so that produced a *hybrid* row that
+> `validateRow` refuses on the receiving side (`title: unknown (unexpected
+> field)`). The pin now edits through the app surface (`db.get` → domain view →
+> `db.put` → re-encrypt), which is what a user edit does. (2) With the fix the
+> round trip converges with **no** conflict copy: A's follow-up edit is not a
+> concurrent divergence (LWW `only-remote-changed`), so the pin asserts clean
+> convergence plus a working 2nd and 3rd round on A instead of a copy.
 
 `merge.ts:177` compares the local entry kind (from the `tasks` store → `'task'`)
 against the wire kind (`'list'`) and refuses:

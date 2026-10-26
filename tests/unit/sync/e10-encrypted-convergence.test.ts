@@ -26,8 +26,9 @@ import type { KeyFile } from '../../../src/crypto/recovery';
 import { enableEncryption } from '../../../src/crypto/service';
 import { resetRowCryptoSeam } from '../../../src/storage/cryptoSeam';
 import { resetMergeCryptoSeam } from '../../../src/sync/mergeSeam';
+import { CHANGES_PREFIX } from '../../../src/sync/engine';
 import { WebDavClient } from '../../../src/sync/webdav';
-import { bootDb, makeFakeWebDav, makeTask, runEngine, T0, testUlid } from './fixtures';
+import { bootDb, makeFakeWebDav, makeList, makeTask, runEngine, T0, testUlid } from './fixtures';
 
 const PASSPHRASE = 'correct horse battery staple';
 let clock = T0 + 10_000;
@@ -85,6 +86,24 @@ async function viewTitle(
   return view.ok && view.value !== undefined ? (view.value as Task).title : undefined;
 }
 
+/** Every record the device pushed, decoded from the fake's file bytes. */
+function decodePushedRecords(
+  fake: ReturnType<typeof makeFakeWebDav>,
+): { path: string; kind: string; record: { id: string; kind?: string } }[] {
+  const out: { path: string; kind: string; record: { id: string; kind?: string } }[] = [];
+  for (const [path, body] of fake.state.files) {
+    if (!path.startsWith(`${CHANGES_PREFIX}/`)) continue;
+    const doc = JSON.parse(body) as { records?: unknown };
+    if (typeof doc.records !== 'string') continue;
+    const recs = JSON.parse(doc.records) as {
+      kind: string;
+      record: { id: string; kind?: string };
+    }[];
+    for (const r of recs) out.push({ path, kind: r.kind, record: r.record });
+  }
+  return out;
+}
+
 const opened: AppDBImpl[] = [];
 async function freshBoot(): Promise<AppDBImpl> {
   const db = await bootDb();
@@ -135,37 +154,32 @@ describe('encrypted sync — the wire and convergence', () => {
     await vaultA.lock();
   });
 
-  it.fails(
-    'DEFECT E10-Q4: an encrypted TASK is pushed with wire kind "task" (engine.ts:103 infers kind from `title in row`, which ciphertext never has)',
-    async () => {
-      const dbA = await freshBoot();
-      const vaultA = new CryptoVault({ now });
-      await vaultA.attach(dbA);
-      registerVault(vaultA);
-      await enableOn(dbA, vaultA);
-      const taskId = testUlid('s1b-task');
-      await dbA.put(
-        'tasks',
-        makeTask({ id: taskId, title: 'wire kind', deviceId: dbA.deviceId, updatedAt: now() }),
-      );
+  // Was `it.fails` (pin) until the E10-Q4 fix: `toSyncRecord` now derives the
+  // envelope kind with `rowKindOf`, so the pin is a passing regression test.
+  it('DEFECT E10-Q4: an encrypted TASK is pushed with wire kind "task" (engine.ts:103 infers kind from `title in row`, which ciphertext never has)', async () => {
+    const dbA = await freshBoot();
+    const vaultA = new CryptoVault({ now });
+    await vaultA.attach(dbA);
+    registerVault(vaultA);
+    await enableOn(dbA, vaultA);
+    const taskId = testUlid('s1b-task');
+    await dbA.put(
+      'tasks',
+      makeTask({ id: taskId, title: 'wire kind', deviceId: dbA.deviceId, updatedAt: now() }),
+    );
 
-      const fake = makeFakeWebDav();
-      expect((await runEngine(dbA, clientFor(fake))).ok).toBe(true);
+    const fake = makeFakeWebDav();
+    expect((await runEngine(dbA, clientFor(fake))).ok).toBe(true);
 
-      let wireKind: string | undefined;
-      for (const [p, body] of fake.state.files) {
-        if (!p.endsWith('.json') || !p.includes('/changes/')) continue;
-        const doc = JSON.parse(body) as { records?: unknown };
-        const recs = JSON.parse(String(doc.records)) as { kind: string; record: { id: string } }[];
-        const mine = recs.find((r) => r.record.id === taskId);
-        if (mine !== undefined) wireKind = mine.kind;
-      }
-      // EncryptedTaskRecord.self-describes `kind: 'task'` (domain/model.ts:166);
-      // the wire must carry that, not a `'title' in row` guess.
-      expect(wireKind).toBe('task');
-      await vaultA.lock();
-    },
-  );
+    let wireKind: string | undefined;
+    for (const pushed of decodePushedRecords(fake)) {
+      if (pushed.record.id === taskId) wireKind = pushed.kind;
+    }
+    // EncryptedTaskRecord.self-describes `kind: 'task'` (domain/model.ts:166);
+    // the wire must carry that, not a `'title' in row` guess.
+    expect(wireKind).toBe('task');
+    await vaultA.lock();
+  });
 
   it('S2: one-way convergence — B joins the key, pulls A ciphertext and decrypts it', async () => {
     const dbA = await freshBoot();
@@ -205,75 +219,82 @@ describe('encrypted sync — the wire and convergence', () => {
     await vaultB.lock();
   });
 
-  it.fails(
-    'DEFECT E10-Q5: a second version of an encrypted task hard-fails the peer sync — CORRUPT_REMOTE (retryable:false), so the conflict copy round trip never completes',
-    async () => {
-      const dbA = await freshBoot();
-      const vaultA = new CryptoVault({ now });
-      await vaultA.attach(dbA);
-      registerVault(vaultA);
-      const { keyFile } = await enableOn(dbA, vaultA);
+  // Was `it.fails` (pin) until the E10-Q4 fix: the wire kind now agrees with
+  // the local kind, so no CORRUPT_REMOTE fires and the round trip completes.
+  it('DEFECT E10-Q5: a second version of an encrypted task hard-fails the peer sync — CORRUPT_REMOTE (retryable:false), so the conflict copy round trip never completes', async () => {
+    const dbA = await freshBoot();
+    const vaultA = new CryptoVault({ now });
+    await vaultA.attach(dbA);
+    registerVault(vaultA);
+    const { keyFile } = await enableOn(dbA, vaultA);
 
-      const dbB = await freshBoot();
-      const vaultB = new CryptoVault({ now });
-      await vaultB.attach(dbB);
-      expect((await vaultB.joinWithKeyFile(keyFile, 'device b passphrase')).ok).toBe(true);
+    const dbB = await freshBoot();
+    const vaultB = new CryptoVault({ now });
+    await vaultB.attach(dbB);
+    expect((await vaultB.joinWithKeyFile(keyFile, 'device b passphrase')).ok).toBe(true);
 
-      const fake = makeFakeWebDav();
-      const taskId = testUlid('s2b-task');
+    const fake = makeFakeWebDav();
+    const taskId = testUlid('s2b-task');
 
-      registerVault(vaultA);
-      expect(
-        (
-          await dbA.put(
-            'tasks',
-            makeTask({
-              id: taskId,
-              title: 'original on A',
-              deviceId: dbA.deviceId,
-              updatedAt: now(),
-            }),
-          )
-        ).ok,
-      ).toBe(true);
-      expect((await runEngine(dbA, clientFor(fake))).ok).toBe(true);
+    registerVault(vaultA);
+    expect(
+      (
+        await dbA.put(
+          'tasks',
+          makeTask({
+            id: taskId,
+            title: 'original on A',
+            deviceId: dbA.deviceId,
+            updatedAt: now(),
+          }),
+        )
+      ).ok,
+    ).toBe(true);
+    expect((await runEngine(dbA, clientFor(fake))).ok).toBe(true);
 
-      registerVault(vaultB);
-      expect((await runEngine(dbB, clientFor(fake))).ok).toBe(true);
-      expect(await viewTitle(vaultB, dbB, taskId)).toBe('original on A');
+    registerVault(vaultB);
+    expect((await runEngine(dbB, clientFor(fake))).ok).toBe(true);
+    expect(await viewTitle(vaultB, dbB, taskId)).toBe('original on A');
 
-      // A edits and pushes version 2; B pulls it. B already holds the id, so
-      // planMerge compares B's local kind ('task', from the tasks store)
-      // against the wire kind ('list' — engine.ts:103 guesses from `title in
-      // row`, which ciphertext never has) → CORRUPT_REMOTE, non-retryable.
-      registerVault(vaultA);
-      const aRow = (await rawTasks(dbA)).find((r) => r['id'] === taskId) as unknown as Task;
-      await dbA.put('tasks', { ...aRow, title: 'A edit (version 2)', updatedAt: now() });
-      expect((await runEngine(dbA, clientFor(fake))).ok).toBe(true);
+    // A edits through the APP surface — the domain view (decrypted by the
+    // read seam) with a new title; the write seam re-encrypts it into a fresh
+    // EncryptedTaskRecord. That is exactly what a user edit does. (Splicing a
+    // plaintext `title` onto the raw ciphertext row instead produces a hybrid
+    // the write seam stores verbatim — validateRow then refuses it on the
+    // receiving side as "title: unknown (unexpected field)".)
+    registerVault(vaultA);
+    const aView = await dbA.get('tasks', taskId);
+    expect(aView.ok).toBe(true);
+    if (!aView.ok || aView.value === undefined) throw new Error('A lost the row');
+    await dbA.put('tasks', {
+      ...aView.value,
+      title: 'A edit (version 2)',
+      updatedAt: now(),
+    });
+    expect((await runEngine(dbA, clientFor(fake))).ok).toBe(true);
 
-      registerVault(vaultB);
-      const bRun = await runEngine(dbB, clientFor(fake));
+    registerVault(vaultB);
+    const bRun = await runEngine(dbB, clientFor(fake));
 
-      // DESIRED: the pull succeeds and both sides converge to ONE conflict copy.
-      if (!bRun.ok) throw new Error(`B pull failed: ${JSON.stringify(bRun.error)}`);
-      expect(await viewTitle(vaultB, dbB, taskId)).toBe('A edit (version 2)');
-      const bRows = await rawTasks(dbB);
-      const copies = bRows.filter((r) => r['id'] !== taskId);
-      expect(copies).toHaveLength(1);
-      const copyId = (copies[0] as { id: string }).id;
-      expect(await viewTitle(vaultB, dbB, copyId)).toBe('Conflict copy of original on A');
+    // DESIRED: the pull succeeds and both devices converge on version 2.
+    if (!bRun.ok) throw new Error(`B pull failed: ${JSON.stringify(bRun.error)}`);
+    expect(await viewTitle(vaultB, dbB, taskId)).toBe('A edit (version 2)');
 
-      registerVault(vaultA);
-      const aRun = await runEngine(dbA, clientFor(fake));
-      expect(aRun.ok).toBe(true);
-      const aRows = await rawTasks(dbA);
-      expect(aRows).toHaveLength(2);
-      expect(await viewTitle(vaultA, dbA, copyId)).toBe('Conflict copy of original on A');
+    // A keeps syncing: before the fix every further round hard-failed
+    // CORRUPT_REMOTE (retryable:false) and the cursor never advanced.
+    registerVault(vaultA);
+    const aRun = await runEngine(dbA, clientFor(fake));
+    if (!aRun.ok) throw new Error(`A sync failed: ${JSON.stringify(aRun.error)}`);
+    const aRows = await rawTasks(dbA);
+    expect(await viewTitle(vaultA, dbA, taskId)).toBe('A edit (version 2)');
+    expect(aRows.some((r) => r['id'] === taskId)).toBe(true);
 
-      await vaultA.lock();
-      await vaultB.lock();
-    },
-  );
+    // A third round still succeeds — no wedge, no self-inflicted corruption.
+    expect((await runEngine(dbA, clientFor(fake))).ok).toBe(true);
+
+    await vaultA.lock();
+    await vaultB.lock();
+  });
 
   it('S3: a foreign-key device defers non-destructively (D3.3 mixed-key store)', async () => {
     // Device A enables its OWN key — B never joins it.
@@ -328,5 +349,93 @@ describe('encrypted sync — the wire and convergence', () => {
     expect(await viewTitle(vaultB, dbB, ownId)).toBe('B own row');
 
     await vaultB.lock();
+  });
+});
+
+/**
+ * Push-envelope kind derivation — the coverage gap that let E10-Q4 through:
+ * nothing drove an ENCRYPTED row through `toSyncRecord`, so `'title' in row`
+ * went unchallenged for ciphertext. These pins decode the REAL bytes a
+ * `runSyncOnce` push wrote and compare the envelope `kind` with the at-rest
+ * row's own `kind`, for both stores and both sync rounds.
+ */
+describe('push envelope — wire kind self-description (regression for E10-Q4)', () => {
+  it('an encrypted device labels its own rows "task" / "list" on the wire — first push and re-push', async () => {
+    const dbA = await freshBoot();
+    const vaultA = new CryptoVault({ now });
+    await vaultA.attach(dbA);
+    registerVault(vaultA);
+    await enableOn(dbA, vaultA);
+
+    const listId = testUlid('r1-list');
+    const taskId = testUlid('r1-task');
+    const putList = await dbA.put(
+      'lists',
+      makeList({ id: listId, name: 'Private list', deviceId: dbA.deviceId, updatedAt: now() }),
+    );
+    expect(putList.ok).toBe(true);
+    const putTask = await dbA.put(
+      'tasks',
+      makeTask({ id: taskId, listId, deviceId: dbA.deviceId, updatedAt: now() }),
+    );
+    expect(putTask.ok).toBe(true);
+
+    // At rest both rows are ciphertext that SELF-DESCRIBE their kind.
+    const restLists = await dbA.readUnfiltered('lists');
+    expect(restLists.ok).toBe(true);
+    const restList = restLists.ok
+      ? (restLists.value.find((r) => r.id === listId) as { kind?: string } | undefined)
+      : undefined;
+    const restTask = (await rawTasks(dbA)).find((r) => r['id'] === taskId) as
+      { kind?: string } | undefined;
+    expect(isEncryptedRecord(restTask)).toBe(true);
+    expect(isEncryptedRecord(restList)).toBe(true);
+    expect(restTask?.kind).toBe('task');
+    expect(restList?.kind).toBe('list');
+
+    const expectWireKinds = (): void => {
+      const pushed = decodePushedRecords(fake).filter(
+        (p) => p.record.id === taskId || p.record.id === listId,
+      );
+      expect(pushed.length).toBeGreaterThan(0);
+      for (const p of pushed) {
+        // The envelope must echo the row's own kind — never a field-presence
+        // guess (ciphertext has no top-level `title`/`name`).
+        expect(p.kind, `wire kind of ${p.record.id} in ${p.path}`).toBe(
+          p.record.id === taskId ? 'task' : 'list',
+        );
+      }
+    };
+
+    const fake = makeFakeWebDav();
+    expect((await runEngine(dbA, clientFor(fake))).ok).toBe(true);
+    expectWireKinds();
+
+    // Round 2 re-pushes the same rows (PUSH_OVERLAP_MS window) — the round
+    // whose mislabelled echo used to wedge every later sync (E10-Q5).
+    expect((await runEngine(dbA, clientFor(fake))).ok).toBe(true);
+    expectWireKinds();
+
+    await vaultA.lock();
+  });
+
+  it('a PLAINTEXT device keeps the field-presence derivation — task vs list, both stores', async () => {
+    const dbA = await freshBoot(); // C1 off
+    const listId = testUlid('r2-list');
+    const taskId = testUlid('r2-task');
+    await dbA.put('lists', makeList({ id: listId, deviceId: dbA.deviceId, updatedAt: now() }));
+    await dbA.put(
+      'tasks',
+      makeTask({ id: taskId, listId, deviceId: dbA.deviceId, updatedAt: now() }),
+    );
+
+    const fake = makeFakeWebDav();
+    expect((await runEngine(dbA, clientFor(fake))).ok).toBe(true);
+
+    const pushed = decodePushedRecords(fake).filter(
+      (p) => p.record.id === taskId || p.record.id === listId,
+    );
+    expect(pushed.find((p) => p.record.id === taskId)?.kind).toBe('task');
+    expect(pushed.find((p) => p.record.id === listId)?.kind).toBe('list');
   });
 });
