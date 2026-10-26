@@ -257,8 +257,10 @@ Snapshot  { id, takenAt, kind: auto|manual, sizeBytes, payloadRef }
     before the user starts re-entering data; `lastBackupAt` is surfaced on the first run after a
     long absence.
   - **Residual risk — explicitly ACCEPTED by the PO for MVP:** an iOS Safari user who neither
-    installs (not available until V1) nor backs up, and is away from the app for 7+ days, can lose
-    data. PWA installability (S13) is the structural fix and the first V1 item (R1).
+    installs nor backs up, and is away from the app for 7+ days, can lose data. PWA installability
+    (S13) was the structural fix and the first V1 item (R1) — SHIPPED in Epic E6 (2026-10-26):
+    home-screen-installed apps are exempt from the 7-day rule. The residual statement still applies
+    to users who decline install; pre-install mitigations are unchanged.
 - **Private browsing / ephemeral storage:** detect low-availability storage (e.g. `persist()`
   denied + estimate anomalies) and warn that data may vanish with the session.
 - **Auto-snapshots:** rolling last-3 snapshots in IndexedDB for corruption recovery (M12).
@@ -465,7 +467,7 @@ ADR constrained by these budgets.
 
 | ID | Risk | L | I | Mitigation |
 |---|---|---|---|---|
-| R1 | iOS Safari storage eviction wipes data (non-installed usage) | H | H | MVP (PO Q12: no install): persist() + backup discipline + eviction detection + honest onboarding (§5.5) — residual risk ACCEPTED by PO; PWA install (S13, V1) is the structural fix that brings impact back to M |
+| R1 | iOS Safari storage eviction wipes data (non-installed usage) | H | M | S13 SHIPPED (Epic E6, 2026-10-26): PWA installability is the structural fix per PO Q12 — installed home-screen apps are exempt from the 7-day ITP rule, so impact is reduced to M. Pre-install mitigations UNCHANGED (belt and braces): persist() + backup discipline + eviction detection + honest onboarding (§5.5). Residual: users who decline install AND never back up keep the MVP-era exposure (PO-accepted); real-device install verification remains an open manual checklist (docs/dev/pwa-install.md §6) |
 | R2 | User-caused data loss (clearing data, new device) without a backup | M | H | Export discipline, auto-snapshots, visible last-backup age, onboarding |
 | R3 | Sync scope creep explodes the schedule (protocols, conflicts) | M | H | MVP has zero auto-sync; WebDAV only after Q2 answer + ADR; conflict policy pre-decided (§6.2) |
 | R4 | Recurrence semantics balloon (exceptions, timezone edge cases) | M | M | RRULE-lite subset only (S4); defer exceptions |
