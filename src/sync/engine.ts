@@ -24,6 +24,7 @@ import { isUlid } from '../storage/id';
 import { SYNC_KEY } from '../storage/schema';
 import type { StoreName, SyncCursor, SyncShadowEntry, SyncStateRecord } from '../storage/types';
 import { validateRow } from '../storage/validate';
+import { notifyDataReplaced } from '../portability/side-effects';
 import { decodeBatch, decodeSnapshot, encodeBatch, encodeSnapshot } from './batchCodec';
 import type { DecodeErrorKind } from './batchCodec';
 import { collectPushSet, planMerge } from './merge';
@@ -380,6 +381,19 @@ export async function runSyncOnce(
       ),
     );
   }
+
+  // Post-commit UI seam (fix card for E8-UI-D1; ADR-006 Addendum C): the apply
+  // transaction is the ONLY local write of phases 2..6 and it bypasses
+  // `MutationRunner.onCommitted`, so the RUNNING task store cannot learn about
+  // pulled rows or materialized `Conflict copy of …` rows otherwise — they
+  // stayed invisible in the rendered list until a full page reload (the E3
+  // finding F1 recurring at this seam). Fire the SAME `data-replaced` seam the
+  // portability import/export path uses (ADR-004 Decision 3): registered
+  // handlers re-read the dataset into the store and announce the bulk change
+  // (`wireDataReplacedRefresh()` at composition). Fire-and-forget AFTER the
+  // commit; only when the merge actually materialized rows — a no-op run must
+  // not churn the running UI on every periodic pass.
+  if (plan.puts.length + plan.copies.length > 0) notifyDataReplaced();
 
   /* ---- phase 7: push (never rolls back the merge) ---- */
   phase('push');
