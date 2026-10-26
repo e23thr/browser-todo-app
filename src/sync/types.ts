@@ -9,7 +9,8 @@
 
 import type { EncryptedTaskRecord, RowLike, Task } from '../domain/model';
 import type { Result } from '../domain/kernel';
-import type { SyncErrorCode } from '../storage/types';
+import type { SyncErrorCode, SyncShadowEntry } from '../storage/types';
+import type { Stamp } from './shadow';
 
 export type { SyncErrorCode, SyncShadowEntry, SyncCursor, SyncStateRecord } from '../storage/types';
 
@@ -30,6 +31,14 @@ export type SyncRecord = {
   kind: 'list' | 'task';
   /** At-rest row (ADR-007: encrypted rows ride the wire verbatim — Decision 8.1). */
   record: RowLike;
+  /**
+   * ADR-006 Addendum B (E8-D1): the causal parent of `record` — the version it
+   * was built on. `null` = root version; ABSENT = unknown (pre-Addendum peers
+   * and artifacts). Lets the holder of a displaced own version tell "superseded
+   * by a follow-up edit" from "discarded by a concurrent winner" without which
+   * the reverse delivery order silently drops the loser.
+   */
+  base?: Stamp | null;
 };
 
 /** `changes/<deviceId>/<seq>.json` — immutable per-device change batch (§2.1). */
@@ -89,7 +98,7 @@ export type MergePlan = {
   copies: ConflictCopySpec[];
   notices: SyncNotice[];
   /** Shadow entries to upsert (keyed by record id — copies included). */
-  shadowUpserts: Record<string, { updatedAt: number; deviceId: string; contentHash: string }>;
+  shadowUpserts: Record<string, SyncShadowEntry>;
 };
 
 /* ------------------------ engine API (Decision 9.2) ------------------------ */

@@ -525,7 +525,7 @@ const SYNC_CURSOR_FIELDS = [
   'pushedSeq',
   'remoteCoveredUpTo',
 ] as const;
-const SYNC_SHADOW_FIELDS = ['updatedAt', 'deviceId', 'contentHash'] as const;
+const SYNC_SHADOW_FIELDS = ['updatedAt', 'deviceId', 'contentHash', 'base'] as const;
 // The ADR-006 Decision 6 code table, closed (a persisted code outside this set
 // is corruption, quarantined like any other invalid row).
 const SYNC_ERROR_CODES = [
@@ -668,6 +668,18 @@ export function validateSyncState(value: unknown): ValidationResult {
         'format',
         'sha256 hex',
       );
+      // Addendum B causal parent: ABSENT = unknown (legacy entry), `null` = root
+      // version, or a strict {updatedAt, deviceId} version reference.
+      if (entry['base'] !== undefined) {
+        const base = entry['base'];
+        const baseOk =
+          base === null ||
+          (isRecord(base) &&
+            Object.keys(base).every((k) => k === 'updatedAt' || k === 'deviceId') &&
+            isEpochMs(base['updatedAt']) &&
+            isUlid(base['deviceId']));
+        push(issues, `${path}.base`, baseOk, 'format', 'null or {updatedAt, deviceId} version ref');
+      }
     }
   }
 

@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import type { Task } from '../../../src/domain/model';
 import { resetBootSingleton } from '../../../src/storage/boot';
+import type { AppDB } from '../../../src/storage/db';
 import { encodeBatch } from '../../../src/sync/batchCodec';
 import { COMPACT_BATCH_THRESHOLD } from '../../../src/sync/engine';
 import { WebDavClient } from '../../../src/sync/webdav';
@@ -40,6 +41,18 @@ function clientFor(fake: ReturnType<typeof makeFakeWebDav>): WebDavClient {
 }
 
 const TASK_ID = testUlid('engine-task');
+
+async function rowOf(db: AppDB, id: string): Promise<Task> {
+  const got = await db.get('tasks', id);
+  if (!got.ok || got.value === undefined) throw new Error(`row ${id} missing`);
+  return got.value;
+}
+
+async function allTasks(db: AppDB): Promise<Task[]> {
+  const got = await db.getAll('tasks');
+  if (!got.ok) throw new Error('getAll failed');
+  return got.value;
+}
 
 describe('runSyncOnce — full runs', () => {
   it('E1: first sync pushes local rows as a verified batch and advances cursors', async () => {
@@ -399,6 +412,150 @@ describe('runSyncOnce — full runs', () => {
     if (!run.ok) expect(run.error.code).toBe('CORRUPT_REMOTE');
     const after = await db.getAll('lists');
     expect(after.ok && after.value).toEqual(before.ok ? before.value : null);
+  });
+
+  /* ---- Addendum B rows (E8-D1 fix): delivery order is not observable ---- */
+
+  it.each(['B pushes first', 'A pushes first'] as const)(
+    'E13: %s — the push-mutated shadow never silences the loser; exactly ONE copy either way',
+    async (order) => {
+      const dbA = await bootDb();
+      const dbB = await bootDb();
+      const fake = makeFakeWebDav();
+      const clientA = clientFor(fake);
+      const clientB = clientFor(fake);
+
+      // Common ancestor created on A and seen by B.
+      await dbA.put(
+        'tasks',
+        makeTask({ id: TASK_ID, deviceId: dbA.deviceId, updatedAt: T0 + 1000 }),
+      );
+      expect((await runEngine(dbA, clientA)).ok).toBe(true);
+      expect((await runEngine(dbB, clientB)).ok).toBe(true);
+
+      // Concurrent edits (worked example 1): A renames at 2000 (winner),
+      // B adds notes at 1900 (loser).
+      await dbA.put('tasks', {
+        ...(await rowOf(dbA, TASK_ID)),
+        title: 'Buy oat milk',
+        updatedAt: T0 + 2000,
+        deviceId: dbA.deviceId,
+      });
+      await dbB.put('tasks', {
+        ...(await rowOf(dbB, TASK_ID)),
+        notes: 'soy',
+        updatedAt: T0 + 1900,
+        deviceId: dbB.deviceId,
+      });
+
+      // The ORDER under test is who syncs first after the edits exist. The fire
+      // lands on different runs per order, so count conflicts per device over
+      // full sync rounds instead of pinning run indices.
+      let copySeq = 0;
+      const conflictsOf = { A: 0, B: 0 };
+      const sync = async (who: 'A' | 'B'): Promise<void> => {
+        const [db, client] = who === 'A' ? [dbA, clientA] : [dbB, clientB];
+        copySeq += 1;
+        const run = await runEngine(db, client, {
+          newId: counterIds(`e13-${order}-${String(copySeq)}`),
+        });
+        expect(run.ok, `run ${who}#${String(copySeq)} (${order})`).toBe(true);
+        if (run.ok) conflictsOf[who] += run.value.conflicts.length;
+      };
+
+      const loserFirst = order === 'B pushes first';
+      await sync(loserFirst ? 'B' : 'A');
+
+      if (loserFirst) {
+        // The defect precondition, asserted first-hand: the shadow has already
+        // advanced to B's merely-pushed edit (with its causal parent intact) —
+        // the three-way test alone can no longer see the displacement.
+        const shadowed = (await stateOf(dbB)).shadow[TASK_ID];
+        expect(shadowed?.updatedAt).toBe(T0 + 1900);
+        expect(shadowed?.deviceId).toBe(dbB.deviceId);
+        expect(shadowed?.base).toEqual({ updatedAt: T0 + 1000, deviceId: dbA.deviceId });
+      }
+
+      // Then full alternating rounds starting with the device that did NOT go
+      // first — every order gets the same number of pulls to converge.
+      for (const who of loserFirst
+        ? (['A', 'B', 'A', 'B'] as const)
+        : (['B', 'A', 'B', 'A'] as const))
+        await sync(who);
+
+      // Exactly one copy: materialized by the loser's device, never by the
+      // winner's — identical fleet outcome in EITHER delivery order.
+      expect(conflictsOf.B).toBe(1);
+      expect(conflictsOf.A).toBe(0);
+
+      // Converge fully, then the fleet must agree byte-for-byte: one copy, the
+      // winner's stamps untouched, the loser's content visible exactly once.
+      await sync('A');
+      await sync('B');
+      const tasksA = await allTasks(dbA);
+      const tasksB = await allTasks(dbB);
+      const copiesA = tasksA.filter((t) => t.title.startsWith('Conflict copy of '));
+      const copiesB = tasksB.filter((t) => t.title.startsWith('Conflict copy of '));
+      expect(copiesA).toHaveLength(1);
+      expect(copiesB).toHaveLength(1);
+      expect(copiesB[0]).toEqual(copiesA[0]); // the same copy, converged
+      expect(copiesA[0]!.notes).toBe('soy'); // the loser's work is never lost
+      const mainA = tasksA.find((t) => t.id === TASK_ID);
+      const mainB = tasksB.find((t) => t.id === TASK_ID);
+      expect(mainA).toEqual(mainB);
+      expect(mainA?.title).toBe('Buy oat milk');
+      expect(mainA?.updatedAt).toBe(T0 + 2000); // winner stamps byte-for-byte
+      expect(mainA?.deviceId).toBe(dbA.deviceId);
+    },
+  );
+
+  it('E14: reverse order delete-vs-edit — the pushed tombstone holder gets ONE delete-lost notice, never a resurrection', async () => {
+    const dbA = await bootDb();
+    const dbB = await bootDb();
+    const fake = makeFakeWebDav();
+    const clientA = clientFor(fake);
+    const clientB = clientFor(fake);
+
+    await dbA.put('tasks', makeTask({ id: TASK_ID, deviceId: dbA.deviceId, updatedAt: T0 + 1000 }));
+    expect((await runEngine(dbA, clientA)).ok).toBe(true);
+    expect((await runEngine(dbB, clientB)).ok).toBe(true);
+
+    // B deletes at 2500 (LWW loser) and pushes FIRST; A edits at 2600 (winner).
+    await dbB.put('tasks', {
+      ...(await rowOf(dbB, TASK_ID)),
+      updatedAt: T0 + 2500,
+      deletedAt: T0 + 2500,
+      deviceId: dbB.deviceId,
+    });
+    await dbA.put('tasks', {
+      ...(await rowOf(dbA, TASK_ID)),
+      notes: 'still needed',
+      updatedAt: T0 + 2600,
+      deviceId: dbA.deviceId,
+    });
+    expect((await runEngine(dbB, clientB)).ok).toBe(true);
+    expect((await runEngine(dbA, clientA)).ok).toBe(true);
+
+    const bRun = await runEngine(dbB, clientB, { newId: counterIds('e14-b') });
+    expect(bRun.ok).toBe(true);
+    if (!bRun.ok) return;
+    expect(bRun.value.conflicts).toHaveLength(0); // a tombstone is never copied
+    expect(bRun.value.notices).toHaveLength(1); // …but the loss is announced
+    expect(bRun.value.notices[0]?.kind).toBe('delete-lost');
+    expect(bRun.value.notices[0]?.recordId).toBe(TASK_ID);
+
+    // The winner side announces nothing extra — exactly one notice fleet-wide.
+    const aRun = await runEngine(dbA, clientA, { newId: counterIds('e14-a') });
+    expect(aRun.ok).toBe(true);
+    if (aRun.ok) expect(aRun.value.notices).toHaveLength(0);
+
+    // Both devices converge on the live edited row — the delete is undone
+    // VISIBLY (LWW outcome), never silently.
+    const rowA = await rowOf(dbA, TASK_ID);
+    const rowB = await rowOf(dbB, TASK_ID);
+    expect(rowA.deletedAt).toBeNull();
+    expect(rowB.deletedAt).toBeNull();
+    expect(rowA).toEqual(rowB);
   });
 });
 

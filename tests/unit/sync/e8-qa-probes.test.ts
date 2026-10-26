@@ -118,146 +118,142 @@ function copiesOf(rows: Task[]): Task[] {
 /* ------------------------------ Q1 — convergence ------------------------------ */
 
 describe('Q1: two-device convergence, reverse delivery order (spec §6.2 guarantees)', () => {
-  // E8-D1 (OPEN DEFECT — docs/qa/e8-sync-engine.md §5 D1): `it.fails` while the
-  // defect is open. The loser's displaced version is never materialized when it
-  // pushed BEFORE pulling the winner's version (shadow advanced by its own push
-  // + copy creation keyed on localLoses). This flips to RED the moment the
-  // conflict copy comes back — replace it.fails with it() and keep the body.
-  it.fails(
-    'E8-D1: B pushes first → B\'s displaced edit MUST still become one visible "Conflict copy of …"',
-    async () => {
-      const devA = await bootDb();
-      const devB = await bootDb();
-      const fake = makeFakeWebDav();
-      const cA = clientFor(fake);
-      const cB = clientFor(fake);
-      const TASK_ID = testUlid('qa-q1-task');
+  // E8-D1 REGRESSION (fixed in ADR-006 Addendum B, card t_5b47f3e1): the
+  // loser's displaced version MUST materialize even when it pushed BEFORE
+  // pulling the winner's version — the shadow is already advanced by its own
+  // push, so the winner's recorded causal `base` is what makes the
+  // displacement detectable. Was `it.fails` while the defect was open; flipped
+  // to `it` by the fix card, body kept verbatim as the regression test.
+  it('E8-D1: B pushes first → B\'s displaced edit MUST still become one visible "Conflict copy of …"', async () => {
+    const devA = await bootDb();
+    const devB = await bootDb();
+    const fake = makeFakeWebDav();
+    const cA = clientFor(fake);
+    const cB = clientFor(fake);
+    const TASK_ID = testUlid('qa-q1-task');
 
-      // Common ancestor created on A and seen by B.
-      await devA.put('lists', makeList({ id: LIST_1, deviceId: devA.deviceId }));
-      await devA.put(
-        'tasks',
-        makeTask({ id: TASK_ID, listId: LIST_1, deviceId: devA.deviceId, updatedAt: T0 + 1000 }),
-      );
-      expect((await runEngine(devA, cA)).ok).toBe(true);
-      expect((await runEngine(devB, cB)).ok).toBe(true);
-      expect((await taskRow(devB, TASK_ID)).updatedAt).toBe(T0 + 1000);
+    // Common ancestor created on A and seen by B.
+    await devA.put('lists', makeList({ id: LIST_1, deviceId: devA.deviceId }));
+    await devA.put(
+      'tasks',
+      makeTask({ id: TASK_ID, listId: LIST_1, deviceId: devA.deviceId, updatedAt: T0 + 1000 }),
+    );
+    expect((await runEngine(devA, cA)).ok).toBe(true);
+    expect((await runEngine(devB, cB)).ok).toBe(true);
+    expect((await taskRow(devB, TASK_ID)).updatedAt).toBe(T0 + 1000);
 
-      // Concurrent edits — worked example 1 (§6.2): A renames at 2000, B adds
-      // notes at 1900. Both are offline relative to each other from here on.
-      const onA = await taskRow(devA, TASK_ID);
-      const onB = await taskRow(devB, TASK_ID);
-      await devA.put('tasks', {
-        ...onA,
-        title: 'Buy oat milk',
-        updatedAt: T0 + 2000,
-        deviceId: devA.deviceId,
-      });
-      await devB.put('tasks', {
-        ...onB,
-        notes: 'soy',
-        updatedAt: T0 + 1900,
-        deviceId: devB.deviceId,
-      });
+    // Concurrent edits — worked example 1 (§6.2): A renames at 2000, B adds
+    // notes at 1900. Both are offline relative to each other from here on.
+    const onA = await taskRow(devA, TASK_ID);
+    const onB = await taskRow(devB, TASK_ID);
+    await devA.put('tasks', {
+      ...onA,
+      title: 'Buy oat milk',
+      updatedAt: T0 + 2000,
+      deviceId: devA.deviceId,
+    });
+    await devB.put('tasks', {
+      ...onB,
+      notes: 'soy',
+      updatedAt: T0 + 1900,
+      deviceId: devB.deviceId,
+    });
 
-      // REVERSE order: B's edit reaches the server first (E3 only covers A-first).
-      expect((await runEngine(devB, cB)).ok).toBe(true);
+    // REVERSE order: B's edit reaches the server first (E3 only covers A-first).
+    expect((await runEngine(devB, cB)).ok).toBe(true);
 
-      // A pulls: A's 2000 wins the id → nothing displaced on the winner side.
-      const aRun = await runEngine(devA, cA, { newId: counterIds('qa-q1-a') });
-      expect(aRun.ok).toBe(true);
-      if (!aRun.ok) return;
-      expect(aRun.value.conflicts).toHaveLength(0);
+    // A pulls: A's 2000 wins the id → nothing displaced on the winner side.
+    const aRun = await runEngine(devA, cA, { newId: counterIds('qa-q1-a') });
+    expect(aRun.ok).toBe(true);
+    if (!aRun.ok) return;
+    expect(aRun.value.conflicts).toHaveLength(0);
 
-      // B pulls A's newer rename → B's displaced notes MUST survive as THE copy.
-      const bRun = await runEngine(devB, cB, { newId: counterIds('qa-q1-b') });
-      expect(bRun.ok).toBe(true);
-      if (!bRun.ok) return;
-      const bConflicts = bRun.value.conflicts.length;
+    // B pulls A's newer rename → B's displaced notes MUST survive as THE copy.
+    const bRun = await runEngine(devB, cB, { newId: counterIds('qa-q1-b') });
+    expect(bRun.ok).toBe(true);
+    if (!bRun.ok) return;
+    const bConflicts = bRun.value.conflicts.length;
 
-      // A absorbs whatever B published; the fleet must be byte-equal either way.
-      expect((await runEngine(devA, cA, { newId: counterIds('qa-q1-a2') })).ok).toBe(true);
+    // A absorbs whatever B published; the fleet must be byte-equal either way.
+    expect((await runEngine(devA, cA, { newId: counterIds('qa-q1-a2') })).ok).toBe(true);
 
-      const snapA = await userSnapshot(devA);
-      const snapB = await userSnapshot(devB);
-      expect(snapB.digest).toBe(snapA.digest);
-      expect(copiesOf(snapA.tasks).length).toBe(copiesOf(snapB.tasks).length);
-      expect(snapA.tasks.find((t) => t.id === TASK_ID)?.title).toBe('Buy oat milk');
+    const snapA = await userSnapshot(devA);
+    const snapB = await userSnapshot(devB);
+    expect(snapB.digest).toBe(snapA.digest);
+    expect(copiesOf(snapA.tasks).length).toBe(copiesOf(snapB.tasks).length);
+    expect(snapA.tasks.find((t) => t.id === TASK_ID)?.title).toBe('Buy oat milk');
 
-      // …and the displaced 'soy' notes are preserved somewhere visible.
-      const preserved = [...snapA.tasks, ...snapB.tasks].some((t) => t.notes === 'soy');
-      expect(preserved, "B's concurrent edit must not vanish").toBe(true);
-      expect(bConflicts, 'exactly one conflict copy on the losing device').toBe(1);
-    },
-  );
+    // …and the displaced 'soy' notes are preserved somewhere visible.
+    const preserved = [...snapA.tasks, ...snapB.tasks].some((t) => t.notes === 'soy');
+    expect(preserved, "B's concurrent edit must not vanish").toBe(true);
+    expect(bConflicts, 'exactly one conflict copy on the losing device').toBe(1);
+  });
 });
 
 /* ------------------------------- Q2 — LWW tie ------------------------------- */
 
 describe('Q2: LWW tie-break (updatedAt equal → deviceId decides) end-to-end', () => {
-  // E8-D1 again: BOTH devices pushed their tie-stamped edit before pulling, so
-  // neither materializes a copy for its own displaced version (see report §5 D1).
-  // Convergence itself is proven by the digest assertions below; only the copy
-  // is missing. it.fails while the defect is open — flip to it() with the fix.
-  it.fails(
-    'E8-D1: tie-break winner converges AND the loser holds exactly one visible conflict copy',
-    async () => {
-      const devA = await bootDb();
-      const devB = await bootDb();
-      const fake = makeFakeWebDav();
-      const cA = clientFor(fake);
-      const cB = clientFor(fake);
-      const TASK_ID = testUlid('qa-q2-task');
+  // E8-D1 REGRESSION again: BOTH devices pushed their tie-stamped edit before
+  // pulling, so neither could materialize a copy for its own displaced version
+  // (report §5 D1). Convergence is proven by the digest assertions below.
+  // Was `it.fails` while the defect was open; flipped to `it` by the fix card
+  // t_5b47f3e1, body kept verbatim as the regression test.
+  it('E8-D1: tie-break winner converges AND the loser holds exactly one visible conflict copy', async () => {
+    const devA = await bootDb();
+    const devB = await bootDb();
+    const fake = makeFakeWebDav();
+    const cA = clientFor(fake);
+    const cB = clientFor(fake);
+    const TASK_ID = testUlid('qa-q2-task');
 
-      await devA.put('lists', makeList({ id: LIST_1, deviceId: devA.deviceId }));
-      await devA.put(
-        'tasks',
-        makeTask({ id: TASK_ID, listId: LIST_1, deviceId: devA.deviceId, updatedAt: T0 + 1000 }),
+    await devA.put('lists', makeList({ id: LIST_1, deviceId: devA.deviceId }));
+    await devA.put(
+      'tasks',
+      makeTask({ id: TASK_ID, listId: LIST_1, deviceId: devA.deviceId, updatedAt: T0 + 1000 }),
+    );
+    expect((await runEngine(devA, cA)).ok).toBe(true);
+    expect((await runEngine(devB, cB)).ok).toBe(true);
+
+    // Identical timestamps — only the device id can decide (spec §6.2 key).
+    const tie = T0 + 5000;
+    await devA.put('tasks', {
+      ...(await taskRow(devA, TASK_ID)),
+      title: 'from A',
+      updatedAt: tie,
+      deviceId: devA.deviceId,
+    });
+    await devB.put('tasks', {
+      ...(await taskRow(devB, TASK_ID)),
+      title: 'from B',
+      updatedAt: tie,
+      deviceId: devB.deviceId,
+    });
+    const winnerIsA = devA.deviceId > devB.deviceId;
+    const loser = winnerIsA ? 'from B' : 'from A';
+
+    for (const round of [1, 2]) {
+      expect((await runEngine(devA, cA, { newId: counterIds(`qa-q2-a${String(round)}`) })).ok).toBe(
+        true,
       );
-      expect((await runEngine(devA, cA)).ok).toBe(true);
-      expect((await runEngine(devB, cB)).ok).toBe(true);
+      expect((await runEngine(devB, cB, { newId: counterIds(`qa-q2-b${String(round)}`) })).ok).toBe(
+        true,
+      );
+    }
 
-      // Identical timestamps — only the device id can decide (spec §6.2 key).
-      const tie = T0 + 5000;
-      await devA.put('tasks', {
-        ...(await taskRow(devA, TASK_ID)),
-        title: 'from A',
-        updatedAt: tie,
-        deviceId: devA.deviceId,
-      });
-      await devB.put('tasks', {
-        ...(await taskRow(devB, TASK_ID)),
-        title: 'from B',
-        updatedAt: tie,
-        deviceId: devB.deviceId,
-      });
-      const winnerIsA = devA.deviceId > devB.deviceId;
-      const loser = winnerIsA ? 'from B' : 'from A';
+    const snapA = await userSnapshot(devA);
+    const snapB = await userSnapshot(devB);
+    expect(snapB.digest).toBe(snapA.digest);
 
-      for (const round of [1, 2]) {
-        expect(
-          (await runEngine(devA, cA, { newId: counterIds(`qa-q2-a${String(round)}`) })).ok,
-        ).toBe(true);
-        expect(
-          (await runEngine(devB, cB, { newId: counterIds(`qa-q2-b${String(round)}`) })).ok,
-        ).toBe(true);
-      }
+    const winnerRow = snapA.tasks.find((t) => t.id === TASK_ID);
+    expect(winnerRow?.title).toBe(winnerIsA ? 'from A' : 'from B');
+    expect(winnerRow?.deviceId).toBe(winnerIsA ? devA.deviceId : devB.deviceId);
+    expect(winnerRow?.updatedAt).toBe(tie);
 
-      const snapA = await userSnapshot(devA);
-      const snapB = await userSnapshot(devB);
-      expect(snapB.digest).toBe(snapA.digest);
-
-      const winnerRow = snapA.tasks.find((t) => t.id === TASK_ID);
-      expect(winnerRow?.title).toBe(winnerIsA ? 'from A' : 'from B');
-      expect(winnerRow?.deviceId).toBe(winnerIsA ? devA.deviceId : devB.deviceId);
-      expect(winnerRow?.updatedAt).toBe(tie);
-
-      const copiesA = copiesOf(snapA.tasks);
-      expect(copiesA).toHaveLength(1);
-      expect(copiesA[0]!.title).toBe(conflictCopyTitle(loser));
-      expect(copiesOf(snapB.tasks)[0]?.id).toBe(copiesA[0]!.id);
-    },
-  );
+    const copiesA = copiesOf(snapA.tasks);
+    expect(copiesA).toHaveLength(1);
+    expect(copiesA[0]!.title).toBe(conflictCopyTitle(loser));
+    expect(copiesOf(snapB.tasks)[0]?.id).toBe(copiesA[0]!.id);
+  });
 });
 
 /* -------------------- Q3 — never a silent overwrite (invariant) -------------------- */

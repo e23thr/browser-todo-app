@@ -765,6 +765,97 @@ enable" completes against the same fake host; external https fetch no longer vio
 plain-HTTP external fetch still fires exactly one `connect-src` violation. Evidence:
 `docs/qa/e8-csp-connect-src.md`.
 
+## Addendum B (2026-10-26) — Causal `base` stamps: the loser survives the reverse delivery order (E8-D1)
+
+**Status**: Accepted (sole decider: h_senior_coder; blocking defect E8-D1 from QA card
+t_beed2e01, fix card t_5b47f3e1). PROJECT_ANALYSIS §6.2 is untouched — the LWW key
+`(updatedAt, deviceId)`, tombstone propagation, "never a silent overwrite" and the
+conflict-copy/notice shapes are exactly as pre-decided (§11 R3 honored).
+
+**Context**: In the REVERSE delivery order — the losing device pushes its edit before
+pulling the winner's version — the loser left the fleet with **no `Conflict copy of …`
+and no notice** (silent data loss; the same root cause resurrected a losing DELETE with
+zero `delete-lost` notices). Two halves produced the silence:
+
+1. **Decision 5 step 8** advances the shadow for records a run merely PUSHED. After the
+   loser's push run, `shadow[id]` equals its own edit, so the next pull classifies
+   `only-remote-changed` and the §4.2 copy block (guarded by "local diverged since the
+   shadow") cannot fire.
+2. On the winner side nothing is displaced, so it duplicates nothing — correct per §4.3
+   ("every device preserves its own displaced work"), but then the loser's device is the
+   ONLY preserver and half 1 silenced it.
+
+The deeper issue: from `(local L, remote W, shadow S)` alone the loser's device cannot
+tell *"W supersedes my L"* (a peer pulled my edit and edited on top — nothing is lost)
+from *"W is concurrent with my L"* (my edit was discarded — it must be materialized).
+After a push run both cases look identical (`L == S`, newer `W`). No shadow bookkeeping
+(pushed-vs-observed splits, root rules, echo detection) can separate them
+deterministically — the difference is the winner's causal history, which only its
+producer knows.
+
+**Decision**: every record version carries its **causal parent** `base` — the version it
+was built on (`null` = root version; ABSENT = unknown, i.e. pre-Addendum artifacts):
+
+- **Wire (Decision 2.1/2.2 amendment)**: optional envelope field on `SyncRecord`
+  (`{kind, record, base?}`) in batches AND snapshots. Old readers ignore it (the codec's
+  record check is shape-tolerant on absent fields); `recordsHash`/`stateHash` cover it as
+  part of the payload string. A present-but-malformed `base` is `corrupt` (it is
+  hash-verified — genuine corruption, not transit noise).
+- **Decision 5 step 8 amendment**: the shadow entry carries the winner's parent, not just
+  its stamp. Fetched winners keep the parent their producer recorded; our own versions
+  inherit the previous entry's stamp (our edit descends from the last reconciled
+  version); a version new to the shadow is a root (`null`). The push/compaction paths
+  re-publish `base` per record — including re-pushes and snapshot folds, so the claim
+  survives compaction and third-device echoes.
+- **Decision 4.2 amendment (the trigger)**: in addition to the existing three-way
+  trigger, the holder materializes its displaced OWN version when the winner is **not
+  built on it**: classification `only-remote-changed`, `local.deviceId === this device`,
+  content displaced, not tombstone-vs-tombstone, and the winner's recorded `base` is
+  explicitly NOT our version's stamp. `base` absent (legacy) → the pre-Addendum rule
+  stands (apply, no copy). The copy/notice shapes are unchanged (§4.3): a live task
+  loser → one `Conflict copy of …`; a losing tombstone → one `delete-lost` notice emitted
+  by its holder (the impl's M5 rule, preserved); a list loser → `list-conflict` notice.
+
+Single-copy is structural: only the displaced version's own device can fire (the
+ownership check), and one fold fires at most once — no matter how many devices re-deliver
+the winner.
+
+**Alternatives considered**
+
+| Option | Pros | Cons | Why not |
+|---|---|---|---|
+| Stop advancing the shadow on push (track pushed-vs-observed separately) | No wire change; fixes both repros | Turns every dependent follow-up edit into a spurious copy (the (L, W, S) isomorphism above: supersession and concurrency are the same triple at the loser); echo/re-push bookkeeping makes the outcome timing-dependent | Non-deterministic and noisy; the acceptance demands both |
+| Materialize on the winner side (the discarding fold) | The winner can see the concurrency directly | Contradicts the recorded test plan (M13 + Q1: the winner side duplicates nothing; §4.3's "each device preserves its own displaced work") — Q1 pins `aRun.conflicts = 0` and the copy on the loser | Locked by the recorded contract |
+| Both sides fire + deterministic copy ids (converge to one row) | Order-independent | Still two creations; requires §4.3 copy-stamp redesign (byte-identical rows) and violates the M13/Q1 winner-side rule | Rejected with the option above |
+| Fire on any displaced own version, no causality check | Minimal | Spurious copies for ordinary "peer edited on top of my synced edit" flows (E2 class) | Breaks the basic convergence flow |
+| Vector clocks / per-record parent on the ROW / CRDTs | Causality at the row level | §6.2 pre-decides LWW-only; row shapes are ADR-002/ADR-007's; heavier migration | Out of scope by policy (R3) |
+
+**Consequences**
+
+- Positive: delivery order is not observable (Q1/Q2/E13 both orders converge with exactly
+  one copy, byte-equal fleets, winner stamps byte-for-byte); follow-up edits never become
+  conflicts (M16); the three-device echo topology is safe (the parent travels with
+  re-pushes, so an echo of my version cannot reclassify a concurrent winner); losing
+  DELETEs announce themselves exactly once on the tombstone holder (E14); no schema
+  migration (`base` is optional; old shadow rows read as "unknown").
+- Negative / residual: a fold whose winner carries NO `base` (artifacts written before
+  this Addendum, or a legacy peer) keeps the pre-Addendum behaviour — the loser may still
+  be dropped there (M17 records it). The fixed engine always publishes `base`, so the
+  residual window closes as artifacts age through Decision 8 compaction. Wire cost: ~60
+  bytes per record. A restored/imported row keeps its old stamps and is preserved
+  conservatively (O2's stale-echo exemption unchanged).
+
+**Verification** (t_5b47f3e1): flipped probes Q1/Q2 (now plain `it`, bodies verbatim);
+matrix rows M15 (push-mutated shadow + concurrent winner → exactly one copy), M16
+(descendant winner → no copy), M17 (legacy winner → pre-Addendum fallback), M18 (reverse
+delete-vs-edit → `delete-lost`, never a row copy); engine rows E13 (both delivery orders,
+the push-mutated shadow asserted first-hand before the fold) and E14 (reverse
+delete-vs-edit: exactly one notice fleet-wide). Suite:
+`npx vitest run tests/unit/sync tests/unit/storage/sync-state.test.ts` → 115/115 green.
+Coverage (sync-scope run): merge.ts 97.05/95.23/100/97.75, shadow.ts 100/100/100/100,
+batchCodec.ts 83.56/85.89/92.30/88.52, `src/sync` aggregate 87.61/79.88/89.78/90.57 —
+zero `src/sync` threshold errors.
+
 ## Links
 - PROJECT_ANALYSIS.md §6.2 (binding sync/conflict policy + guarantees), §5.2 (storage strategy),
   §11 R3 (scope-creep risk), §2 + §4 WON'T (no server we operate), §12 Q1/Q2 (PO decisions),
@@ -778,3 +869,8 @@ plain-HTTP external fetch still fires exactly one `connect-src` violation. Evide
   allow-list), `tests/e2e/smoke.spec.ts` (connect-src regression guard),
   `docs/qa/e8-csp-connect-src.md` (real-browser evidence); review chain t_7567495e (B2) →
   t_11670709 (this decision) → t_9114bd20 (R2 re-review)
+- Addendum B: `docs/qa/e8-sync-engine.md` §5 D1 (defect + repros) and
+  `docs/qa/e8-sync-engine-logs/d1-reverse-order-trace.log` (raw traces); implementation
+  `src/sync/{merge,shadow,types,batchCodec,engine}.ts` + `src/storage/{types,validate}.ts`;
+  regression rows `tests/unit/sync/{e8-qa-probes,merge-matrix,engine}.test.ts` (Q1/Q2 flipped,
+  M15–M18, E13/E14); chain t_beed2e01 (E8 QA) → t_5b47f3e1 (this decision + fix)

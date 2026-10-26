@@ -29,7 +29,7 @@ import { isEncryptedRecord, rowKindOf } from '../domain/model';
 import { err, ok } from '../domain/kernel';
 import type { Result } from '../domain/kernel';
 import { contentHashOf } from './hash';
-import { classifyDivergence, sameVersion } from './shadow';
+import { classifyDivergence, descendsFrom, sameVersion } from './shadow';
 import type { ShadowEntry, Side, Stamp } from './shadow';
 import { mergeCryptoSeam } from './mergeSeam';
 import type { ConflictCopySpec, MergePlan, SyncError, SyncRecord } from './types';
@@ -150,7 +150,8 @@ async function titleOf(row: EitherRow): Promise<string> {
 export async function planMerge(input: MergeInput): Promise<Result<MergePlan, SyncError>> {
   const { shadow, deviceId, now, newId } = input;
 
-  type Entry = { kind: 'list' | 'task'; local: EitherRow | null; remoteVersions: EitherRow[] };
+  type RemoteVersion = { row: EitherRow; base: Stamp | null | undefined };
+  type Entry = { kind: 'list' | 'task'; local: EitherRow | null; remoteVersions: RemoteVersion[] };
   const entries = new Map<string, Entry>();
 
   const put = (id: string, kind: 'list' | 'task', local: EitherRow): void => {
@@ -167,7 +168,11 @@ export async function planMerge(input: MergeInput): Promise<Result<MergePlan, Sy
   for (const sr of input.fetched) {
     const entry = entries.get(sr.record.id);
     if (entry === undefined) {
-      entries.set(sr.record.id, { kind: sr.kind, local: null, remoteVersions: [sr.record] });
+      entries.set(sr.record.id, {
+        kind: sr.kind,
+        local: null,
+        remoteVersions: [{ row: sr.record, base: sr.base }],
+      });
     } else {
       if (entry.kind !== sr.kind) {
         return err({
@@ -176,7 +181,7 @@ export async function planMerge(input: MergeInput): Promise<Result<MergePlan, Sy
           retryable: false,
         });
       }
-      entry.remoteVersions.push(sr.record);
+      entry.remoteVersions.push({ row: sr.record, base: sr.base });
     }
   }
 
@@ -192,10 +197,22 @@ export async function planMerge(input: MergeInput): Promise<Result<MergePlan, Sy
 
   for (const [id, entry] of [...entries.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
     const versions: EitherRow[] =
-      entry.local === null ? [...entry.remoteVersions] : [entry.local, ...entry.remoteVersions];
+      entry.local === null
+        ? entry.remoteVersions.map((v) => v.row)
+        : [entry.local, ...entry.remoteVersions.map((v) => v.row)];
     const winner = foldLww(versions);
     const local = entry.local;
-    const remoteBest = entry.remoteVersions.length === 0 ? null : foldLww(entry.remoteVersions);
+    const remoteBest =
+      entry.remoteVersions.length === 0 ? null : foldLww(entry.remoteVersions.map((v) => v.row));
+
+    // The winner's causal parent (Addendum B): the version its producer built
+    // it on. Several same-version artifacts may carry it (a re-push echoes the
+    // original claim) — an explicit claim anywhere wins; all-unknown stays
+    // unknown (pre-Addendum artifacts keep the pre-Addendum behaviour).
+    const winnerBases = entry.remoteVersions
+      .filter((v) => sameVersion(stampOf(v.row), stampOf(winner)))
+      .map((v) => v.base);
+    const winnerBase = winnerBases.find((b) => b !== undefined);
 
     // Preserve-before-overwrite: nothing is displaced, nothing is duplicated.
     if (local !== null && remoteBest !== null) {
@@ -215,8 +232,26 @@ export async function planMerge(input: MergeInput): Promise<Result<MergePlan, Sy
         !sameVersion(stampOf(local), stampOf(winner)) &&
         compareLww(stampOf(local), stampOf(winner)) < 0;
 
-      if (localLoses) {
-        const lostTo = { updatedAt: remoteBest.updatedAt, deviceId: remoteBest.deviceId };
+      // Addendum B (E8-D1 trigger): this device's OWN version displaced by a
+      // winner that is NOT built on it. Decision 5 step 8 has already advanced
+      // the shadow to the merely-pushed version, so the three-way test reads
+      // `only-remote-changed` and the block above cannot fire — the reverse
+      // delivery order would silently drop the loser. The winner's recorded
+      // parent separates the two indistinguishable cases: built ON our version
+      // (a follow-up edit supersedes it — nothing is lost) vs built on anything
+      // else (a concurrent winner — OUR version is the loser and, being its
+      // only holder, this device materializes it exactly once fleet-wide).
+      const displacedOwn =
+        divergence === 'only-remote-changed' &&
+        local.deviceId === deviceId &&
+        !sameVersion(stampOf(local), stampOf(winner)) &&
+        (await hashOf(local)) !== (await hashOf(winner)) &&
+        !(isTombstone(local) && isTombstone(winner)) &&
+        winnerBase !== undefined &&
+        !winnerBases.some((b) => descendsFrom(b, stampOf(local)));
+
+      if (localLoses || displacedOwn) {
+        const lostTo = { updatedAt: winner.updatedAt, deviceId: winner.deviceId };
         if (isTombstone(local)) {
           // Decision 4.3: "a tombstone is never copied into a visible row" —
           // the displaced delete surfaces as a visible sync-log notice instead.
@@ -246,6 +281,7 @@ export async function planMerge(input: MergeInput): Promise<Result<MergePlan, Sy
             updatedAt: row.updatedAt,
             deviceId: row.deviceId,
             contentHash: await hashOf(row),
+            base: null,
           };
         } else {
           // List conflicts: LWW + visible notice, never a row copy (membership
@@ -268,10 +304,30 @@ export async function planMerge(input: MergeInput): Promise<Result<MergePlan, Sy
       (await hashOf(local)) !== (await hashOf(winner));
     if (changed) plan.puts.push(winner);
 
+    // Shadow outcome (Decision 5 step 8, amended by Addendum B): the entry
+    // carries the winner's CAUSAL PARENT so a later fold can still tell a
+    // follow-up edit from a concurrent one even though the entry advanced past
+    // a merely-pushed version. Fetched winners keep the parent their producer
+    // recorded (absent = legacy unknown); our own versions inherit the previous
+    // entry's stamp (our edit descends from the last reconciled version), and a
+    // version new to this shadow is a root (`null`).
+    const prev = shadow[id];
+    let base: Stamp | null | undefined;
+    if (winnerBase !== undefined) {
+      base = winnerBase;
+    } else if (local !== null && sameVersion(stampOf(local), stampOf(winner))) {
+      if (prev === undefined) base = null;
+      else if (sameVersion({ updatedAt: prev.updatedAt, deviceId: prev.deviceId }, stampOf(winner)))
+        base = prev.base;
+      else base = { updatedAt: prev.updatedAt, deviceId: prev.deviceId };
+    } else {
+      base = undefined;
+    }
     plan.shadowUpserts[id] = {
       updatedAt: winner.updatedAt,
       deviceId: winner.deviceId,
       contentHash: await hashOf(winner),
+      ...(base === undefined ? {} : { base }),
     };
   }
 

@@ -404,6 +404,155 @@ describe('merge matrix (recorded — ADR-006 test plan item 1)', () => {
     expect((copy.row as Task).notes).toBe('b');
     expect(copy.row.updatedAt).toBe(9000);
   });
+
+  /* ---- Addendum B rows (E8-D1 fix) — the reverse delivery order ---- */
+
+  it('M15: reverse order — the PUSH-mutated shadow + a concurrent winner still materializes exactly one copy', async () => {
+    // The row the D1 report says the matrix was missing: the shadow has ALREADY
+    // advanced to this device's merely-pushed edit (Decision 5 step 8), so the
+    // three-way test reads `only-remote-changed` — the copy must come from the
+    // winner's recorded causal `base` (built on the ancestor, NOT on our edit).
+    const bEdit = makeTask({ id: TASK_ID, updatedAt: 1900, deviceId: DEVICE_B, notes: 'soy' });
+    const aEdit = makeTask({
+      id: TASK_ID,
+      updatedAt: 2000,
+      deviceId: DEVICE_A,
+      title: 'Buy oat milk',
+    });
+    const result = await plan({
+      localTasks: [bEdit],
+      fetched: [
+        {
+          kind: 'task',
+          record: aEdit,
+          base: { updatedAt: 1000, deviceId: DEVICE_A },
+        },
+      ],
+      shadow: {
+        [TASK_ID]: {
+          updatedAt: 1900,
+          deviceId: DEVICE_B,
+          contentHash: await hash(bEdit),
+          base: { updatedAt: 1000, deviceId: DEVICE_A },
+        },
+      },
+      deviceId: DEVICE_B,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.copies).toHaveLength(1);
+    expect((result.value.copies[0]!.row as Task).notes).toBe('soy');
+    expect(result.value.puts).toHaveLength(1); // the winner still applies
+  });
+
+  it('M16: a winner BUILT ON the pushed version supersedes it — never a spurious copy', async () => {
+    // The other half of the same triple shape: if the winner's producer edited
+    // ON TOP of our version (its `base` IS our stamp), nothing is lost and no
+    // copy may appear — delivery order must not turn follow-up edits into
+    // conflicts.
+    const bEdit = makeTask({ id: TASK_ID, updatedAt: 1900, deviceId: DEVICE_B, notes: 'soy' });
+    const followUp = makeTask({
+      id: TASK_ID,
+      updatedAt: 2000,
+      deviceId: DEVICE_A,
+      title: 'Buy oat milk',
+    });
+    const result = await plan({
+      localTasks: [bEdit],
+      fetched: [
+        {
+          kind: 'task',
+          record: followUp,
+          base: { updatedAt: 1900, deviceId: DEVICE_B },
+        },
+      ],
+      shadow: {
+        [TASK_ID]: {
+          updatedAt: 1900,
+          deviceId: DEVICE_B,
+          contentHash: await hash(bEdit),
+          base: { updatedAt: 1000, deviceId: DEVICE_A },
+        },
+      },
+      deviceId: DEVICE_B,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.copies).toHaveLength(0);
+    expect(result.value.notices).toHaveLength(0);
+    expect(result.value.puts).toHaveLength(1);
+  });
+
+  it('M17: legacy winner with NO recorded parent falls back to the pre-Addendum rule (documented)', async () => {
+    // Pre-Addendum artifacts carry no `base`; the discriminator is unavailable,
+    // so the recorded pre-Addendum expectation stands (apply, no copy). The
+    // fixed engine never produces such winners — see Addendum B residual notes.
+    const bEdit = makeTask({ id: TASK_ID, updatedAt: 1900, deviceId: DEVICE_B, notes: 'soy' });
+    const aEdit = makeTask({
+      id: TASK_ID,
+      updatedAt: 2000,
+      deviceId: DEVICE_A,
+      title: 'Buy oat milk',
+    });
+    const result = await plan({
+      localTasks: [bEdit],
+      fetched: [{ kind: 'task', record: aEdit }],
+      shadow: {
+        [TASK_ID]: {
+          updatedAt: 1900,
+          deviceId: DEVICE_B,
+          contentHash: await hash(bEdit),
+          base: { updatedAt: 1000, deviceId: DEVICE_A },
+        },
+      },
+      deviceId: DEVICE_B,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.copies).toHaveLength(0);
+    expect(result.value.puts).toHaveLength(1);
+  });
+
+  it('M18: reverse order delete-vs-edit — the pushed tombstone holder announces delete-lost (never a row copy)', async () => {
+    const bDelete = makeTask({
+      id: TASK_ID,
+      updatedAt: 2500,
+      deviceId: DEVICE_B,
+      deletedAt: 2500,
+    });
+    const aEdit = makeTask({
+      id: TASK_ID,
+      updatedAt: 2600,
+      deviceId: DEVICE_A,
+      notes: 'still needed',
+    });
+    const result = await plan({
+      localTasks: [bDelete],
+      fetched: [
+        {
+          kind: 'task',
+          record: aEdit,
+          base: { updatedAt: 1000, deviceId: DEVICE_A },
+        },
+      ],
+      shadow: {
+        [TASK_ID]: {
+          updatedAt: 2500,
+          deviceId: DEVICE_B,
+          contentHash: await hash(bDelete),
+          base: { updatedAt: 1000, deviceId: DEVICE_A },
+        },
+      },
+      deviceId: DEVICE_B,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.copies).toHaveLength(0); // a tombstone is never copied
+    expect(result.value.notices).toHaveLength(1);
+    expect(result.value.notices[0]?.kind).toBe('delete-lost');
+    expect(result.value.puts).toHaveLength(1);
+    expect((result.value.puts[0] as Task).deletedAt).toBeNull(); // the live edit wins
+  });
 });
 
 describe('shadow three-way test (Decision 4.2 case table)', () => {

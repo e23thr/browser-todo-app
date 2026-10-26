@@ -14,6 +14,7 @@
 import type { SyncRecord, BatchDoc, SnapshotDoc, RemoteArtifact } from './types';
 import { SYNC_FORMAT } from './types';
 import { sha256OfUtf8 } from './hash';
+import { isUlid } from '../storage/id';
 
 export type DecodeErrorKind = 'corrupt' | 'unknown-format' | 'newer-format';
 
@@ -45,6 +46,20 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
+/** Addendum B `base` (causal parent): absent/undefined = unknown, null = root. */
+function isVersionRef(v: unknown): boolean {
+  if (v === undefined || v === null) return true;
+  return (
+    isRecord(v) &&
+    Object.keys(v).every((k) => k === 'updatedAt' || k === 'deviceId') &&
+    typeof v['updatedAt'] === 'number' &&
+    Number.isSafeInteger(v['updatedAt']) &&
+    v['updatedAt'] >= 0 &&
+    typeof v['deviceId'] === 'string' &&
+    isUlid(v['deviceId'])
+  );
+}
+
 function isSyncRecordArray(v: unknown): v is SyncRecord[] {
   return (
     Array.isArray(v) &&
@@ -52,7 +67,8 @@ function isSyncRecordArray(v: unknown): v is SyncRecord[] {
       (item) =>
         isRecord(item) &&
         (item['kind'] === 'list' || item['kind'] === 'task') &&
-        isRecord(item['record']),
+        isRecord(item['record']) &&
+        isVersionRef(item['base']),
     )
   );
 }

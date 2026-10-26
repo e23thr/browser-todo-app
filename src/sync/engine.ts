@@ -87,6 +87,24 @@ function seqName(seq: number): string {
   return `${String(seq).padStart(10, '0')}.json`;
 }
 
+/**
+ * Wire record for a row — carrying its Addendum B causal parent (`base`, the
+ * version it was built on) so peers can separate "supersedes my version" from
+ * "concurrent with my version". Absent = unknown (shadow entries predating
+ * Addendum B) — receivers fall back to the pre-Addendum behaviour then.
+ */
+function toSyncRecord(
+  row: List | Task | EncryptedListRecord | EncryptedTaskRecord,
+  shadow: Record<string, SyncShadowEntry>,
+): SyncRecord {
+  const base = shadow[row.id]?.base;
+  return {
+    kind: 'title' in row ? 'task' : 'list',
+    record: row,
+    ...(base === undefined ? {} : { base }),
+  };
+}
+
 function baseName(path: string): string {
   const segments = path.split('/').filter((s) => s.length > 0);
   return decodeURIComponent(segments[segments.length - 1] ?? '');
@@ -377,10 +395,7 @@ export async function runSyncOnce(
   for (let i = 0; i < pushRows.length; i += BATCH_MAX_RECORDS) {
     const chunk = pushRows.slice(i, i + BATCH_MAX_RECORDS);
     const seq = cursor.pushedSeq + 1;
-    const records: SyncRecord[] = chunk.map((row) => ({
-      kind: 'title' in row ? 'task' : 'list',
-      record: row,
-    }));
+    const records: SyncRecord[] = chunk.map((row) => toSyncRecord(row, shadow));
     const { json } = await encodeBatch(records, {
       deviceId: state.deviceId,
       seq,
@@ -413,10 +428,9 @@ export async function runSyncOnce(
   if (totalBatches >= COMPACT_BATCH_THRESHOLD) {
     const all = await readAllRecords(db);
     if (!all.ok) return fail(all.error);
-    const snapshotRecords: SyncRecord[] = [...all.value.lists, ...all.value.tasks].map((row) => ({
-      kind: 'title' in row ? 'task' : 'list',
-      record: row,
-    }));
+    const snapshotRecords: SyncRecord[] = [...all.value.lists, ...all.value.tasks].map((row) =>
+      toSyncRecord(row, shadow),
+    );
     const takenAt = now();
     const name = `${String(takenAt)}-${state.deviceId}.json`;
     const { json } = await encodeSnapshot(snapshotRecords, {

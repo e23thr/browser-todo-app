@@ -20,11 +20,26 @@ import { compareLww } from '../domain/merge';
 
 export type Stamp = { updatedAt: number; deviceId: string };
 
+/**
+ * The shadow entry. `base` (ADR-006 Addendum B — E8-D1) is the causal parent
+ * of the entry's version: the version it was built on (`null` = root, ABSENT =
+ * unknown/legacy). Decision 5 step 8 advances the entry to whatever the run
+ * reconciled — including versions this device merely PUSHED — so the entry's
+ * own stamp cannot distinguish "the winner supersedes my pushed version" from
+ * "the winner is concurrent with it"; the recorded parent can (see
+ * `descendsFrom`).
+ */
 export type ShadowEntry = {
   updatedAt: number;
   deviceId: string;
   contentHash: string;
+  base?: Stamp | null;
 };
+
+/** `ref` is the version `candidate` was built on (its causal parent). */
+export function descendsFrom(ref: Stamp | null | undefined, candidate: Stamp): boolean {
+  return ref !== undefined && ref !== null && sameVersion(ref, candidate);
+}
 
 /** One side of the test: a record version plus its prepared hash/liveness. */
 export type Side = {

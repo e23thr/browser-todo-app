@@ -66,11 +66,23 @@ export type SyncErrorCode =
   | 'LOCKED'
   | 'ABORTED';
 
-/** Per-record LAST-SYNCED version — the merge base for the shadow three-way test (ADR-006 Decision 4.2). */
+/**
+ * Per-record LAST-SYNCED version — the merge base for the shadow three-way test
+ * (ADR-006 Decision 4.2).
+ *
+ * `base` (ADR-006 Addendum B, E8-D1 fix): the version THIS entry's version was
+ * built on — its causal parent. `null` = a root version (nothing precedes it);
+ * ABSENT = unknown (entries persisted before Addendum B, or artifacts from
+ * pre-Addendum peers). The push path re-publishes it per record so a peer can
+ * tell "supersedes my version" from "concurrent with my version" — the
+ * discriminator the shadow alone cannot provide after Decision 5 step 8
+ * advanced it past a merely-pushed version.
+ */
 export type SyncShadowEntry = {
   updatedAt: number;
   deviceId: string;
   contentHash: string;
+  base?: { updatedAt: number; deviceId: string } | null;
 };
 
 /**
