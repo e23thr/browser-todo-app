@@ -60,6 +60,7 @@ export const ONBOARDING_DONE = 'done';
  */
 export const BANNER_PRIORITY = [
   'long-absence',
+  'crypto-blocked',
   'shrunken',
   'quota-pending',
   'quota-warn',

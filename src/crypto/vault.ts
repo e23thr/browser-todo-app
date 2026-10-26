@@ -54,6 +54,8 @@ import {
 } from './keys';
 import { decodeRecoveryCode, parseKeyFile, recoveryKek } from './recovery';
 import type { KeyFile } from './recovery';
+import { foreignCiphertext } from './foreignData';
+import { resumeMigration } from './service';
 
 /** The self-contained at-rest wrapper for snapshot payload strings (Decision 4.4). */
 export type WrappedSnapshotPayload = {
@@ -249,19 +251,22 @@ export class CryptoVault {
     });
     if (!unlocked.ok) return cryptoErr(unlocked.error.code, unlocked.error.message);
     for (const entry of unlocked.value) this.#dmks.set(entry.keyId, entry.dmk);
-    // Lazy kdf-floor upgrades (Decision 2.2) persist as part of unlock.
-    const upgraded = unlocked.value.find((e) => e.upgradedSlot !== null);
-    if (upgraded?.upgradedSlot != null) {
-      const slot = upgraded.upgradedSlot;
+    // Lazy kdf-floor upgrades (Decision 2.2) persist as part of unlock. Every
+    // upgraded slot persists, not just the first one (mixed-key stores).
+    const upgraded = unlocked.value.filter((e) => e.upgradedSlot !== null);
+    if (upgraded.length > 0) {
       await this.saveState({
-        keys: state.keys.map((k) =>
-          k.keyId === upgraded.keyId
-            ? { ...k, slots: k.slots.map((s) => (s.kind === 'passphrase' ? slot : s)) }
-            : k,
-        ),
+        keys: state.keys.map((k) => {
+          const match = upgraded.find((e) => e.keyId === k.keyId);
+          const slot = match === undefined ? null : match.upgradedSlot;
+          return slot === null
+            ? k
+            : { ...k, slots: k.slots.map((s) => (s.kind === 'passphrase' ? slot : s)) };
+        }),
       });
     }
     this.#afterUnlock();
+    await this.#resumeAfterUnlock();
     return cryptoOk(this.keyIds);
   }
 
@@ -276,14 +281,20 @@ export class CryptoVault {
     if (state === null) return cryptoErr('NOT_ENABLED', 'crypto state is unavailable');
     const decoded = await decodeRecoveryCode(input);
     if (!decoded.ok) return decoded;
-    return this.#unlockWithRecoverySecret(decoded.value);
+    const unlocked = await this.#unlockWithRecoverySecret(decoded.value);
+    if (!unlocked.ok) return unlocked;
+    await this.#resumeAfterUnlock();
+    return unlocked;
   }
 
   /** Key-file unlock (Decision 3.1/3.2). */
   async unlockWithKeyFile(raw: unknown): Promise<CryptoResult<string[]>> {
     const parsed = parseKeyFile(raw);
     if (!parsed.ok) return parsed;
-    return this.#unlockWithKeyFile(parsed.value, false);
+    const unlocked = await this.#unlockWithKeyFile(parsed.value, false);
+    if (!unlocked.ok) return unlocked;
+    await this.#resumeAfterUnlock();
+    return unlocked;
   }
 
   async #unlockWithKeyFile(file: KeyFile, adopt: boolean): Promise<CryptoResult<string[]>> {
@@ -348,9 +359,22 @@ export class CryptoVault {
     const base: KeyEntry = existing ?? { keyId: file.keyId, slots: [], createdAt: this.#now() };
     const rewrapped = await rewrapEntryWithPassphrase(dmk, base, localPassphrase, this.#now());
     if (!rewrapped.ok) return rewrapped;
+    const joinedAt = this.#now();
     await this.saveState({
       keys: [...state.keys.filter((k) => k.keyId !== file.keyId), rewrapped.value],
+      // A never-enabled store joins INTO encryption (Decision 3.2): without the
+      // status flip the adopted keys sit on an `off` store — the locked screen
+      // never shows, fresh writes stay plaintext and a reload is a brick
+      // (review Q3). Nothing else changes: zero record re-encryption, the
+      // local plaintext rows stay plaintext (Decision 3.2's "nothing changes").
+      ...(state.status === 'off' ? { status: 'on' as const, enabledAt: joinedAt } : {}),
     });
+    // Decision 3.3's heal (deviation #10's missing caller): rows the ring
+    // couldn't open before the join ARE readable under the adopted key —
+    // drop their decrypt-quarantine entries so reads see them again.
+    this.#db?.clearDecryptQuarantine();
+    // The store is no longer ciphertext-blocked (Decision 3.3).
+    foreignCiphertext.value = false;
     this.#afterUnlock();
     return cryptoOk(this.keyIds);
   }
@@ -473,6 +497,21 @@ export class CryptoVault {
     }
   }
 
+  /**
+   * Decision 7.1: a crash or pause mid-sweep leaves `status: 'migrating'` — a
+   * legal mixed store the NEXT UNLOCK completes, before the unlock resolves
+   * (review F1: resume needs a caller on the production boot/unlock path, not
+   * only tests). Failures surface through the `migrationRun` signal (paused +
+   * retry), never the unlock result: the unlock itself succeeded and the
+   * locked-screen copy stays honest. Skipped by `joinWithKeyFile` — a join is
+   * not an enable (status is `on`, migration is null there).
+   */
+  async #resumeAfterUnlock(): Promise<void> {
+    const db = this.#db;
+    if (db === null || this.status !== 'migrating') return;
+    await resumeMigration(db, this, this.#now);
+  }
+
   #syncLockState(): void {
     const state = this.#state;
     if (state === null || state.status === 'off') {
@@ -500,7 +539,19 @@ export class CryptoVault {
    */
   async readRow(store: 'tasks' | 'lists', row: unknown): Promise<Result<unknown, StorageError>> {
     if (!isEncryptedRecord(row)) return { ok: true, value: row };
-    if (!this.isUnlocked) return { ok: true, value: row };
+    if (!this.isUnlocked) {
+      // Never-enabled store (Decision 3.3): ciphertext pulled from another
+      // device's ring has NO key here — quarantine honestly (excluded from
+      // reads, kept verbatim, in the recovery file) instead of leaking raw
+      // envelopes through as "domain views" (review F4). Locked WITH keys keeps
+      // the raw passthrough — Decision 4.3's envelope operations need it and
+      // the UI is on the locked screen.
+      if (this.status === 'off') {
+        foreignCiphertext.value = true;
+        return { ok: true, value: undefined };
+      }
+      return { ok: true, value: row };
+    }
     const view = await this.decryptRecord(store, row);
     if (view.ok && view.value !== undefined) return { ok: true, value: view.value };
     return { ok: true, value: undefined };
@@ -557,6 +608,12 @@ export class CryptoVault {
         listViewOf(row as unknown as EncryptedListRecord, opened.value as ListPayload),
       );
     }
+    // Every ring key failed to open it — another device's key or tampered
+    // beyond GCM's reach (Decision 9: indistinguishable). Surface the blocked
+    // state (Decision 3.3); the AppDB layer quarantines the row. A caps
+    // violation under a SUCCESSFUL key is our own corrupt data (Decision 9's
+    // tamper path) and does not claim foreign ciphertext.
+    foreignCiphertext.value = true;
     return cryptoOk(undefined);
   }
 

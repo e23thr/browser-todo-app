@@ -623,5 +623,21 @@
   "crypto.preLock.toast": "Locking soon — keep working?",
   "crypto.preLock.keep": "Keep working",
   "crypto.error.noBackup": "A fresh backup export is required before enabling encryption (it is your only recovery path).",
-  "crypto.error.exportFailed": "The backup export failed — nothing was enabled."
+  "crypto.error.exportFailed": "The backup export failed — nothing was enabled.",
+  "crypto.error.migration": "The encryption setup did not finish — you can retry.",
+  "crypto.turnOff.title": "Turn off encryption?",
+  "crypto.turnOff.warning": "Anyone with access to this browser profile will be able to read your task text again.",
+  "crypto.turnOff.progress": "Decrypting your data… {done}/{total}",
+  "crypto.enable.skipRecovery": "Continue without a recovery key",
+  "crypto.join.title": "Set up encryption on this device",
+  "crypto.join.desc": "Choose the key file from the device that encrypted this data, then pick a passphrase for this device.",
+  "crypto.join.file": "Key file",
+  "crypto.join.submit": "Set up encryption",
+  "crypto.join.addAnother": "Add a key file from another device",
+  "crypto.blocked.title": "Encrypted data from another device",
+  "crypto.blocked.body": "Some data here was encrypted on another device with a different key. Add that device's key file to read it.",
+  "crypto.blocked.action": "Open encryption settings",
+  "crypto.recovery.issue": "Create a recovery key",
+  "crypto.lost.deleteAll": "Delete all data",
+  "crypto.lost.deleteAllCaution": "This permanently deletes every task and setting in this browser. It cannot be undone."
 }

@@ -145,35 +145,56 @@ export async function runDeleteAll(): Promise<boolean> {
     const counts = await loadCounts(db);
     const confirmed = await openDialog({ kind: 'delete-all-confirm', dataCounts: counts });
     if (!confirmed) return false;
-
-    const wiped = await deleteAllData();
-    if (!wiped.ok) {
-      announce(t('dataSafety.deleteAll.failed'), 'assertive');
-      pushToast({ message: t('dataSafety.deleteAll.failed'), variant: 'error' });
-      return false;
-    }
-
-    markRecoveryStarted();
-    invalidateCounts();
-    invalidateSnapshots();
-    patchState({
-      counts: null,
-      hasData: false,
-      snapshots: [],
-      lastBackupAt: null,
-      classification: { kind: 'normal' },
-      onboarding: false,
-      exportState: 'idle',
-      panelState: 'idle',
-    });
-    announce(t('dataSafety.deleteAll.done'));
-    pushToast({ message: t('dataSafety.deleteAll.done'), variant: 'success' });
-    await refreshQuota();
-    await refreshPersistence();
-    deriveBanners();
-    return true;
+    return await wipeAllData();
   } finally {
     deleteInFlight = false;
     closeDialog();
   }
+}
+
+/**
+ * The wipe half of `runDeleteAll` WITHOUT the confirm dialog — for surfaces
+ * that confirm inline: the lost-passphrase "delete all data" escape
+ * (ADR-007 Decision 6.3 / §7.4) lives on the LOCKED screen, where there is no
+ * `<DataSafetyHost>` to queue a dialog on — the panel owns its own two-step
+ * confirmation instead.
+ */
+export async function runDeleteAllWithoutDialog(): Promise<boolean> {
+  if (isBusy() || deleteInFlight) return false;
+  deleteInFlight = true;
+  try {
+    if (resolveDb() === null) return false;
+    return await wipeAllData();
+  } finally {
+    deleteInFlight = false;
+  }
+}
+
+async function wipeAllData(): Promise<boolean> {
+  const wiped = await deleteAllData();
+  if (!wiped.ok) {
+    announce(t('dataSafety.deleteAll.failed'), 'assertive');
+    pushToast({ message: t('dataSafety.deleteAll.failed'), variant: 'error' });
+    return false;
+  }
+
+  markRecoveryStarted();
+  invalidateCounts();
+  invalidateSnapshots();
+  patchState({
+    counts: null,
+    hasData: false,
+    snapshots: [],
+    lastBackupAt: null,
+    classification: { kind: 'normal' },
+    onboarding: false,
+    exportState: 'idle',
+    panelState: 'idle',
+  });
+  announce(t('dataSafety.deleteAll.done'));
+  pushToast({ message: t('dataSafety.deleteAll.done'), variant: 'success' });
+  await refreshQuota();
+  await refreshPersistence();
+  deriveBanners();
+  return true;
 }

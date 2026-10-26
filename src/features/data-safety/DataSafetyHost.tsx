@@ -23,12 +23,14 @@ import {
   answerDialog,
   currentDialog,
   dismissToast,
+  setBanner,
   snoozeBanner,
   toasts,
   visibleBanners,
   type QueuedDialog,
   type Toast,
 } from './notices';
+import { foreignCiphertext } from '../../crypto/foreignData';
 import { pendingWrites, retryPendingWrites } from './pendingWrites';
 import { NudgeBanner, type BannerAction, type BannerKind } from './NudgeBanner';
 import { runRequestPersist } from './persistGate';
@@ -161,6 +163,18 @@ function bannerSpec(kind: BannerKind, params: BannerParams, closeLabel: string):
         closeLabel,
       };
     }
+
+    // ADR-007 Decision 3.3: data this device cannot decrypt (another device's
+    // key) — a blocker, not a nudge: no close/snooze; it clears itself when the
+    // ring can read the data again (join or disable).
+    case 'crypto-blocked':
+      return {
+        kind,
+        tier: 1,
+        title: t('crypto.blocked.title'),
+        body: t('crypto.blocked.body'),
+        actions: [{ id: 'open-encryption', label: t('crypto.blocked.action'), variant: 'primary' }],
+      };
   }
 }
 
@@ -186,6 +200,14 @@ export function DataSafetyHost(): JSX.Element {
     deriveBanners();
   }, [state, quota, persistence, pending]);
 
+  // ADR-007 Decision 3.3 (review F4): the ciphertext-blocked banner arms from
+  // the crypto read path's own signal and disarms when the ring can read the
+  // data again — kept out of `deriveBanners` (data-safety's inputs only).
+  const foreignBlocked = foreignCiphertext.value;
+  useEffect(() => {
+    setBanner('crypto-blocked', foreignBlocked ? {} : null);
+  }, [foreignBlocked]);
+
   const { visible, overflow } = visibleBanners();
   const dialog = currentDialog();
   const toastList = toasts.value;
@@ -197,6 +219,7 @@ export function DataSafetyHost(): JSX.Element {
         return;
       case 'open-storage':
       case 'free-space':
+      case 'open-encryption':
         goStorage();
         return;
       case 'ask-again':

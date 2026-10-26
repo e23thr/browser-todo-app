@@ -21,6 +21,7 @@ export type BannerKind =
   | 'backup-reminder'
   | 'quota-warn'
   | 'quota-pending'
+  | 'crypto-blocked'
   | 'persist-denied'
   | 'long-absence'
   | 'shrunken';
@@ -51,6 +52,7 @@ const ICONS: Readonly<Record<BannerKind, 'info' | 'alert-triangle' | 'alert-circ
   'backup-reminder': 'info',
   'quota-warn': 'alert-triangle',
   'quota-pending': 'alert-circle',
+  'crypto-blocked': 'alert-circle',
   'persist-denied': 'alert-triangle',
   'long-absence': 'info',
   shrunken: 'alert-triangle',

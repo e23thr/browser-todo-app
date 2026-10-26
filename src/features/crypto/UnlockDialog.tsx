@@ -107,6 +107,44 @@ function LostPassphrasePanel({ onRecovered }: { onRecovered: () => void }): JSX.
   const [status, setStatus] = useState<string | null>(null);
   const [needsPassphrase, setNeedsPassphrase] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  /**
+   * Decision 6.3 / §7.4's escape (review F4): data that cannot be recovered
+   * can still be CLEARED — the last door out of a brick. Order matters, so
+   * never a data-less brick from a partial wipe: the store is wiped FIRST
+   * (`deleteAllData` deletes by id — quarantine and lock do not block it),
+   * then the crypto state resets and the session key drops. Inline two-step
+   * confirm — the locked screen has no DataSafetyHost to queue a dialog on.
+   */
+  const wipeEverything = async (): Promise<void> => {
+    setDeleteBusy(true);
+    setError(null);
+    const { runDeleteAllWithoutDialog } = await import('../data-safety/actions');
+    const wiped = await runDeleteAllWithoutDialog();
+    if (!wiped) {
+      setDeleteBusy(false);
+      setError(t('dataSafety.deleteAll.failed'));
+      return;
+    }
+    const reset = await vault.saveState({
+      status: 'off',
+      enabledAt: null,
+      migration: null,
+      keys: [],
+      recoveryOfferedAt: null,
+    });
+    setDeleteBusy(false);
+    if (!reset.ok) {
+      // Store already empty — retryable from the same button, nothing lost.
+      setError(t('dataSafety.deleteAll.failed'));
+      return;
+    }
+    vault.lockNow();
+    setStatus(t('dataSafety.deleteAll.done'));
+    onRecovered();
+  };
 
   const useCode = async (): Promise<void> => {
     setError(null);
@@ -215,6 +253,43 @@ function LostPassphrasePanel({ onRecovered }: { onRecovered: () => void }): JSX.
       <section>
         <h3>{t('crypto.lost.none')}</h3>
         <p class="field-note">{t('crypto.lost.noneNote')}</p>
+        {deleteConfirm ? (
+          <div>
+            <p role="alert">{t('crypto.lost.deleteAllCaution')}</p>
+            <button
+              type="button"
+              class="button-primary"
+              disabled={deleteBusy}
+              data-testid="lost-delete-confirm"
+              onClick={() => {
+                void wipeEverything();
+              }}
+            >
+              {t('dataSafety.deleteAll.confirm')}
+            </button>
+            <button
+              type="button"
+              class="button-quiet"
+              disabled={deleteBusy}
+              onClick={() => {
+                setDeleteConfirm(false);
+              }}
+            >
+              {t('common.cancel')}
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            class="button-quiet"
+            data-testid="lost-delete-all"
+            onClick={() => {
+              setDeleteConfirm(true);
+            }}
+          >
+            {t('crypto.lost.deleteAll')}
+          </button>
+        )}
       </section>
       {error === null ? null : (
         <p class="field-error" role="alert">
