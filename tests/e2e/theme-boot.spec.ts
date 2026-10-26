@@ -9,7 +9,9 @@ import { APP_URL, seedOnboardingDone } from './helpers';
  * How this is proven: an init script installs a MutationObserver on `documentElement[data-theme]`
  * before any page script runs, timestamps the first non-null value, and a PerformanceObserver
  * records first-contentful-paint. The test asserts the theme was applied at-or-before FCP — a
- * late application (the flash the spec forbids) would land after it.
+ * late application (the flash the spec forbids) would land after it. The FCP read waits for the
+ * observer's delivery first: a heading's visible-check is a LAYOUT fact and can precede paint
+ * (Nightly 40250045123, theme-boot:143 — scripts/diag-theme-boot-fcp.mjs measures the race).
  *
  * First-run handshake (E3): a fresh profile's true first paint is the onboarding screen, so the
  * shell-bound scenarios take `seedOnboardingDone()` on boot (the probe below is untouched); the
@@ -109,15 +111,37 @@ async function expectThemePaintedBeforeFirstPaint(
   await page.goto(APP_URL);
   await expect(page.getByRole('heading', { level: 1, name: 'Today', exact: true })).toBeVisible();
 
+  // The heading's visible check passes on LAYOUT alone; probe.fcp is only set once this frame's
+  // paint emits first-contentful-paint and the PerformanceObserver callback delivers it — an
+  // ordering that is timing, not contract (Nightly 40250045123, theme-boot:143: under runner
+  // load the unsynchronized read raced paint and saw null; scripts/diag-theme-boot-fcp.mjs
+  // measures the race). The probe itself is installed by the init script before any page
+  // script — before paint can matter — so that check still reads immediately and fails fast.
   const probe = await page.evaluate(() => (window as WindowWithProbe).__themeProbe ?? null);
   expect(probe, 'the pre-paint probe must have been installed').not.toBeNull();
-  expect(probe?.fcp, 'first-contentful-paint must have been observed').not.toBeNull();
 
-  const painted = probe?.events.find((event) => event.value !== null);
+  // Synchronize on the FCP delivery before reading it (the same wait the first-run scenario
+  // below has taken since 1006354, bounded like sw-utils' waits). A genuine non-delivery falls
+  // through so the assertion below still reports it in this suite's own words instead of a
+  // waitForFunction/test timeout.
+  try {
+    await page.waitForFunction(
+      () => ((window as WindowWithProbe).__themeProbe ?? null)?.fcp != null,
+      undefined,
+      { timeout: 10_000 },
+    );
+  } catch {
+    /* fall through: the fcp assertion below carries the failure message */
+  }
+
+  const delivered = await page.evaluate(() => (window as WindowWithProbe).__themeProbe ?? null);
+  expect(delivered?.fcp, 'first-contentful-paint must have been observed').not.toBeNull();
+
+  const painted = delivered?.events.find((event) => event.value !== null);
   expect(painted, 'the inline boot snippet must set data-theme').toBeTruthy();
   expect(painted?.value).toBe(expected);
   // No flash: the theme landed before (or exactly at) the first painted frame.
-  expect(painted?.time).toBeLessThanOrEqual(probe?.fcp ?? Number.POSITIVE_INFINITY);
+  expect(painted?.time).toBeLessThanOrEqual(delivered?.fcp ?? Number.POSITIVE_INFINITY);
 
   const state = await page.evaluate((): DocumentState => ({
     theme: document.documentElement.dataset['theme'] ?? null,
@@ -180,9 +204,9 @@ test('a first-run profile boots flash-free on the onboarding screen', async ({ p
     }),
   ).toBeVisible();
 
-  // The existing shell-bound helper reads the probe only after the shell's heavier render, so
-  // the PerformanceObserver has always delivered FCP by then; the onboarding surface paints
-  // fast enough to race it, so wait for the delivery before reading (assertions unchanged).
+  // Wait for the PerformanceObserver's FCP delivery before reading the probe — the shell-bound
+  // helper does the same since theme-boot:143's Nightly flake (40250045123) showed a
+  // layout-visible heading can precede paint under load. Assertions unchanged.
   await page.waitForFunction(() => ((window as WindowWithProbe).__themeProbe ?? null)?.fcp != null);
 
   const probe = await page.evaluate(() => (window as WindowWithProbe).__themeProbe ?? null);
