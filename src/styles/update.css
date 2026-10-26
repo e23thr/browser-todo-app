@@ -2,6 +2,11 @@
  * Update-flow surfaces (ADR-005 Decision 5 / E5 token set). Fixed-position stack, ≥ 44 px
  * action targets (§8), no motion beyond a plain fade (prefers-reduced-motion safe), and no
  * external bytes of any kind (§7.2).
+ *
+ * Tokens (t_0d2fb414): every var() below resolves to a real tokens.css custom property,
+ * mirroring install.css — the twin notice that shares this composition (§6.10). The old
+ * `--radius-1` / `--color-bg` / `--color-text-muted` names never existed, so the notice
+ * rendered square corners, a transparent secondary action and inherited body text.
  */
 
 .update-notice-stack {
@@ -39,7 +44,7 @@
 .update-notice {
   padding: var(--space-4);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   color: var(--color-text);
   box-shadow: 0 4px 16px rgb(0 0 0 / 18%);
@@ -53,7 +58,7 @@
 .update-notice-body,
 .update-notice-error {
   margin: var(--space-2) 0 0;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
 }
 
 .update-notice-error {
@@ -73,8 +78,8 @@
   min-width: 44px;
   padding: 0 var(--space-4);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
-  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-subtle);
   color: var(--color-text);
   font: inherit;
   cursor: pointer;
@@ -83,7 +88,7 @@
 .update-action-primary {
   border-color: var(--color-accent);
   background: var(--color-accent);
-  color: var(--color-bg);
+  color: var(--color-on-accent);
 }
 
 .update-action:focus-visible {
