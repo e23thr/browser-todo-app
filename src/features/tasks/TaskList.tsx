@@ -66,6 +66,8 @@ export interface TaskListProps {
   /** Row id carrying the 600 ms "moved" highlight after a drop (§8.1). */
   readonly movedId?: string | null;
   readonly onToggle: (task: Task, done: boolean) => void;
+  /** S6: row-menu Archive passthrough (done rows only). */
+  readonly onArchive?: (id: string) => void;
   readonly onOpen: (id: string) => void;
   readonly onDelete: (id: string) => void;
   /** Keyboard/menu move (§8.2). The screen decides move vs. announce-unavailable. */
@@ -180,6 +182,7 @@ export function TaskList({
   reorderable = false,
   movedId = null,
   onToggle,
+  onArchive,
   onOpen,
   onDelete,
   onMove,
@@ -604,6 +607,7 @@ export function TaskList({
         posInSet={posInSet}
         setSize={setSize}
         onToggle={onToggle}
+        {...(onArchive !== undefined ? { onArchive } : {})}
         onOpen={onOpen}
         onDelete={onDelete}
         {...(onMove !== undefined ? { onMove } : {})}

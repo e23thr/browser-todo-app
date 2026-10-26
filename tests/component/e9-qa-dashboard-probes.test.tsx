@@ -291,9 +291,9 @@ describe('Q16 — imported markup stays TEXT in the list (XSS)', () => {
   });
 });
 
-/* ------------------- S6 coupling + 10k baseline (deferred S6) ------------------- */
+/* ------------------- S6 coupling (resolved) + pre-S6 10k baseline ------------------- */
 
-describe('Q17 — CSV "archived" rows vs the deferred S6 archive view', () => {
+describe('Q17 — CSV "archived" rows now surface in the S6 archived group', () => {
   beforeEach(() => {
     setUpCoreUi();
   });
@@ -302,14 +302,12 @@ describe('Q17 — CSV "archived" rows vs the deferred S6 archive view', () => {
   });
 
   /**
-   * OBSERVED (S6-coupled finding E9-Q3): the CSV importer maps status "archived" onto
-   * the model's 'archived' status, but S6 (archive/retention view) is DEFERRED — no
-   * view consumes 'archived' (views.ts: list= open, completed= done only). Rows
-   * imported as archived therefore exist in the DB yet appear in NO view. This test
-   * pins today's behaviour; it MUST be re-run when S6 lands, where these rows must
-   * show in the archived group.
+   * S6 LANDED (finding E9-Q3 resolved): the CSV importer maps status
+   * "archived" onto the model's 'archived' status, and the completed view's
+   * retention partition now consumes it — an archived row appears in the
+   * Archived group while staying invisible in the open/list views.
    */
-  it('TRIPWIRE (update when S6 lands): an archived task imported from CSV is invisible in list, completed and open views', async () => {
+  it('an archived task imported from CSV shows in the completed view (archived group) and stays out of the open views', async () => {
     const list = makeList({ id: 'L1', name: 'Personal' });
     await seed({
       lists: [list],
@@ -332,7 +330,7 @@ describe('Q17 — CSV "archived" rows vs the deferred S6 archive view', () => {
     expect(document.body.textContent).toContain('open task');
     expect(document.body.textContent).not.toContain('archived task');
 
-    // Completed view: done only.
+    // Completed view: done rows AND the archived group (S6 retention partition).
     render(
       <TaskScreen
         view={{ kind: 'completed' }}
@@ -343,11 +341,12 @@ describe('Q17 — CSV "archived" rows vs the deferred S6 archive view', () => {
       />,
     );
     expect(document.body.textContent).toContain('done task');
-    expect(document.body.textContent).not.toContain('archived task');
+    expect(document.body.textContent).toContain('archived task');
+    expect(document.body.textContent).toContain('Archived (1)');
   });
 });
 
-describe('Q18 — 10k completed-task baseline (S6 retention view is deferred)', () => {
+describe('Q18 — 10k completed-task baseline (pre-S6; the S6 retention numbers live in tests/component/retention-perf-10k.test.tsx)', () => {
   beforeEach(() => {
     setUpCoreUi();
   });

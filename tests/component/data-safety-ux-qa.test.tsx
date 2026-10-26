@@ -1471,6 +1471,11 @@ function makeQuotaRunner(): {
       if (current === undefined) return err({ code: 'RULE', rule: 'TASK_MISSING', message: id });
       return ok({ ...current, status: done ? 'done' : 'open' });
     },
+    async setArchived(id: string, archived: boolean): Promise<Result<Task, AppError>> {
+      const current = tasks.get(id);
+      if (current === undefined) return err({ code: 'RULE', rule: 'TASK_MISSING', message: id });
+      return ok({ ...current, status: archived ? 'archived' : 'done' });
+    },
     async completeRecurring(
       id: string,
       next: TaskOccurrenceDraft,

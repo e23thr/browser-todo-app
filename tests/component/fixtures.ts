@@ -200,6 +200,34 @@ export function makeTestRunner(
       tasks.set(id, next);
       return ok(next);
     },
+    async setArchived(id: string, archived: boolean): Promise<Result<Task, AppError>> {
+      const current = tasks.get(id);
+      if (current === undefined)
+        return { ok: false, error: { code: 'RULE', rule: 'TASK_MISSING', message: id } };
+      if (archived && current.status !== 'done')
+        return {
+          ok: false,
+          error: {
+            code: 'RULE',
+            rule: 'TASK_STATUS_INVALID',
+            message: `archive expects a done task, got ${current.status}`,
+          },
+        };
+      if (!archived && current.status !== 'archived')
+        return {
+          ok: false,
+          error: {
+            code: 'RULE',
+            rule: 'TASK_STATUS_INVALID',
+            message: `restore expects an archived task, got ${current.status}`,
+          },
+        };
+      const now = clock();
+      const next: Task = { ...current, status: archived ? 'archived' : 'done', updatedAt: now };
+      if (!archived && next.completedAt === undefined) next.completedAt = now;
+      tasks.set(id, next);
+      return ok(next);
+    },
     async completeRecurring(
       id: string,
       next: TaskOccurrenceDraft,
@@ -217,6 +245,9 @@ export function makeTestRunner(
         id: next.id ?? newUlid(),
         listId: next.listId,
         title: next.title,
+        // TaskDraft's notes/priority/tags are REQUIRED (model.ts), so they are
+        // passed through directly — the conditional spreads below stay for the
+        // genuinely optional fields (exactOptionalPropertyTypes).
         notes: next.notes,
         priority: next.priority,
         tags: [...next.tags],

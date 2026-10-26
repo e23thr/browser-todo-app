@@ -195,7 +195,7 @@ describe('views: List (§4.6)', () => {
   });
 });
 
-describe('views: Completed (§4.7)', () => {
+describe('views: Completed (§4.7 + S6 retention partition)', () => {
   const tasks = [
     makeTask({ id: 'C1', listId: 'L1', status: 'done', completedAt: T0 + 100 }),
     makeTask({ id: 'C2', listId: 'L1', status: 'done', completedAt: T0 + 300 }),
@@ -204,8 +204,11 @@ describe('views: Completed (§4.7)', () => {
   ];
   const result = selectView(stateWith(tasks), { kind: 'completed' }, { today: TODAY });
 
-  it('is flat and sorted by completedAt desc, id desc', () => {
-    expect(groupLabels(result.rows)).toEqual([]);
+  it('all three completions are older-than-7d (T0 is 2023) → ONE retention group, order kept', () => {
+    // `T0` sits in 2023, years before TODAY — every done row lands in the
+    // `older` bucket; the bucket detail (recent/older/archived boundaries) is
+    // pinned in views-retention.test.ts.
+    expect(groupLabels(result.rows)).toEqual(['retention']);
     expect(taskRows(result.rows).map((t) => t.id)).toEqual(['C2', 'C3', 'C1']);
   });
 });

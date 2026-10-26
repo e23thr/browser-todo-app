@@ -14,6 +14,7 @@ export type MutationKind =
   | 'create-task'
   | 'patch-task'
   | 'set-done'
+  | 'set-archived'
   | 'move-task'
   | 'remove-task'
   | 'restore-tasks'

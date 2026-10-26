@@ -40,6 +40,7 @@ import {
   deleteTask,
   liveLists,
   moveTaskTo,
+  setTaskArchived,
   setTaskDone,
   sortMode,
   state,
@@ -174,6 +175,15 @@ export function TaskScreen({
   /* ------------------------------ interactions ------------------------------ */
 
   const onToggle = (task: Task, done: boolean): void => {
+    if (task.status === 'archived') {
+      // S6: the archived row's checkbox (and Space, and the menu Restore item)
+      // RESTORES to done — never the uncomplete path, which would silently
+      // reopen finished history.
+      void setTaskArchived(task.id, false).then((result) => {
+        if (result.ok) announce(t('a11y.taskRestored'));
+      });
+      return;
+    }
     if (done) {
       // Anchor BEFORE the optimistic apply removes the row from this view.
       const index = rows.findIndex((row) => row.type === 'task' && row.task.id === task.id);
@@ -192,6 +202,13 @@ export function TaskScreen({
       announce(t('a11y.taskReopened'));
     }
     void setTaskDone(task.id, done);
+  };
+
+  /** S6: row-menu Archive — one guarded write, then the polite announcement. */
+  const onArchive = (id: string): void => {
+    void setTaskArchived(id, true).then((result) => {
+      if (result.ok) announce(t('a11y.taskArchived'));
+    });
   };
 
   const onOpen = (id: string): void => {
@@ -451,6 +468,7 @@ export function TaskScreen({
         reorderable={view.kind === 'list' && sortMode.value !== 'priority'}
         movedId={movedId}
         onToggle={onToggle}
+        onArchive={onArchive}
         onOpen={onOpen}
         onDelete={onDelete}
         onMove={onMove}

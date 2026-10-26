@@ -147,6 +147,9 @@ export class FakeTaskPort implements TaskPort {
   setDone(id: string, done: boolean): Promise<Result<Task, AppError>> {
     return this.rec.record<Task>('setDone', [id, done]);
   }
+  setArchived(id: string, archived: boolean): Promise<Result<Task, AppError>> {
+    return this.rec.record<Task>('setArchived', [id, archived]);
+  }
 
   completeRecurring(
     id: string,

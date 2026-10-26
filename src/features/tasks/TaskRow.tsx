@@ -53,6 +53,8 @@ export interface TaskRowProps {
   readonly posInSet?: number;
   readonly setSize?: number;
   readonly onToggle: (task: Task, done: boolean) => void;
+  /** S6: row-menu Archive (done rows only) — the screen runs the guarded write. */
+  readonly onArchive?: (id: string) => void;
   readonly onOpen: (id: string) => void;
   readonly onDelete: (id: string) => void;
   readonly onMove?: (id: string, delta: MoveDelta) => void;
@@ -107,6 +109,7 @@ export function TaskRow({
   posInSet,
   setSize,
   onToggle,
+  onArchive,
   onOpen,
   onDelete,
   onMove,
@@ -115,7 +118,10 @@ export function TaskRow({
   onRowFocus,
   onRowKeyDown,
 }: TaskRowProps): JSX.Element {
-  const done = task.status === 'done';
+  // S6: an archived row is FINISHED history — it renders checked, and its
+  // uncheck restores (never reopens); the screen routes that gesture.
+  const done = task.status === 'done' || task.status === 'archived';
+  const archived = task.status === 'archived';
   const badge = done ? null : dueBadge(task.dueDate, today);
   const innerTabIndex = current ? 0 : -1;
   const priorityKey = task.priority === 'P4' ? null : PRIORITY_KEY[task.priority];
@@ -148,8 +154,8 @@ export function TaskRow({
     onRowKeyDown(event);
   };
 
-  // §16 item 11: Edit, Move to list…, Move up, Move down (per-list; aria-disabled at
-  // the ends), Delete — in that order; Delete in danger tone.
+  // §16 item 11: Edit, [Archive | Restore (S6)], Move to list…, Move up, Move down
+  // (per-list; aria-disabled at the ends), Delete — in that order; Delete in danger tone.
   const menuItems = [
     {
       key: 'edit',
@@ -158,6 +164,29 @@ export function TaskRow({
         onOpen(task.id);
       },
     },
+    ...(task.status === 'done' && onArchive !== undefined
+      ? [
+          {
+            key: 'archive',
+            label: t('task.action.archive'),
+            onSelect: () => {
+              onArchive(task.id);
+            },
+          },
+        ]
+      : []),
+    ...(archived
+      ? [
+          {
+            key: 'restore',
+            label: t('task.action.restore'),
+            // Restore IS the uncheck: one domain path for both affordances.
+            onSelect: () => {
+              onToggle(task, false);
+            },
+          },
+        ]
+      : []),
     {
       key: 'move-to-list',
       label: t('task.action.moveToList'),
@@ -228,9 +257,11 @@ export function TaskRow({
             class="task-check"
             checked={done}
             aria-label={
-              done
-                ? t('a11y.untoggleTask', { title: task.title })
-                : t('a11y.toggleTask', { title: task.title })
+              archived
+                ? t('a11y.restoreTask', { title: task.title })
+                : done
+                  ? t('a11y.untoggleTask', { title: task.title })
+                  : t('a11y.toggleTask', { title: task.title })
             }
             tabIndex={innerTabIndex}
             onChange={(event) => {

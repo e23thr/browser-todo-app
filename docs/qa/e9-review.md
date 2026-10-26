@@ -162,6 +162,19 @@ were run first-hand by the test card at this same commit and are re-cited here:
   only, **the recorded 10k retention-view numbers**, extension of
   `e9-utilities.spec.ts`, and re-run of probe Q17 (E9-Q3: CSV `status=archived` rows are
   currently stored but visible in no view).
+- **RESOLVED (resumption card t_009d7480, pending re-review):** S6 landed on top of the
+  committed S4 recurrence work — `TaskPort.setArchived` (done→archived preserving
+  `completedAt`; archived→done backfilling it; illegal source states reject with the new
+  `TASK_STATUS_INVALID` rule) wired through `TaskRepo`/`MutationRunner`/store
+  (`setTaskArchived`), the `completedView` retention partition
+  (`retention recent ≤7d / older / archived`, empty groups omitted, rows flat so the
+  virtualization DOM cap holds), row-menu Archive/Restore + checkbox-on-archived =
+  restore with `a11y.taskArchived`/`a11y.taskRestored` announcements, en+th keys, new
+  test files (`views-retention`, `archive-actions`, `repos-archive`, `archive-rows`,
+  `retention-perf-10k`), the recorded 10k numbers (see the resumption card's completion
+  metadata), the `e9-utilities.spec.ts` archive-flow drill, and probe Q17 re-run green
+  with the archived group assertion (E9-Q3 closed). Numbers and gates recorded on the
+  card for the re-review.
 
 ### B2 — E9-Q2: extension-first routing accepts a JSON backup renamed `.txt`
 

@@ -17,6 +17,9 @@
  *  - S12 rides the upload fallback everywhere: a real CSV file goes through the
  *    picker → preview → confirm → rows; a malformed CSV must reject with the
  *    inline notice and leave existing data untouched.
+ *  - S6 archive flows (chromium): complete → Archive from the row menu → the
+ *    Archived retention group → Restore via the checkbox, against the real
+ *    app + real IndexedDB.
  *
  * Locator policy (D1 guard): every getByRole(..., { name }) and getByText(...)
  * carries `exact: true` (eslint enforced).
@@ -304,4 +307,75 @@ test('S12 malformed CSV: rejected with the inline notice and ZERO side effects',
   await page.goto(`${APP_URL}#/all`);
   await expect(page.getByRole('button', { name: 'guard task', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'mystery row', exact: true })).toHaveCount(0);
+});
+
+/* ------------------------------- S6: archive ------------------------------- */
+
+/** Create one real task through the composer (list created on first run). */
+async function seedOneTask(page: Page, title: string): Promise<void> {
+  const newList = page
+    .locator('.composer-nolist')
+    .getByRole('button', { name: 'New list', exact: true });
+  const composer = page.locator('.composer-inline input[type="text"]');
+  await page.waitForSelector('.composer-nolist button, .composer-inline input[type="text"]', {
+    state: 'visible',
+    timeout: 15_000,
+  });
+  if (await newList.isVisible()) {
+    await newList.click();
+    const listDialog = page.getByRole('dialog', { name: 'New list', exact: true });
+    await listDialog.getByRole('textbox', { name: 'List name', exact: true }).fill('Personal');
+    await page.keyboard.press('Enter');
+    await expect(listDialog).toBeHidden();
+  }
+  await expect(composer).toBeVisible();
+  await composer.fill(title);
+  await page.keyboard.press('Enter');
+}
+
+test('S6 archive flow: complete → row-menu Archive → Archived group → checkbox Restore', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !testInfo.project.name.startsWith('chromium'),
+    'archive flow evidence is Chromium-only',
+  );
+  await seedOnboardingDone(page);
+  await page.goto(APP_URL);
+  await seedOneTask(page, 'archive me');
+
+  // Complete it from All open (the checkbox is the completion gesture).
+  await page.goto(`${APP_URL}#/all`);
+  const row = page.locator('li.task-row', { hasText: 'archive me' });
+  await row.getByRole('checkbox').click();
+  await expect(row).toHaveCount(0);
+
+  // The completed view partitions it into the recent retention group.
+  await page.goto(`${APP_URL}#/completed`);
+  await expect(
+    page.getByRole('heading', { name: 'Recently completed (last 7 days) (1)', exact: true }),
+  ).toBeVisible();
+
+  // Row menu → Archive: the row moves to the Archived group (completedAt kept).
+  await page.getByRole('button', { name: 'Actions for "archive me"', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Archive', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Archived (1)', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Recently completed (last 7 days) (1)', exact: true }),
+  ).toHaveCount(0); // empty groups are omitted
+  // The archived row still carries its completion date (completedAt preserved).
+  await expect(page.locator('li.task-row', { hasText: /Completed on/ })).toHaveCount(1);
+
+  // Checkbox-on-archived RESTORES: back under the recent group, archive gone.
+  const restoreCheck = row.getByRole('checkbox', {
+    name: 'Restore "archive me" from the archive',
+    exact: true,
+  });
+  await restoreCheck.click();
+  await expect(page.getByRole('heading', { name: 'Archived (1)', exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole('heading', { name: 'Recently completed (last 7 days) (1)', exact: true }),
+  ).toBeVisible();
+  // Restored rows keep their completion date (the retention partition re-buckets it).
+  await expect(row.getByRole('checkbox')).toBeVisible();
 });

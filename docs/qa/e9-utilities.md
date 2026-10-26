@@ -186,6 +186,17 @@ Probes Q11–Q14 (mocked storage states, fixed clock `now`):
   the window math at 1k/10k (`computeWindow` sub-millisecond) — S6's retention groups must keep
   the same DOM-row cap; re-run Q18 renamed to the real retention view when S6 lands.
 
+> **Status update (resumption card t_009d7480):** **S6 LANDED** on top of the committed S4
+> recurrence work (`TaskPort.setArchived` → `TaskRepo`/`MutationRunner`/store, the
+> `completedView` retention partition `recent ≤7d / older / archived`, row-menu
+> Archive/Restore + checkbox-on-archived = restore, en+th keys). The real retention-view
+> 10k numbers (new test `tests/component/retention-perf-10k.test.tsx`, corpus = 7 000 recent
+> done + 2 000 older done + 1 000 archived, all three groups at scale):
+> **seed ~7–10 ms, render ~138–204 ms (jsdom, four sampled runs), DOM rows 21 / 10 000**
+> — the §5.7/§9.1 virtualization cap HOLDS with the partition (22 → 21, the group header
+> rides inside the same window). Q17 re-run green with the archived-group assertion
+> (E9-Q3 closed); the Q18 baseline above stays as the pre-S6 reference.
+
 **S6-coupled finding:** the CSV importer already maps `status=archived` onto the model's
 `archived` status, but no view consumes it yet — such rows are in the DB yet invisible everywhere
 (tripwire probe Q17 pins this). Resolved by S6 itself; must be re-verified with S6 (E9-Q3 below).
@@ -215,6 +226,13 @@ the failures are "wrong content accepted" / "content invisible", not corruption 
 > copy flipped in place). Ledger rows 9/11 flipped to PASS (§4). E9-Q3 stays open and
 > S6-coupled.
 
+> **Status update (resumption card t_009d7480):** **E9-Q3 is CLOSED** — S6's archived
+> group consumes `status=archived`, so CSV-imported archived rows now render in the
+> completed view's `Archived` group (still invisible in the open/list views, by design).
+> Probe **Q17 re-run and flipped in place** in
+> `tests/component/e9-qa-dashboard-probes.test.tsx` (was: "invisible in every view";
+> now: "shows in the completed view archived group and stays out of the open views").
+
 ### Cross-card findings (NOT E9, surfaced because the gate sees HEAD)
 
 | id | Sev | Finding |
@@ -237,8 +255,9 @@ the failures are "wrong content accepted" / "content invisible", not corruption 
 
 1. E9-Q1/E9-Q2: accept as non-blocking (data-safety envelope intact) or require the encoding/JSON
    sniff in this epic — both fixes are small and local to the routing seam.
-2. S6 remains the epic's open AC: retention partition + the real 10k numbers + the archived-group
-   re-run of probe Q17.
+2. ~~S6 remains the epic's open AC: retention partition + the real 10k numbers + the archived-group
+   re-run of probe Q17.~~ **Resolved by the resumption card t_009d7480** (retention partition +
+   recorded 10k numbers in §7 + Q17 re-run) — re-review item.
 3. X1 must land green before any push of `ad4acc3`+ (the unit gate, together with X2's
    `format:check`, is what currently keeps main's `npm run ci` red).
    *Update 2026-10-26 (t_f8f4a6f5): X1 green since `339cf6c` (39/39 re-verified at `fca1e79`);

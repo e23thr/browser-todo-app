@@ -159,6 +159,45 @@ export class TaskRepo implements TaskPort {
   }
 
   /**
+   * S6 archive/restore (E9): done→archived preserving `completedAt` verbatim,
+   * archived→done backfilling the stamp when it is missing. The legal source
+   * pair is enforced HERE so a stale UI gesture can never reopen a task
+   * through the archive affordance. ADR-007 D4.6 (t_ccdabf50): single-row RMW
+   * via `rmwSealed` — the legal-pair check re-runs against the FRESH row on
+   * every bounded attempt, so a concurrent status change can never be
+   * clobbered by a stale archive/restore gesture.
+   */
+  setArchived(id: string, archived: boolean): Promise<Result<Task, AppError>> {
+    const { clock, db } = this.#deps;
+    return rmwSealed(db, 'tasks', id, (base) => {
+      if (base === undefined || base.deletedAt !== null) return err(taskMissing(id));
+      if (archived && base.status !== 'done') {
+        return err(
+          ruleError('TASK_STATUS_INVALID', `archive expects a done task, got ${base.status}`),
+        );
+      }
+      if (!archived && base.status !== 'archived') {
+        return err(
+          ruleError('TASK_STATUS_INVALID', `restore expects an archived task, got ${base.status}`),
+        );
+      }
+      const now = clock();
+      const next: Task = {
+        ...base,
+        status: archived ? 'archived' : 'done',
+        updatedAt: now,
+        deviceId: db.deviceId,
+      };
+      // Archive keeps the original completion instant; a restore backfills a
+      // lost stamp so the retention partition never sorts it as un-stamped.
+      if (!archived && next.completedAt === undefined) next.completedAt = now;
+      const validated = this.#validate(next);
+      if (!validated.ok) return validated;
+      return ok({ puts: [next], value: next });
+    });
+  }
+
+  /**
    * S4 recurring completion: mark the task done AND create its next occurrence
    * in ONE transaction (a half-applied pair — done without a successor — is
    * exactly the data-loss shape this repo's one-transaction rule exists to

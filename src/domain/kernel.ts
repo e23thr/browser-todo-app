@@ -38,7 +38,8 @@ export type RuleId =
   | 'LIST_DELETE_TARGET_MISSING' // move-disposition target list missing or identical
   | 'TASK_MISSING' // mutation on a record absent from state (stale UI)
   | 'STALE_WRITE' // optimistic at-rest CAS conflict (ADR-007 D4.6): retryable, never a lost update
-  | 'TAG_INVALID'; // tag rename target fails the ADR-004 §6.2 tag-name rules
+  | 'TAG_INVALID' // tag rename target fails the ADR-004 §6.2 tag-name rules
+  | 'TASK_STATUS_INVALID'; // S6: archive expects done, restore expects archived
 
 export type RuleError = { code: 'RULE'; rule: RuleId; message: string };
 
