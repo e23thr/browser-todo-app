@@ -26,6 +26,9 @@ export const FIXTURES = {
   rootA: join(FIXTURES_DIR, 'dist-root-vA'),
 };
 
+/** The E10 encryption drill harness bundle (tests/e2e/encryption). */
+export const ENCRYPTION_DIR = join(FIXTURES_DIR, 'encryption');
+
 function run(command, args) {
   execFileSync(command, args, {
     cwd: REPO_ROOT,
@@ -64,6 +67,15 @@ export function buildFixtures(options = {}) {
     delete process.env.BASE_PATH;
     delete process.env.VITE_BUILD_ID;
   }
+
+  // E10 encryption drill harness (tests/e2e/encryption, ADR-007 browser
+  // contract): same once-per-run rule as the marked builds above. Its spec
+  // used to build this shared directory PER WORKER; with `fullyParallel` and
+  // 4 projects the vite builds ran concurrently with `emptyOutDir: true`,
+  // wiping each other's served bytes mid-run — the source of the
+  // `window.__e10 is undefined` / KAT-content flakes (t_585851b0).
+  rmSync(ENCRYPTION_DIR, { recursive: true, force: true });
+  run('npx', ['vite', 'build', '--config', 'tests/e2e/encryption/vite.config.mjs']);
 
   return FIXTURES;
 }

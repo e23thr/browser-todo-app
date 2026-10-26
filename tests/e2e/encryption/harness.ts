@@ -54,6 +54,14 @@ const D_WRAP_HEX =
   'eb25cbadbb627bd82634204898c3019c5a7e333c8ebb040e6800ca46d3c93c3ebc28cc3c6b271d0d75aea01494c93713';
 
 const KEY_ID = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+/**
+ * The list every seeded task references. The APP invariant is that a task's
+ * `listId` always resolves (tasks are created from a list context), so the
+ * harness store must carry the list row too — an orphan task would be
+ * quarantined by ADR-004 Stage B on any restore ("listId: references no
+ * accepted list record"), which is a harness artifact, not a product path.
+ */
+const SEED_LIST_ID = '01ARZ3NDEKTSV4RRFFQ69G5FM1';
 const AAD = utf8(`todo-enc/1|task|${KEY_ID}`);
 const JSON_PLAINTEXT = JSON.stringify({ title: 'Buy milk', notes: null, tags: [] });
 const KEY_BYTES = Uint8Array.from({ length: 32 }, (_, i) => i);
@@ -240,7 +248,7 @@ async function probeTxLifetime(db: AppDBImpl): Promise<TxProbe> {
           try {
             await t.put('tasks', {
               id: `probe-${label}-row`,
-              listId: '01ARZ3NDEKTSV4RRFFQ69G5FM1',
+              listId: SEED_LIST_ID,
               title: 'probe',
               notes: null,
               status: 'open',
@@ -265,7 +273,7 @@ async function probeTxLifetime(db: AppDBImpl): Promise<TxProbe> {
           try {
             await t.put('tasks', {
               id: `probe-raw-${label}`,
-              listId: '01ARZ3NDEKTSV4RRFFQ69G5FM1',
+              listId: SEED_LIST_ID,
               title: 'probe',
               notes: null,
               status: 'open',
@@ -354,7 +362,7 @@ function importDoc(): string {
     settings: { ...DEFAULT_SETTINGS, lastBackupAt: T },
     lists: [
       {
-        id: '01ARZ3NDEKTSV4RRFFQ69G5FM1',
+        id: SEED_LIST_ID,
         name: 'Personal',
         color: '#336699',
         sortOrder: 'h',
@@ -375,8 +383,8 @@ function importDoc(): string {
       },
     ],
     tasks: [
-      mk('01ARZ3NDEKTSV4RRFFQ69G5FA1', '01ARZ3NDEKTSV4RRFFQ69G5FM1', 'imported alpha'),
-      mk('01ARZ3NDEKTSV4RRFFQ69G5FA2', '01ARZ3NDEKTSV4RRFFQ69G5FM1', 'imported bravo'),
+      mk('01ARZ3NDEKTSV4RRFFQ69G5FA1', SEED_LIST_ID, 'imported alpha'),
+      mk('01ARZ3NDEKTSV4RRFFQ69G5FA2', SEED_LIST_ID, 'imported bravo'),
       mk('01ARZ3NDEKTSV4RRFFQ69G5FA3', '01ARZ3NDEKTSV4RRFFQ69G5FM2', 'imported charlie'),
     ],
     snapshots: [],
@@ -393,6 +401,19 @@ const harness = {
     if (!opened.ok) return { ok: false, error: opened.error.code };
     db = opened.value;
     bindDataSafetyDb(db);
+    // Seed the list row the drills' tasks reference (app invariant above).
+    // Pre-C1 here, so the enable sweep encrypts it exactly like real data.
+    const seeded = await db.put('lists', {
+      id: SEED_LIST_ID,
+      name: 'Personal',
+      color: '#336699',
+      sortOrder: 'h',
+      createdAt: 1_700_000_000_000,
+      updatedAt: 1_700_000_000_000,
+      deletedAt: null,
+      deviceId: db.deviceId,
+    });
+    if (!seeded.ok) return { ok: false, error: seeded.error.code };
     return { ok: true };
   },
 
@@ -440,7 +461,7 @@ const harness = {
     const handle = requireDb();
     const r = await handle.put('tasks', {
       id,
-      listId: '01ARZ3NDEKTSV4RRFFQ69G5FM1',
+      listId: SEED_LIST_ID,
       title,
       notes: null,
       status: 'open',
@@ -523,7 +544,7 @@ const harness = {
       try {
         await t.put('tasks', {
           id: '01ARZ3NDEKTSV4RRFFQ69G5FA9',
-          listId: '01ARZ3NDEKTSV4RRFFQ69G5FM1',
+          listId: SEED_LIST_ID,
           title: 'seamed probe',
           notes: null,
           status: 'open',
