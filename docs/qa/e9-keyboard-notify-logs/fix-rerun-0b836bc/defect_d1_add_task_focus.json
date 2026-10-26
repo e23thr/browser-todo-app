@@ -1,0 +1,7 @@
+{
+  "defect": "D1",
+  "opener": "view h1 (main [data-view-title])",
+  "expectedFocus": "inline composer title input (the action must hand straight to capture)",
+  "actualFocus": "input#P0-1-title.input",
+  "consoleErrors": []
+}

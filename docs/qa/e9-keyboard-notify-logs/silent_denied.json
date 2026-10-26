@@ -1,0 +1,9 @@
+{
+  "notificationsConstructed": 0,
+  "requestPermissionCalls": 0,
+  "toasts": 0,
+  "assertiveText": "",
+  "consoleErrors": [],
+  "statusLine": "Notifications are blocked in this browser. Tasks keep their due-date indicators instead.",
+  "dueBadge": "Due today (visible)"
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "shell": "inline(wide)",
+    "mode": "human(80ms/char)",
+    "ms": 1677,
+    "title": "Human capture run 1"
+  },
+  {
+    "shell": "inline(wide)",
+    "mode": "human(80ms/char)",
+    "ms": 1662,
+    "title": "Human capture run 2"
+  },
+  {
+    "shell": "inline(wide)",
+    "mode": "human(80ms/char)",
+    "ms": 1660,
+    "title": "Human capture run 3"
+  },
+  {
+    "shell": "inline(wide)",
+    "mode": "machine",
+    "ms": 41,
+    "title": "Machine capture reference"
+  },
+  {
+    "shell": "sheet(compact path)",
+    "mode": "human(80ms/char)",
+    "ms": 2404,
+    "title": "Sheet capture from settings"
+  }
+]

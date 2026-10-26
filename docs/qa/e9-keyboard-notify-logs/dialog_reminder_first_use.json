@@ -1,0 +1,9 @@
+{
+  "reminderAt": 1792981740000,
+  "fired": true,
+  "deltaMs": 2,
+  "requests": 1,
+  "permission": "granted",
+  "notificationsEnabled": true,
+  "consoleErrors": []
+}

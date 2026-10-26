@@ -1,0 +1,40 @@
+{
+  "helpRows": 4,
+  "combos": [
+    "Ctrl/⌘ + Shift + F",
+    "Ctrl/⌘ + Shift + 1",
+    "Ctrl/⌘ + Shift + 2",
+    "?"
+  ],
+  "widgetRows": 4,
+  "bindingsFired": [
+    "palette",
+    "quickAdd(focus)",
+    "search(hash)"
+  ],
+  "defaultPreventedForOwnChords": true,
+  "reservedCombosProbed": [
+    "Ctrl+k",
+    "Ctrl+s",
+    "Ctrl+Shift+p",
+    "Ctrl+Shift+n",
+    "Ctrl+Shift+e",
+    "Ctrl+Shift+s",
+    "/",
+    "'",
+    "g",
+    "d",
+    "n",
+    "h",
+    "j",
+    "e",
+    "F5",
+    "ArrowDown"
+  ],
+  "reservedIntercepted": 0,
+  "suppressions": [
+    "typing-?",
+    "dialog-open",
+    "auto-repeat"
+  ]
+}
