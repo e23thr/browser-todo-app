@@ -16,7 +16,8 @@
 
 import { openForTests } from '../../../src/storage/db';
 import type { AppDBImpl } from '../../../src/storage/db';
-import type { MigrationStep } from '../../../src/storage/migrations';
+import type { MigrationRegistry, MigrationStep } from '../../../src/storage/migrations';
+import { productionMigrations } from '../../../src/storage/migrations';
 import type {
   List,
   Meta,
@@ -203,6 +204,23 @@ function disarmPutFault(): void {
 /* ------------------------------------------------------------------ *
  * Migration seam (drill 3)                                             *
  * ------------------------------------------------------------------ */
+
+/**
+ * The drill's synthetic registry: the injected step (the notes backfill / the
+ * deliberate failure) stands in for the version-2 migration, and every
+ * PRODUCTION step above it rides along so the chain stays complete up to the
+ * APP baseline. `targetVersionOf` floors at APP_SCHEMA_VERSION (ADR-002 — an
+ * import always lands on the current schema), and `migrateRows` rejects a
+ * registry that lacks a unique step for any version in (from, target]: since
+ * the E7 schemaVersion-3 bump a registry stopping at `to: 2` can no longer
+ * upgrade a v1 document at all — it fails the completeness check BEFORE the
+ * injected step ever runs. Composing with `productionMigrations` keeps the
+ * seam's intent (drive one injected step through the real chain) intact and
+ * makes the failing case fail because of the INJECTED step, not a registry hole.
+ */
+function drillChain(step: MigrationStep): MigrationRegistry {
+  return [step, ...productionMigrations.filter((s) => s.to > step.to)];
+}
 
 const notesBackfill: MigrationStep = {
   to: 2,
@@ -453,9 +471,9 @@ const harness: E3Harness = {
   prepare(text, migration) {
     const migrations =
       migration === 'backfill'
-        ? [notesBackfill]
+        ? drillChain(notesBackfill)
         : migration === 'failing'
-          ? [failingStep]
+          ? drillChain(failingStep)
           : undefined;
     return prepareImport(text, migrations === undefined ? {} : { migrations });
   },

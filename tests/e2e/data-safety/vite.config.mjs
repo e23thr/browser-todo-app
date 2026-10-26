@@ -23,5 +23,17 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'es2022',
     sourcemap: false,
+    // ADR-004 §6.1: every drill runs with the browser context OFFLINE. The
+    // engine's lazy crypto imports (`await import('../crypto/…')`, c1ed860)
+    // would otherwise code-split the harness into chunks the offline page can
+    // no longer fetch mid-drill ("Failed to fetch dynamically imported
+    // module"). Inline them so the harness is one self-contained bundle,
+    // exactly as it was before the split — the §9.2 chunk rule governs the
+    // production `dist/`, not this test artifact.
+    rollupOptions: {
+      output: {
+        inlineDynamicImports: true,
+      },
+    },
   },
 });

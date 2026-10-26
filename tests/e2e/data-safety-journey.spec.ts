@@ -42,6 +42,7 @@ import type {
   ImportReport,
 } from '../../src/portability/types';
 import type { Result } from '../../src/storage/errors';
+import { APP_SCHEMA_VERSION } from '../../src/storage/schema';
 import type { Snapshot } from '../../src/storage/types';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -278,7 +279,15 @@ test('drill 3: old exports upgrade through the migration chain (failing step = z
   const v1doc = await buildDoc(page, 'v1');
 
   const upgraded = ok(await prepare(page, v1doc, 'backfill'));
-  expect(upgraded.fileSummary).toMatchObject({ schemaVersion: 1, upgradedTo: 2 });
+  // The chain lands on the APP baseline: the injected step stands in for the
+  // v2 migration and every production step above it rides along (targetVersionOf
+  // floors at APP_SCHEMA_VERSION — an import never lands on a stale schema),
+  // so the expectation tracks the schema version instead of a literal that
+  // goes stale on every schema bump (this drill broke exactly that way).
+  expect(upgraded.fileSummary).toMatchObject({
+    schemaVersion: 1,
+    upgradedTo: APP_SCHEMA_VERSION,
+  });
   // The v1 tasks carry NO notes field at all; the injected v1->v2 step backfilled ''.
   expect(upgraded.records.tasks.map((t) => t.notes)).toEqual(['', '', '']);
   expect(upgraded.records.tasks.every((t) => t.notes !== null)).toBe(true);
