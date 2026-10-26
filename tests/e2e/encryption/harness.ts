@@ -16,6 +16,9 @@
  *     ADR-007 Decision 4.6). Proving the divergence in a real browser rules
  *     out "fake-indexeddb is stricter than spec".
  *  3. `applyImport` / `restoreSnapshot` against a REAL encrypted store.
+ *  4. The repo write path (create + patch + setDone + tombstone through the
+ *     REAL `TaskRepo`/`ListRepo`) against a REAL encrypted store — the
+ *     day-to-day editing carriers of Decision 4.6 (t_a155ebf2).
  *
  * Test-only seams live here, never in `src/`.
  */
@@ -28,6 +31,9 @@ import { registerVault, vault as appVault } from '../../../src/crypto/vault';
 import { enableEncryption } from '../../../src/crypto/service';
 import { openForTests } from '../../../src/storage/db';
 import type { AppDBImpl } from '../../../src/storage/db';
+import { newUlid } from '../../../src/storage/id';
+import { ListRepo } from '../../../src/storage/repos/listRepo';
+import { TaskRepo } from '../../../src/storage/repos/taskRepo';
 import { DEFAULT_SETTINGS, isEncryptedRecord } from '../../../src/domain/model';
 import type { Task } from '../../../src/domain/model';
 import {
@@ -337,6 +343,16 @@ function requireDb(): AppDBImpl {
 
 export type EnableResult = { ok: boolean; detail: string; status: string };
 
+/** Repo-path drill result (t_a155ebf2): the day-to-day write surface under C1. */
+export type RepoDrillResult = {
+  ok: boolean;
+  error: string | null;
+  steps: { list: boolean; create: boolean; patch: boolean; setDone: boolean; remove: boolean };
+  atRest: { listEncrypted: boolean; taskEncrypted: boolean; taskTombstoned: boolean };
+  leak: { encrypted: boolean; titleLeaked: boolean };
+  loadAll: { lists: number; tasks: number; listName: string | null };
+};
+
 /** Minimal valid document for prepareImport, built by the PRODUCTION builder. */
 function importDoc(): string {
   const T = 1_700_000_000_000;
@@ -514,6 +530,84 @@ const harness = {
       takeOk: true,
       restoreOk: restored.ok,
       restoreError: restored.ok ? null : JSON.stringify(restored.error),
+    };
+  },
+
+  /**
+   * REPO-PATH DRILL (t_a155ebf2, ADR-007 Decision 4.6): the REAL `ListRepo` /
+   * `TaskRepo` write surface — create + patch + setDone + remove(tombstone) —
+   * against the REAL encrypted store. This is the day-to-day editing path that
+   * used to await the row seam's WebCrypto inside its `db.tx` (E10-Q6 class,
+   * silently fine on chromium only); it now stages seals outside and commits
+   * verbatim in one `txRaw`, so it must succeed on EVERY engine.
+   */
+  async repoDrill(): Promise<RepoDrillResult> {
+    const handle = requireDb();
+    const deps = { db: handle, clock: now, ids: () => newUlid() };
+    const lists = new ListRepo(deps);
+    const tasks = new TaskRepo(deps);
+    const steps = { list: false, create: false, patch: false, setDone: false, remove: false };
+    const failed = (step: string, error: unknown): RepoDrillResult => ({
+      ok: false,
+      error: `${step}: ${JSON.stringify(error)}`,
+      steps,
+      atRest: { listEncrypted: false, taskEncrypted: false, taskTombstoned: false },
+      leak: { encrypted: false, titleLeaked: false },
+      loadAll: { lists: -1, tasks: -1, listName: null },
+    });
+
+    const list = await lists.create({ name: 'Repo drill list', color: '#336699' });
+    if (!list.ok) return failed('list.create', list.error);
+    steps.list = true;
+    const created = await tasks.create({
+      listId: list.value.id,
+      title: 'repo alpha secret',
+      notes: null,
+      priority: 'P3',
+      tags: [],
+    });
+    if (!created.ok) return failed('task.create', created.error);
+    steps.create = true;
+    const patched = await tasks.patch(created.value.id, { title: 'repo alpha retitle secret' });
+    if (!patched.ok) return failed('task.patch', patched.error);
+    steps.patch = true;
+    const done = await tasks.setDone(created.value.id, true);
+    if (!done.ok) return failed('task.setDone', done.error);
+    steps.setDone = true;
+    const removed = await tasks.remove(created.value.id, { mode: 'cascade' });
+    if (!removed.ok) return failed('task.remove', removed.error);
+    steps.remove = true;
+
+    // At-rest inspection over the RAW bytes (never through the seam).
+    const rawTasks = await handle.readUnfiltered('tasks');
+    const rawLists = await handle.readUnfiltered('lists');
+    const taskRow = rawTasks.ok ? rawTasks.value.find((r) => r.id === created.value.id) : undefined;
+    const listRow = rawLists.ok ? rawLists.value.find((r) => r.id === list.value.id) : undefined;
+    const taskText = taskRow === undefined ? '' : JSON.stringify(taskRow);
+    // Domain reads still decrypt correctly after the drill.
+    const loaded = await tasks.loadAll();
+    const loadedList = loaded.ok
+      ? loaded.value.lists.find((l) => l.id === list.value.id)
+      : undefined;
+    return {
+      ok: true,
+      error: null,
+      steps,
+      atRest: {
+        listEncrypted: listRow !== undefined && isEncryptedRecord(listRow),
+        taskEncrypted: taskRow !== undefined && isEncryptedRecord(taskRow),
+        taskTombstoned:
+          taskRow !== undefined && (taskRow as { deletedAt: number | null }).deletedAt !== null,
+      },
+      leak: {
+        encrypted: taskRow !== undefined && isEncryptedRecord(taskRow),
+        titleLeaked: taskText.includes('repo alpha'), // both title versions
+      },
+      loadAll: {
+        lists: loaded.ok ? loaded.value.lists.length : -1,
+        tasks: loaded.ok ? loaded.value.tasks.length : -1,
+        listName: loadedList?.name ?? null,
+      },
     };
   },
 

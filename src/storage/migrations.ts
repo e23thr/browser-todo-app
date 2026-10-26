@@ -265,11 +265,21 @@ export async function runMigrations(
     return err(migrationFailed(from, target, snap.error));
   }
 
+  // ADR-007 Decision 4.6 (E10-Q6 carriers, t_a155ebf2): migration steps are
+  // AT-REST consumers — the row-seam contract has always listed "migrations via
+  // txRaw" (`cryptoSeam.ts` header), and the chain now actually runs there, so
+  // a registered seam can never transform a step's rows. Reachability of the
+  // v3 step with the seam live is doubly impossible in production: (a) boot
+  // runs the chain BEFORE `features/crypto/wiring` registers the row seam, and
+  // (b) a C1-on store requires `crypto_state` (idbVersion 3 / schemaVersion 4),
+  // so a database below v3 cannot hold ciphertext rows. (`db` is the concrete
+  // `AppDBImpl` here, so `txRaw` always exists — no double-fallback needed.)
+  const runStepTx = db.txRaw.bind(db);
   for (const step of chain) {
     const stores: StoreName[] = step.stores.includes('meta')
       ? step.stores
       : [...step.stores, 'meta'];
-    const stepped = await db.tx(stores, 'readwrite', (t) => executeStep(t, step));
+    const stepped = await runStepTx(stores, 'readwrite', (t) => executeStep(t, step));
     if (!stepped.ok) {
       // Interrupted mid-chain: roll back to the pre-migration snapshot.
       const rollback = await restoreSnapshot(db, snap.value.id, codec);

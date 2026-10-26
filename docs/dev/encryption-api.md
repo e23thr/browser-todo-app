@@ -71,13 +71,27 @@ deviations are additive and listed in §4 — nothing normative was weakened).
    Decision 4.6, E10-Q6 / t_361487a7).** firefox/webkit deactivate a `readwrite`
    transaction across a `crypto.subtle` await (chromium survives only because it
    resolves the small seal as a microtask — a scheduling accident, not a
-   contract), so multi-row seamed applies STAGE every row first
+   contract), so seamed applies STAGE every row first
    (`AppDBImpl.sealForWrite` — the same transform `put` applies, including the
    locked-write `BLOCKED` refusal) and write at-rest bytes verbatim in one
-   `txRaw`. `applyImport`/`restoreSnapshot` are staged this way; the remaining
-   seamed-in-tx carriers (`Tx.put`/`get`/`getAll` via `repos/support.ts`
-   `withTx`, `purge.ts` seamed reads, the schema-v3 migration step) must follow
-   before C1 is cross-browser for day-to-day editing (follow-up of t_361487a7).
+   `txRaw`. As of t_a155ebf2 this covers EVERY carrier:
+   - `applyImport`/`restoreSnapshot` (t_361487a7), and the whole repo surface
+     (`repos/support.ts`): reads go through the safe surface (`db.get` /
+     `db.getAll` / `db.query` — these decrypt AFTER their own tx); single-row
+     read-modify-writes (patch/setDone/move/rename/recolor) commit via
+     `guardedSealedPut` — seal outside, ONE `txRaw` put, guarded by the
+     envelope-level `updatedAt` stamp (mismatch → typed retryable
+     `RULE: STALE_WRITE`; a concurrent write is never silently lost); bulk
+     writes (remove cascade, rebalance hatch, sweepTag, upsertImported) stage
+     every row (`stageAll`) and commit verbatim in one `txRaw`.
+   - `purge.ts`: `txRaw` — the pass only reads envelope-level fields (`id`,
+     `deletedAt` — plaintext in both row shapes), so behaviour is identical.
+   - the boot migration chain: steps run over at-rest rows via `txRaw` (the
+     "migrations via `txRaw`" half of the `cryptoSeam.ts` contract). The v3
+     step is structurally unreachable with the seam live: C1-on requires
+     `crypto_state` (idbVersion 3 / schemaVersion 4), and boot runs the chain
+     BEFORE `features/crypto/wiring` registers the seam — pinned by a
+     macrotask-seam boot probe (`tests/unit/storage/e10-seam-carriers.test.ts`).
 
 ## 3. Dependency & budget audit (testing contract: "attach to the impl card")
 

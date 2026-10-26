@@ -414,11 +414,23 @@ Consequences:
 
 - Multi-row seamed applies are engine-independent — chromium's microtask resolution is a
   scheduling accident, not a contract, and must never again be load-bearing.
-- `Tx.put`/`Tx.get`/`Tx.getAll` still run the seam inside the transaction for the app's
-  single-row repo surface (`repos/support.ts` `withTx`), `purge.ts`'s seamed reads, and the
-  schema-v3 migration step — the same await-in-tx hazard, tracked as follow-ups of
-  t_361487a7. They must migrate to the stage-then-`txRaw` pattern before C1 can be called
-  cross-browser for day-to-day editing.
+- **Follow-up carried through (t_a155ebf2): the repo surface, `purge.ts` and the migration
+  chain no longer run the seam inside a transaction either.** Repo reads use the safe
+  surface (`db.get`/`getAll`/`query` — decrypt after their own tx); single-row
+  read-modify-writes (patch/setDone/move/rename/recolor) commit via `guardedSealedPut` —
+  seal outside, ONE `txRaw` put, guarded by the envelope-level `updatedAt` stamp (mismatch →
+  typed retryable `RULE: STALE_WRITE`, so the pessimistic single-tx guard's loss can never
+  cost a lost update); bulk writes (remove cascade, rebalance hatch, sweepTag,
+  upsertImported) stage every row and commit verbatim in one `txRaw` — the same pattern as
+  `runSweep`/`applyImport`. `purge.ts` reads envelope-level fields only (`id`, `deletedAt` —
+  plaintext in both row shapes), so its pass runs over `txRaw` with identical behaviour. The
+  migration chain runs its steps over `txRaw` — the "migrations via `txRaw`" half of the
+  `cryptoSeam.ts` contract is now real; the v3 step is structurally unreachable with the seam
+  live (C1 requires `crypto_state` = schemaVersion 4; boot migrates before
+  `features/crypto/wiring` registers the seam), pinned by a macrotask-seam boot probe.
+  At-rest bytes format (Decision 4.1) and every write set's ONE-transaction atomicity are
+  unchanged; the e2e repo-path drill (create + patch + setDone + tombstone into a REAL
+  encrypted store) passes on all 4 playwright projects.
 - The rule ratifies what the code already did deliberately elsewhere: `queryWith` decrypts
   AFTER `base.done`, and the C1 migration sweep (`src/crypto/migrate.ts`) transforms outside
   and applies through `txRaw`.

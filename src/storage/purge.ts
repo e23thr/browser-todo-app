@@ -83,8 +83,16 @@ export async function purgeTombstones(
   // deletions had committed, so a stamp failure reported QUOTA_EXCEEDED with
   // rows already purged and the count lost). `meta` rides along only in auto
   // mode — explicit passes never touch the throttle.
+  //
+  // ADR-007 Decision 4.6 (E10-Q6 carriers, t_a155ebf2): the pass runs over the
+  // AT-REST transaction — purge only reads envelope-level fields (`id`,
+  // `deletedAt`, both plaintext in the plain AND encrypted row shapes) and
+  // deletes, so behaviour is identical with C1 on, but no row-seam crypto ever
+  // runs inside the live transaction (firefox/webkit deactivate across it).
+  // Fallback: a double without `txRaw` is raw under `tx` (sync/engine.ts rule).
   const stores: StoreName[] = mode === 'auto' ? ['lists', 'tasks', 'meta'] : ['lists', 'tasks'];
-  const result = await db.tx(stores, 'readwrite', async (t) => {
+  const runTx = db.txRaw === undefined ? db.tx.bind(db) : db.txRaw.bind(db);
+  const result = await runTx(stores, 'readwrite', async (t) => {
     for (const store of TOMBSTONE_STORES) {
       const rows = await t.getAll(store);
       for (const row of rows) {

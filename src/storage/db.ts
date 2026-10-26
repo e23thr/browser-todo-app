@@ -130,6 +130,18 @@ export interface AppDB {
     spec?: QuerySpec,
   ) => Promise<Result<Row<K>[], StorageError>>;
 
+  /**
+   * Stage ONE domain row to its at-rest form WITHOUT any transaction open
+   * (ADR-007 Decision 4.6). Optional on the interface (`AppDBImpl` implements
+   * it; test doubles may omit it — callers treat the seal as identity, which is
+   * correct for a non-transforming double). Repo write paths stage with this
+   * and write the result verbatim in one `txRaw`.
+   */
+  sealForWrite?: <K extends StoreName>(
+    store: K,
+    row: Row<K>,
+  ) => Promise<Result<Row<K>, StorageError>>;
+
   get<K extends StoreName>(
     store: K,
     key: string,
@@ -556,9 +568,13 @@ class TxImpl implements Tx {
   // work awaited INSIDE a live transaction. firefox/webkit deactivate the tx
   // across such an await (the continuation lands after the auto-commit window),
   // so seamed reads/writes through `Tx` are only reliable on engines that
-  // resolve WebCrypto in a microtask (chromium). Multi-row seamed applies must
-  // stage first (`AppDBImpl.sealForWrite`) and run `txRaw`; the remaining
-  // seamed-in-tx carriers are tracked as follow-ups of t_361487a7.
+  // resolve WebCrypto in a microtask (chromium). As of t_a155ebf2 NO production
+  // carrier awaits seam work through `Tx` anymore: the repo surface stages
+  // outside (`sealForWrite`) and commits verbatim via `txRaw` (stamp-guarded
+  // for single-row RMW), `purge.ts` and the migration steps run over `txRaw`,
+  // and `settings`/`meta`/… are unseamed stores. The seamed `Tx` surface stays
+  // for the app's own single-store reads and as the non-transforming-double
+  // fallback — never again a load-bearing path for `tasks`/`lists` writes.
 
   async get<K extends StoreName>(store: K, key: string): Promise<Row<K> | undefined> {
     const k = store === 'meta' ? META_KEY : key;

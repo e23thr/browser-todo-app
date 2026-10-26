@@ -37,6 +37,7 @@ export type RuleId =
   | 'REORDER_TARGET_NOT_IN_GROUP' // move target ids must belong to the declared group
   | 'LIST_DELETE_TARGET_MISSING' // move-disposition target list missing or identical
   | 'TASK_MISSING' // mutation on a record absent from state (stale UI)
+  | 'STALE_WRITE' // optimistic stamp-guard conflict (ADR-007 D4.6): retryable, never a lost update
   | 'TAG_INVALID'; // tag rename target fails the ADR-004 §6.2 tag-name rules
 
 export type RuleError = { code: 'RULE'; rule: RuleId; message: string };

@@ -21,6 +21,9 @@
  *     engine divergence as history.
  *  3. The real `applyImport`/`restoreSnapshot` paths against a REAL encrypted
  *     store: measured, not assumed.
+ *  4. The real repo write path (create + patch + setDone + tombstone) against
+ *     a REAL encrypted store — the day-to-day carriers of Decision 4.6
+ *     (t_a155ebf2), asserted on EVERY project with no engine scoping.
  *
  * Bundled once into `tests/e2e/.fixtures/encryption/` by the harness vite
  * config and served by the ADR-005 fixture server, offline.
@@ -36,7 +39,7 @@ import { fileURLToPath } from 'node:url';
 
 import { expect, test, type Page } from '@playwright/test';
 
-import type { TxProbe } from './encryption/harness';
+import type { RepoDrillResult, TxProbe } from './encryption/harness';
 import type { StaticServer } from './fixtures/static-server.mjs';
 import { startFixtureServer } from './sw-utils';
 
@@ -238,6 +241,47 @@ test.describe('E10 — encryption at rest in a real browser', () => {
     expect(summary.tasks).toBeGreaterThanOrEqual(1);
     expect(summary.encrypted).toBe(summary.tasks);
     expect(summary.status).toBe('on');
+
+    await page.evaluate(() => window.__e10.close());
+  });
+
+  test('repo write path (create + patch + setDone + tombstone) survives an encrypted store (D4.6)', async ({
+    page,
+  }, testInfo) => {
+    await boot(page, `e10-repo-${String(testInfo.workerIndex)}`);
+
+    // C1 on, real PBKDF2, real pre-migration snapshot — then the REAL repos.
+    const enabled = await page.evaluate(() => window.__e10.enable());
+    expect(enabled.ok, `enable failed: ${enabled.detail}`).toBe(true);
+    expect(enabled.status).toBe('on');
+
+    // Day-to-day editing (t_a155ebf2): every repo write stages its seal OUTSIDE
+    // the transaction and commits verbatim in one txRaw, so this drill must
+    // pass on EVERY engine — no per-engine pin here, deliberately (engine
+    // scoping is exactly what t_361487a7 removed from this spec).
+    const drill: RepoDrillResult = await page.evaluate(() => window.__e10.repoDrill());
+    testInfo.annotations.push({ type: 'repo-drill', description: JSON.stringify(drill) });
+    expect(drill.ok, `repo drill failed: ${String(drill.error)}`).toBe(true);
+    expect(drill.steps).toEqual({
+      list: true,
+      create: true,
+      patch: true,
+      setDone: true,
+      remove: true,
+    });
+
+    // At rest: both rows ciphertext (the tombstone included — its payload is
+    // encrypted, only the envelope fields are plaintext), no title leaked.
+    expect(drill.atRest.listEncrypted, 'list row must be ciphertext at rest').toBe(true);
+    expect(drill.atRest.taskEncrypted, 'task row must be ciphertext at rest').toBe(true);
+    expect(drill.atRest.taskTombstoned, 'remove must leave a tombstone').toBe(true);
+    expect(drill.leak.encrypted).toBe(true);
+    expect(drill.leak.titleLeaked, 'no repo title may appear in at-rest bytes').toBe(false);
+
+    // Domain reads still decrypt: the drill list is visible, the tombstoned
+    // task is filtered out of loadAll.
+    expect(drill.loadAll.listName).toBe('Repo drill list');
+    expect(drill.loadAll.tasks).toBe(0);
 
     await page.evaluate(() => window.__e10.close());
   });
