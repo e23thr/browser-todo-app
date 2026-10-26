@@ -13,9 +13,12 @@
  *     slot-binding and AAD/tamper negatives.
  *  2. IndexedDB transaction lifetime: a microtask await keeps the transaction
  *     alive; a macrotask (`setTimeout`) or `crypto.subtle` await deactivates
- *     it. This is what makes `applyImport`'s seamed `db.tx` write fail inside
- *     an encrypted store (defect E10-Q6) — proven here in Chromium so the
- *     finding cannot be blamed on fake-indexeddb being stricter than spec.
+ *     it on engines that do not resolve WebCrypto as a microtask (firefox,
+ *     webkit — and fake-indexeddb). This is what made `applyImport`'s seamed
+ *     write fail inside an encrypted store (defect E10-Q6): the product now
+ *     seals rows OUTSIDE the transaction (ADR-007 Decision 4.6, t_361487a7),
+ *     so the drills below pass on every engine and the probe pins the raw
+ *     engine divergence as history.
  *  3. The real `applyImport`/`restoreSnapshot` paths against a REAL encrypted
  *     store: measured, not assumed.
  *
@@ -135,21 +138,7 @@ test.describe('E10 — encryption at rest in a real browser', () => {
     await page.evaluate(() => window.__e10.close());
   });
 
-  test('import into an encrypted store re-encrypts on write (D4.5) — real seamed tx in Chromium', async ({
-    page,
-  }, testInfo) => {
-    // E10-Q6 ENGINE DIVERGENCE (t_585851b0 → product card t_361487a7): the
-    // seamed write awaits crypto.subtle INSIDE the live readwrite tx.
-    // Chromium resolves the small digest/seal as a microtask (the tx survives,
-    // the apply lands); firefox deactivates the tx (InvalidStateError) and
-    // webkit (TransactionInactiveError), so `applyImport`'s ONE-tx apply
-    // silently drops its writes there with C1 on. The D4.5 drill is therefore
-    // a CHROMIUM-scoped browser contract until the product-side seam fix
-    // lands; the KAT and tx-lifetime probes still run on every engine.
-    test.skip(
-      !testInfo.project.name.startsWith('chromium'),
-      'encrypted-store apply is Chromium-only until the E10-Q6 cross-browser seam fix lands (t_361487a7)',
-    );
+  test('import into an encrypted store re-encrypts on write (D4.5)', async ({ page }, testInfo) => {
     await boot(page, `e10-import-${String(testInfo.workerIndex)}`);
 
     // C1 on, real PBKDF2, real pre-migration snapshot.
@@ -169,16 +158,26 @@ test.describe('E10 — encryption at rest in a real browser', () => {
     expect(leak.encrypted).toBe(true);
     expect(leak.titleLeaked, 'plaintext title must not appear in at-rest bytes').toBe(false);
 
-    // The seamed transaction pattern in isolation (crypto before put).
+    // The seamed transaction pattern in isolation (crypto awaited INSIDE a live
+    // tx — what the product no longer does). Pinned per engine, because the
+    // divergence IS the E10-Q6 mechanism: chromium resolves the small digest
+    // as a microtask (the put survives), firefox/webkit deactivate the tx and
+    // refuse the put (InvalidStateError / TransactionInactiveError). fake-
+    // indexeddb sides with firefox/webkit — the old unit-level Q6 signal was a
+    // TRUE positive there, and only looked like one on Chromium.
     const seamedThrow = await page.evaluate(() => window.__e10.probeSeamedTx());
     testInfo.annotations.push({ type: 'seamed-tx', description: String(seamedThrow) });
-    // Chromium resolves a small crypto.subtle digest as a microtask, so the
-    // seamed put survives — this is the divergence from fake-indexeddb that
-    // made the unit-level Q6 probe a false positive.
-    expect(
-      seamedThrow,
-      'seamed tx + async crypto must not deactivate the tx in Chromium',
-    ).toBeNull();
+    if (testInfo.project.name.startsWith('chromium')) {
+      expect(
+        seamedThrow,
+        'chromium resolves the digest as a microtask — the seamed put survives',
+      ).toBeNull();
+    } else {
+      expect(
+        ['InvalidStateError', 'TransactionInactiveError'],
+        `firefox/webkit must deactivate the seamed tx (got ${String(seamedThrow)})`,
+      ).toContain(seamedThrow);
+    }
 
     // The real feature: import 3 plaintext records into the ENCRYPTED store.
     const imported = await page.evaluate(() => window.__e10.importIntoEncrypted());
@@ -210,14 +209,6 @@ test.describe('E10 — encryption at rest in a real browser', () => {
   test('pre-migration snapshot restore rolls back an encrypted store (D4.4/D6.1)', async ({
     page,
   }, testInfo) => {
-    // Same E10-Q6 engine divergence as the import drill above (product card
-    // t_361487a7): restore IS the import pipeline, so the ONE-tx seamed apply
-    // drops its writes on firefox/webkit with C1 on. Chromium-scoped until the
-    // product-side seam fix lands.
-    test.skip(
-      !testInfo.project.name.startsWith('chromium'),
-      'encrypted-store restore is Chromium-only until the E10-Q6 cross-browser seam fix lands (t_361487a7)',
-    );
     await boot(page, `e10-restore-${String(testInfo.workerIndex)}`);
 
     const enabled = await page.evaluate(() => window.__e10.enable());

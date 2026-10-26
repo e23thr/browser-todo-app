@@ -6,6 +6,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { AppDBImpl } from '../../../src/storage/db';
+import { blocked } from '../../../src/storage/errors';
+import {
+  resetRowCryptoSeam,
+  setRowCryptoSeam,
+  type RowCryptoSeam,
+} from '../../../src/storage/cryptoSeam';
 import { DEFAULT_SETTINGS } from '../../../src/domain/model';
 import {
   applyImport,
@@ -289,5 +295,126 @@ describe('fixture corpus sanity', () => {
   it('keeps hostile fixtures as raw text (never imported as JSON modules)', () => {
     const raw = fixture('drill4-proto-pollution.json');
     expect(raw).toContain('"__proto__"');
+  });
+});
+
+/* -------------- E10-Q6: seam staging vs transaction lifetime -------------- */
+
+/**
+ * A seam whose writeRow crosses a MACROTASK boundary — strictly harder on a
+ * live IndexedDB transaction than firefox/webkit's WebCrypto (which is exactly
+ * where the real engines deactivate the tx: E10-Q6, t_361487a7). Before the
+ * staging fix this pattern silently dropped the seamed writes of `applyImport`
+ * / `restoreSnapshot` on every engine that does not resolve WebCrypto as a
+ * microtask (chromium only). The contract under test: the seam's async work
+ * NEVER runs inside the apply transaction — the ONE tx writes at-rest bytes
+ * verbatim and is atomic over deletes + puts (ADR-004 Decision 5).
+ */
+type SeamCall = { store: string; id: string };
+
+function macrotaskSeam(options: { refuseOn?: number; calls: SeamCall[] }): RowCryptoSeam {
+  let seen = 0;
+  return {
+    readRow: async (_store, row) => ({ ok: true, value: row }),
+    writeRow: async (store, row) => {
+      seen += 1;
+      const rawId = (row as { id?: unknown }).id;
+      const id = typeof rawId === 'string' ? rawId : '';
+      options.calls.push({ store, id });
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      if (options.refuseOn === seen) return { ok: false, error: blocked('seam refused') };
+      return {
+        ok: true,
+        value: { ...(row as Record<string, unknown>), sealedBySeam: id },
+      };
+    },
+  };
+}
+
+describe('applyImport — seam staging outside the transaction (E10-Q6)', () => {
+  const calls: SeamCall[] = [];
+  afterEach(() => {
+    resetRowCryptoSeam();
+    calls.length = 0;
+  });
+
+  it('a macrotask seam cannot deactivate the apply tx — every row lands sealed, none dropped', async () => {
+    const db = await openSeeded();
+    setRowCryptoSeam(macrotaskSeam({ calls }));
+
+    const prepared = await prepareImport(makeDocText({ ...seedCorpus() }));
+    if (!prepared.ok) throw new Error('prepare failed');
+    const applied = await applyImport(prepared.value, { db, now: () => T0 });
+    expect(applied.ok, `apply must survive a macrotask seam: ${JSON.stringify(applied)}`).toBe(
+      true,
+    );
+
+    // Exactly one seal per seamed row (no double-seal), all before the tx put.
+    expect(calls.map((c) => c.store).sort()).toEqual(['lists', 'lists', 'tasks', 'tasks', 'tasks']);
+
+    // Nothing dropped: the corpus is fully present AND every row is the sealed
+    // shape the seam staged (the tx wrote at-rest bytes verbatim).
+    const lists = await db.readUnfiltered('lists');
+    const tasks = await db.readUnfiltered('tasks');
+    expect(lists.ok && lists.value).toHaveLength(2);
+    expect(tasks.ok && tasks.value).toHaveLength(3);
+    for (const row of [...(lists.ok ? lists.value : []), ...(tasks.ok ? tasks.value : [])]) {
+      expect((row as { sealedBySeam?: string }).sealedBySeam).toBe(row.id);
+    }
+  });
+
+  it('restoreSnapshot round-trips through the same staging (no seamed write is dropped)', async () => {
+    // A resolvable pair (openSeeded's default task deliberately dangles and
+    // would be quarantined by restore's Stage B — see drill 1's comment).
+    const db = await openFixtureDb(uniqueDbName('seam-undo'));
+    opened.push(db);
+    const l1 = makeList({ id: fixtureId(10) });
+    const t1 = makeTask({ id: fixtureId(20), listId: l1.id });
+    await db.put('lists', l1);
+    await db.put('tasks', t1);
+    await db.put('settings', makeSettings());
+    const seededBefore = await rowTexts(db);
+    setRowCryptoSeam(macrotaskSeam({ calls }));
+
+    const prepared = await prepareImport(makeDocText({ ...seedCorpus() }));
+    if (!prepared.ok) throw new Error('prepare failed');
+    const applied = await applyImport(prepared.value, { db, now: () => T0 });
+    if (!applied.ok || applied.value.undoSnapshot === null) throw new Error('apply failed');
+
+    const restored = await restoreSnapshot(applied.value.undoSnapshot.id, {
+      db,
+      now: () => T0,
+    });
+    expect(restored.ok, `restore must survive a macrotask seam: ${JSON.stringify(restored)}`).toBe(
+      true,
+    );
+    // The pre-import state is back (REPLACE of the corpus rows), rows sealed.
+    const lists = await db.readUnfiltered('lists');
+    const tasks = await db.readUnfiltered('tasks');
+    expect(lists.ok && lists.value).toHaveLength(1);
+    expect(tasks.ok && tasks.value).toHaveLength(1);
+    for (const row of [...(lists.ok ? lists.value : []), ...(tasks.ok ? tasks.value : [])]) {
+      expect((row as { sealedBySeam?: string }).sealedBySeam).toBe(row.id);
+    }
+    const after = await rowTexts(db);
+    expect(after.settings).toBe(seededBefore.settings);
+  });
+
+  it('a seam refusal during staging aborts BEFORE any write (zero side effects)', async () => {
+    const db = await openSeeded();
+    const before = await rowTexts(db);
+    // Refuse the second staged row: with staging, the transaction is never
+    // even opened — the store must be byte-identical afterwards.
+    setRowCryptoSeam(macrotaskSeam({ calls, refuseOn: 2 }));
+
+    const prepared = await prepareImport(makeDocText({ ...seedCorpus() }));
+    if (!prepared.ok) throw new Error('prepare failed');
+    const applied = await applyImport(prepared.value, { db, now: () => T0 });
+    expect(applied.ok).toBe(false);
+    // BLOCKED crosses as the typed UNKNOWN-with-cause (toImportError), never a
+    // silent partial apply.
+    if (!applied.ok) expect(applied.error.code).toBe('UNKNOWN');
+    expect(await rowTexts(db)).toEqual(before);
+    expect(calls).toHaveLength(2); // staging stopped at the refusal
   });
 });

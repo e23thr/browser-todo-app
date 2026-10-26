@@ -20,6 +20,7 @@
 import { err, ok } from '../storage/errors';
 import type { Result, StorageError } from '../storage/errors';
 import type { AppDBImpl } from '../storage/db';
+import type { Row } from '../storage/types';
 import { productionMigrations, targetVersionOf } from '../storage/migrations';
 import type { MigrationRegistry } from '../storage/migrations';
 import { readImportText, parseBackupDocument } from './backup-document';
@@ -197,28 +198,50 @@ export async function applyImport(
     for (const row of existing.value) staleIds.push({ store, id: row.id });
   }
 
-  const applied = await db.tx(['lists', 'tasks', 'settings'], 'readwrite', async (t) => {
+  // ADR-007 Decision 4.5 (Decision 7.2 stamping applies): into an encrypted
+  // store every imported record is re-encrypted on write with a FRESH version
+  // stamp — the same content-shaping rule as the migration sweep, so the new
+  // ciphertext wins LWW everywhere instead of byte-diverging at equal stamps.
+  // Pre-C1 stores keep the M11 verbatim-stamps contract unchanged.
+  const stampImport = vault.status !== 'off';
+  const clock = opts.now ?? Date.now;
+
+  // ADR-007 Decision 4.6 (E10-Q6): every row is sealed OUTSIDE the transaction
+  // and the ONE readwrite transaction writes the at-rest bytes VERBATIM. The
+  // seam's WebCrypto is real async work — awaiting it inside a live IndexedDB
+  // transaction deactivates the transaction on firefox/webkit, which dropped
+  // (or refused) the seamed writes while the hard-deletes still committed.
+  // Staging is pure: a refusal here has touched nothing (zero side effects),
+  // and the tx below still covers deletes + puts together (ADR-004 Decision
+  // 5's ONE-transaction atomicity is unchanged).
+  const stagedLists: Row<'lists'>[] = [];
+  const stagedTasks: Row<'tasks'>[] = [];
+  for (const list of plan.records.lists) {
+    const sealed = await db.sealForWrite(
+      'lists',
+      stampImport ? { ...list, updatedAt: clock(), deviceId: db.deviceId } : list,
+    );
+    if (!sealed.ok) return err(toImportError(sealed.error));
+    stagedLists.push(sealed.value);
+  }
+  for (const task of plan.records.tasks) {
+    const sealed = await db.sealForWrite(
+      'tasks',
+      stampImport ? { ...task, updatedAt: clock(), deviceId: db.deviceId } : task,
+    );
+    if (!sealed.ok) return err(toImportError(sealed.error));
+    stagedTasks.push(sealed.value);
+  }
+
+  const applied = await db.txRaw(['lists', 'tasks', 'settings'], 'readwrite', async (t) => {
     for (const { store, id } of staleIds) {
       await t.delete(store, id);
     }
-    // ADR-007 Decision 4.5 (Decision 7.2 stamping applies): into an encrypted
-    // store every imported record is re-encrypted on write with a FRESH version
-    // stamp — the same content-shaping rule as the migration sweep, so the new
-    // ciphertext wins LWW everywhere instead of byte-diverging at equal stamps.
-    // Pre-C1 stores keep the M11 verbatim-stamps contract unchanged.
-    const stampImport = vault.status !== 'off';
-    const clock = opts.now ?? Date.now;
-    for (const list of plan.records.lists) {
-      await t.put(
-        'lists',
-        stampImport ? { ...list, updatedAt: clock(), deviceId: db.deviceId } : list,
-      );
+    for (const row of stagedLists) {
+      await t.put('lists', row);
     }
-    for (const task of plan.records.tasks) {
-      await t.put(
-        'tasks',
-        stampImport ? { ...task, updatedAt: clock(), deviceId: db.deviceId } : task,
-      );
+    for (const row of stagedTasks) {
+      await t.put('tasks', row);
     }
     if (plan.records.settings !== null) await t.put('settings', plan.records.settings);
     return ok(undefined);

@@ -467,6 +467,31 @@ export class AppDBImpl implements AppDB {
     return this.putWith(store, row, false);
   }
 
+  /**
+   * Stage ONE domain row to its at-rest form WITHOUT any transaction open
+   * (ADR-007 Decision 4.6 / E10-Q6): the row seam's WebCrypto is real async
+   * work, and a transaction that awaits it deactivates on firefox/webkit —
+   * the continuation lands after the auto-commit window, so the remaining
+   * writes are refused or silently dropped. Multi-row seamed applies (import /
+   * snapshot restore) stage EVERY row with this first, then write the results
+   * VERBATIM in one `txRaw` — ADR-004 Decision 5's ONE-transaction atomicity
+   * is unchanged, because staging is pure (no side effects, nothing to roll
+   * back) and the tx still covers deletes + puts together.
+   */
+  async sealForWrite<K extends StoreName>(
+    store: K,
+    row: Row<K>,
+  ): Promise<Result<Row<K>, StorageError>> {
+    if (!primaryKeyOk(store, row)) {
+      return err(invalidRecord(store, ['missing or malformed primary key'], rowKey(store, row)));
+    }
+    const seam = store === 'tasks' || store === 'lists' ? rowCryptoSeam() : null;
+    if (seam === null) return ok(row);
+    const sealed = await seam.writeRow(store as 'tasks' | 'lists', row);
+    if (!sealed.ok) return err(sealed.error);
+    return ok(sealed.value as Row<K>);
+  }
+
   async putWith<K extends StoreName>(
     store: K,
     row: Row<K>,
@@ -474,16 +499,16 @@ export class AppDBImpl implements AppDB {
   ): Promise<Result<void, StorageError>> {
     if (this.#closed) return err(unknownError(new Error('AppDB is closed')));
     if (this.#writeGuard !== null) return err(this.#writeGuard);
-    if (!primaryKeyOk(store, row)) {
-      return err(invalidRecord(store, ['missing or malformed primary key'], rowKey(store, row)));
+    let staged: Result<Row<K>, StorageError>;
+    if (transform) {
+      staged = await this.sealForWrite(store, row);
+    } else if (primaryKeyOk(store, row)) {
+      staged = ok(row);
+    } else {
+      staged = err(invalidRecord(store, ['missing or malformed primary key'], rowKey(store, row)));
     }
-    let toWrite: Row<K> = row;
-    const seam = transform && (store === 'tasks' || store === 'lists') ? rowCryptoSeam() : null;
-    if (seam !== null) {
-      const sealed = await seam.writeRow(store as 'tasks' | 'lists', row);
-      if (!sealed.ok) return err(sealed.error);
-      toWrite = sealed.value as Row<K>;
-    }
+    if (!staged.ok) return err(staged.error);
+    const toWrite: Row<K> = staged.value;
     try {
       if (store === 'meta') {
         await this.#db.put(store, toWrite, META_KEY);
@@ -526,6 +551,14 @@ class TxImpl implements Tx {
     this.#transform = transform;
     this.#owner = owner;
   }
+
+  // E10-Q6 hazard (ADR-007 Decision 4.6): every seam call below is real async
+  // work awaited INSIDE a live transaction. firefox/webkit deactivate the tx
+  // across such an await (the continuation lands after the auto-commit window),
+  // so seamed reads/writes through `Tx` are only reliable on engines that
+  // resolve WebCrypto in a microtask (chromium). Multi-row seamed applies must
+  // stage first (`AppDBImpl.sealForWrite`) and run `txRaw`; the remaining
+  // seamed-in-tx carriers are tracked as follow-ups of t_361487a7.
 
   async get<K extends StoreName>(store: K, key: string): Promise<Row<K> | undefined> {
     const k = store === 'meta' ? META_KEY : key;

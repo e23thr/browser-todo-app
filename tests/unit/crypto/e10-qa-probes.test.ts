@@ -431,41 +431,33 @@ describe('Q6 — pre-migration snapshot exists, is wrapped at rest, and rolls ba
       expect(JSON.parse(payload.value.payload).format).toBe('todo-enc/1');
     }
 
-    // Rollback — the restore half of this drill is asserted in a REAL browser
-    // (`tests/e2e/e10-encryption.spec.ts`, "pre-migration snapshot restore"),
-    // because fake-indexeddb deactivates a transaction when a `crypto.subtle`
-    // await crosses its task boundary, while Chromium resolves the same await
-    // as a microtask and keeps the transaction alive. That divergence is a
-    // property of the double, NOT of the product: measured first-hand both ways
-    // (unit: `UNAVAILABLE/InvalidStateError`; Chromium: restore succeeds with
-    // every row still ciphertext). Assert here only what the double can settle:
-    // the snapshot exists, is wrapped at rest, and a locked restore refuses
-    // TYPED rather than corrupting (next test).
+    // Rollback — E10-Q6 is NOT a test-double artifact (t_361487a7): awaiting
+    // the seam's WebCrypto inside the live tx deactivated it on fake-indexeddb
+    // AND on real firefox/webkit (only chromium resolves the small seal as a
+    // microtask). Since the staging fix (seal rows OUTSIDE the tx, write
+    // verbatim inside one `txRaw`), the restore half works on every engine and
+    // on the double — so assert the real contract here: restore succeeds and
+    // every row round-trips, still ciphertext at rest (the real-browser drill
+    // `tests/e2e/e10-encryption.spec.ts` re-proves it on all 4 engines).
     const restoreAttempt = await restoreSnapshot(pre!.id, { db, now });
-    if (restoreAttempt.ok) {
-      // If the double ever behaves like the browser, verify the content too.
-      const raw = await db.readUnfiltered('tasks');
-      expect(raw.ok).toBe(true);
-      if (raw.ok) {
-        const titles: string[] = [];
-        for (const row of raw.value) {
-          if (isEncryptedRecord(row)) {
-            const view = await appVault.decryptRecord('tasks', row);
-            if (view.ok && view.value !== undefined) titles.push((view.value as Task).title);
-          } else {
-            titles.push(row.title);
-          }
-        }
-        expect(titles).toContain('pre-alpha');
-        expect(titles).toContain('pre-bravo');
+    expect(
+      restoreAttempt.ok,
+      `restore into the encrypted store must succeed: ${JSON.stringify(restoreAttempt)}`,
+    ).toBe(true);
+    const raw = await db.readUnfiltered('tasks');
+    expect(raw.ok).toBe(true);
+    if (raw.ok) {
+      for (const row of raw.value) {
+        expect(isEncryptedRecord(row), 'restored rows must stay ciphertext at rest').toBe(true);
       }
-    } else {
-      // Documented double-only outcome — must be the typed tx error, never a
-      // partial/garbled store.
-      expect(['UNAVAILABLE', 'QUOTA_EXCEEDED']).toContain(restoreAttempt.error.code);
-      const raw = await db.readUnfiltered('tasks');
-      expect(raw.ok).toBe(true);
-      if (raw.ok) for (const row of raw.value) expect(isEncryptedRecord(row)).toBe(true);
+      const titles: string[] = [];
+      for (const row of raw.value) {
+        if (!isEncryptedRecord(row)) continue;
+        const view = await appVault.decryptRecord('tasks', row);
+        if (view.ok && view.value !== undefined) titles.push((view.value as Task).title);
+      }
+      expect(titles).toContain('pre-alpha');
+      expect(titles).toContain('pre-bravo');
     }
   });
 
