@@ -522,7 +522,7 @@ test('keyboard-only: F1 capture → F2 edit → F3 complete → F4 delete → F6
   await expect(page.getByRole('menu')).toBeVisible();
   // `toBeVisible` only proves the menu is MOUNTED: RowMenu applies the other half of that
   // §9.2 contract ("focuses the first item") in its open-focus effect, which Preact runs after
-  // paint — a 1-35 ms window on a loaded box. An End sent inside it is delivered to the still
+  // paint — a 1-36 ms window on a loaded box. An End sent inside it is delivered to the still
   // focused TRIGGER (which ignores End), so the key is dropped and focus never reaches the
   // last item (t_9f0b70a4: webkit at workers=1 under `taskset -c 0,1`, 3 fails / 8 runs).
   // Wait for the documented first-item focus before pressing End; the End assertion below is
