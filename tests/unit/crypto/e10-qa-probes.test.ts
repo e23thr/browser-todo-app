@@ -226,33 +226,32 @@ describe('Q2 — QUOTA_EXCEEDED mid-sweep pauses resumably (real fault injection
 /* -------------------------- Q3: crash resume wiring ------------------------------ */
 
 describe("Q3 — crash mid-sweep resumes on the app's unlock path (D7.1)", () => {
-  it.fails(
-    'DEFECT E10-Q1: unlocking a crashed migrating store resumes the sweep (D7.1: "resume on next unlock")',
-    async () => {
-      await seedMigrating(2);
-      const rows0 = await db.readUnfiltered('tasks');
-      expect(rows0.ok).toBe(true);
-      const first = rows0.ok ? rows0.value[0] : undefined;
-      expect(first).toBeDefined();
-      const sealed = await vault.encryptRecord('tasks', first as Task);
-      expect(sealed.ok).toBe(true);
-      if (sealed.ok) await db.putRaw('tasks', sealed.value as unknown as Task);
-      await vault.lock();
+  // Was `it.fails` (pin) until the E10-Q1 fix: `unlockWithPassphrase` now
+  // resumes the sweep in-line — D7.1's "resume on next unlock" has a caller.
+  it('DEFECT E10-Q1: unlocking a crashed migrating store resumes the sweep (D7.1: "resume on next unlock")', async () => {
+    await seedMigrating(2);
+    const rows0 = await db.readUnfiltered('tasks');
+    expect(rows0.ok).toBe(true);
+    const first = rows0.ok ? rows0.value[0] : undefined;
+    expect(first).toBeDefined();
+    const sealed = await vault.encryptRecord('tasks', first as Task);
+    expect(sealed.ok).toBe(true);
+    if (sealed.ok) await db.putRaw('tasks', sealed.value as unknown as Task);
+    await vault.lock();
 
-      // The app boot/unlock path: attach a fresh session and unlock with the
-      // passphrase — nothing else runs in src/ (resumeMigration has no caller).
-      const rebooted = new CryptoVault({ now });
-      await rebooted.attach(db);
-      registerVault(rebooted);
-      const unlocked = await rebooted.unlockWithPassphrase(PASSPHRASE);
-      expect(unlocked.ok).toBe(true);
+    // The app boot/unlock path: attach a fresh session and unlock with the
+    // passphrase — nothing else runs in src/ (resumeMigration has no caller).
+    const rebooted = new CryptoVault({ now });
+    await rebooted.attach(db);
+    registerVault(rebooted);
+    const unlocked = await rebooted.unlockWithPassphrase(PASSPHRASE);
+    expect(unlocked.ok).toBe(true);
 
-      // D7.1 desired: the sweep resumes and the store reaches 'on'.
-      expect(await sweepRemaining(db, 'encrypt')).toBe(0);
-      expect(rebooted.status).toBe('on');
-      await rebooted.lock();
-    },
-  );
+    // D7.1 desired: the sweep resumes and the store reaches 'on'.
+    expect(await sweepRemaining(db, 'encrypt')).toBe(0);
+    expect(rebooted.status).toBe('on');
+    await rebooted.lock();
+  });
 
   it('control: the resume API itself works when called directly (wiring-only gap)', async () => {
     await seedMigrating(2);
@@ -338,46 +337,46 @@ describe('Q5 — enable failure branches degrade without touching user data', ()
     if (raw.ok) for (const row of raw.value) expect(isEncryptedRecord(row)).toBe(false);
   });
 
-  it.fails(
-    'DEFECT E10-Q2: a sweep failure after a recovery opt-in leaves NO orphaned recovery slot (D6.1 order: the code is shown BEFORE migration)',
-    async () => {
-      await seedSettings(T0 + 10);
-      await seedTasks(['alpha', 'bravo']);
+  // Was `it.fails` (pin) until the E10-Q2 fix: the recovery slot is persisted
+  // only at the offer acknowledgment (UI) or after a successful sweep
+  // (headless) — never with the key ring, so a failed enable strands none.
+  it('DEFECT E10-Q2: a sweep failure after a recovery opt-in leaves NO orphaned recovery slot (D6.1 order: the code is shown BEFORE migration)', async () => {
+    await seedSettings(T0 + 10);
+    await seedTasks(['alpha', 'bravo']);
 
-      // saveState(migrating) is put #1 (allowed); the sweep's first row put is
-      // #2 → the sweep fails while the recovery slot is already persisted.
-      const restore = armQuotaAfter(1);
-      let disclosed: { code: string } | null = null;
-      let failed = false;
-      try {
-        const result = await enableEncryption({
-          db,
-          vault,
-          passphrase: PASSPHRASE,
-          passphraseConfirm: PASSPHRASE,
-          flowOpenedAt: T0,
-          lostPassphraseAcknowledged: true,
-          wantRecoveryKey: true,
-          now,
-          takePreMigrationSnapshot: async () => ({ ok: true, id: 'snap' }),
-        });
-        failed = !result.ok;
-        if (result.ok) disclosed = result.value.recovery;
-      } finally {
-        restore();
-      }
-      const state: CryptoStateRecord | undefined = await cryptoState();
+    // saveState(migrating) is put #1 (allowed); the sweep's first row put is
+    // #2 → the sweep fails while the recovery slot is already persisted.
+    const restore = armQuotaAfter(1);
+    let disclosed: { code: string } | null = null;
+    let failed = false;
+    try {
+      const result = await enableEncryption({
+        db,
+        vault,
+        passphrase: PASSPHRASE,
+        passphraseConfirm: PASSPHRASE,
+        flowOpenedAt: T0,
+        lostPassphraseAcknowledged: true,
+        wantRecoveryKey: true,
+        now,
+        takePreMigrationSnapshot: async () => ({ ok: true, id: 'snap' }),
+      });
+      failed = !result.ok;
+      if (result.ok) disclosed = result.value.recovery;
+    } finally {
+      restore();
+    }
+    const state: CryptoStateRecord | undefined = await cryptoState();
 
-      // Current behavior: sweep failed, slot persisted, code never disclosed.
-      expect(failed).toBe(true);
-      const orphaned =
-        disclosed === null &&
-        (state?.keys ?? []).some((k) => k.slots.some((s) => s.kind === 'recovery'));
-      // Desired (D6.1 normative order — offer/ack BEFORE the migration sweep):
-      // a failed enable can never strand a recovery slot whose secret nobody saw.
-      expect(orphaned).toBe(false);
-    },
-  );
+    // Current behavior: sweep failed, slot persisted, code never disclosed.
+    expect(failed).toBe(true);
+    const orphaned =
+      disclosed === null &&
+      (state?.keys ?? []).some((k) => k.slots.some((s) => s.kind === 'recovery'));
+    // Desired (D6.1 normative order — offer/ack BEFORE the migration sweep):
+    // a failed enable can never strand a recovery slot whose secret nobody saw.
+    expect(orphaned).toBe(false);
+  });
 });
 
 /* ---------------- Q6: pre-migration snapshot + rollback (real path) ---------------- */
@@ -556,46 +555,44 @@ describe('Q8 — quarantine recovery file leaks no plaintext (leak audit)', () =
 /* --------------------------- Q9: device join --------------------------- */
 
 describe('Q9 — device join via key file (D3.2)', () => {
-  it.fails(
-    'DEFECT E10-Q3: joining a fresh store leaves it status "on" (a joined device must lock + encrypt its writes)',
-    async () => {
-      // Store A enables and hands over its emergency kit.
-      await seedSettings(T0 + 10);
-      await seedTasks(['alpha']);
-      const enabled = await enableEncryption({
-        db,
-        vault,
-        passphrase: PASSPHRASE,
-        passphraseConfirm: PASSPHRASE,
-        flowOpenedAt: T0,
-        lostPassphraseAcknowledged: true,
-        wantRecoveryKey: true,
-        now,
-        takePreMigrationSnapshot: async () => ({ ok: true, id: 'snap' }),
-      });
-      expect(enabled.ok).toBe(true);
-      if (!enabled.ok || enabled.value.recovery === null)
-        throw new Error('expected a recovery key');
-      await vault.lock();
+  // Was `it.fails` (pin) until the E10-Q3 fix: a fresh-store join saves the
+  // adopted ring under `status: 'on'` — the joined device locks and encrypts.
+  it('DEFECT E10-Q3: joining a fresh store leaves it status "on" (a joined device must lock + encrypt its writes)', async () => {
+    // Store A enables and hands over its emergency kit.
+    await seedSettings(T0 + 10);
+    await seedTasks(['alpha']);
+    const enabled = await enableEncryption({
+      db,
+      vault,
+      passphrase: PASSPHRASE,
+      passphraseConfirm: PASSPHRASE,
+      flowOpenedAt: T0,
+      lostPassphraseAcknowledged: true,
+      wantRecoveryKey: true,
+      now,
+      takePreMigrationSnapshot: async () => ({ ok: true, id: 'snap' }),
+    });
+    expect(enabled.ok).toBe(true);
+    if (!enabled.ok || enabled.value.recovery === null) throw new Error('expected a recovery key');
+    await vault.lock();
 
-      // Fresh device B joins with A's key file under its own local passphrase.
-      const dbB = await freshDb();
-      const vaultB = new CryptoVault({ now });
-      await vaultB.attach(dbB);
-      registerVault(vaultB);
-      const joined = await vaultB.joinWithKeyFile(
-        enabled.value.recovery.keyFile,
-        'device b local passphrase',
-      );
-      expect(joined.ok).toBe(true);
+    // Fresh device B joins with A's key file under its own local passphrase.
+    const dbB = await freshDb();
+    const vaultB = new CryptoVault({ now });
+    await vaultB.attach(dbB);
+    registerVault(vaultB);
+    const joined = await vaultB.joinWithKeyFile(
+      enabled.value.recovery.keyFile,
+      'device b local passphrase',
+    );
+    expect(joined.ok).toBe(true);
 
-      // D3.2 desired: a joined device is an ENCRYPTED device — status 'on'
-      // (otherwise lockState stays 'disabled', writeRow stores NEW user text in
-      // PLAINTEXT, and after a reload the local passphrase slot cannot even be
-      // used: unlockWithPassphrase refuses status 'off').
-      expect(vaultB.status).toBe('on');
-      await vaultB.lock();
-      registerVault(vault);
-    },
-  );
+    // D3.2 desired: a joined device is an ENCRYPTED device — status 'on'
+    // (otherwise lockState stays 'disabled', writeRow stores NEW user text in
+    // PLAINTEXT, and after a reload the local passphrase slot cannot even be
+    // used: unlockWithPassphrase refuses status 'off').
+    expect(vaultB.status).toBe('on');
+    await vaultB.lock();
+    registerVault(vault);
+  });
 });
