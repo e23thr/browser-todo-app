@@ -137,6 +137,44 @@ export class TaskRepo implements TaskPort {
     });
   }
 
+  /**
+   * S6 archive/restore (E9): done→archived preserving `completedAt` verbatim,
+   * archived→done backfilling the stamp when it is missing. The legal source
+   * pair is enforced HERE (one transaction, one put) so a stale UI gesture can
+   * never reopen a task through the archive affordance.
+   */
+  setArchived(id: string, archived: boolean): Promise<Result<Task, AppError>> {
+    const { clock, db } = this.#deps;
+    return txApp(db, ['tasks'], 'readwrite', async (t) => {
+      const row = await t.get('tasks', id);
+      if (row === undefined || row.deletedAt !== null) return err(taskMissing(id));
+      if (archived && row.status !== 'done') {
+        return err(
+          ruleError('TASK_STATUS_INVALID', `archive expects a done task, got ${row.status}`),
+        );
+      }
+      if (!archived && row.status !== 'archived') {
+        return err(
+          ruleError('TASK_STATUS_INVALID', `restore expects an archived task, got ${row.status}`),
+        );
+      }
+      const now = clock();
+      const next: Task = {
+        ...row,
+        status: archived ? 'archived' : 'done',
+        updatedAt: now,
+        deviceId: db.deviceId,
+      };
+      // Archive keeps the original completion instant; a restore backfills a
+      // lost stamp so the retention partition never sorts it as un-stamped.
+      if (!archived && next.completedAt === undefined) next.completedAt = now;
+      const validated = this.#validate(next);
+      if (!validated.ok) return validated;
+      await t.put('tasks', next);
+      return ok(next);
+    });
+  }
+
   /** S4 recurring completion: done + successor in ONE transaction. */
   completeRecurring(
     id: string,

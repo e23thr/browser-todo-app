@@ -98,6 +98,15 @@ export interface TaskPort {
   /** `completedAt` stamped on done, cleared on uncomplete (ADR-002 Decision 5). */
   setDone(id: string, done: boolean): Promise<Result<Task, AppError>>;
   /**
+   * S6 archive/restore (E9): `archived` flips a DONE task to `archived`
+   * PRESERVING its `completedAt` (the retention partition still shows when it
+   * was finished); un-archiving returns it to `done`, backfilling
+   * `completedAt` when the archived row somehow lost the stamp. Only
+   * done→archived and archived→done are legal — anything else is a
+   * `TASK_STATUS_INVALID` rule error (never a silent reopen).
+   */
+  setArchived(id: string, archived: boolean): Promise<Result<Task, AppError>>;
+  /**
    * S4 recurring completion: mark the task done AND create its next occurrence
    * in ONE transaction (a half-applied pair — done without a successor — is
    * exactly the data-loss shape this repo's one-transaction rule exists to

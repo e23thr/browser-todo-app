@@ -43,6 +43,11 @@ export function groupTitle(
       return `${listName ?? ''} (${String(count)})`;
     case 'results':
       return t('search.results.count', { count });
+    case 'retention':
+      // S6 retention partition: structured bucket label → localized copy.
+      return `${t(label.bucket === 'recent' ? 'group.retention.recent' : 'group.retention.older')} (${String(count)})`;
+    case 'archived':
+      return `${t('group.archived')} (${String(count)})`;
   }
 }
 

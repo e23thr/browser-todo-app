@@ -20,7 +20,7 @@
  * (deterministic and tested); each rolled-back op gets its own `write-failed`.
  */
 
-import { err, ok, ruleError, type AppError, type Result } from './kernel';
+import { err, ok, ruleError, type AppError, type Result, type RuleId } from './kernel';
 import { todayStr } from './dates';
 import { nextOccurrence } from './recurrence';
 import {
@@ -390,6 +390,50 @@ export class MutationRunner {
       (outcome) => ({
         tasks: outcome.created === undefined ? [outcome.task] : [outcome.task, outcome.created],
       }),
+    );
+  }
+
+  /**
+   * S6 archive/restore (E9 retention): done→archived PRESERVES `completedAt`;
+   * archived→done backfills it when the stamp is missing. The optimistic apply
+   * mirrors the repo write exactly, and any source state other than the legal
+   * pair rejects synchronously (`TASK_STATUS_INVALID`) — an archive gesture can
+   * never silently reopen a task.
+   */
+  setArchived(id: string, archived: boolean): Promise<Result<Task, AppError>> {
+    const opId = this.#nextOpId();
+    const prev = this.#state.tasks.get(id);
+    if (prev === undefined) {
+      return this.#rejectSync('set-archived', opId, 'TASK_MISSING', `no task ${id}`);
+    }
+    if (archived && prev.status !== 'done') {
+      return this.#rejectSync(
+        'set-archived',
+        opId,
+        'TASK_STATUS_INVALID',
+        `archive expects a done task, got ${prev.status}`,
+      );
+    }
+    if (!archived && prev.status !== 'archived') {
+      return this.#rejectSync(
+        'set-archived',
+        opId,
+        'TASK_STATUS_INVALID',
+        `restore expects an archived task, got ${prev.status}`,
+      );
+    }
+    const now = this.#deps.clock();
+    const stamped = { ...prev, updatedAt: now, deviceId: this.#deps.deviceId };
+    const next: Task = archived
+      ? { ...stamped, status: 'archived' } // completedAt verbatim — retention shows the real finish time
+      : { ...stamped, status: 'done', completedAt: prev.completedAt ?? now };
+    return this.#run<Task>(
+      'set-archived',
+      opId,
+      { tasks: [next] },
+      { tasks: [id] },
+      async () => this.#deps.tasks.setArchived(id, archived),
+      (saved) => ({ tasks: [saved] }),
     );
   }
 
@@ -804,12 +848,7 @@ export class MutationRunner {
   #rejectSync<T>(
     kind: MutationKind,
     opId: string,
-    rule:
-      | 'PARENT_DEPTH_EXCEEDED'
-      | 'REORDER_TARGET_NOT_IN_GROUP'
-      | 'LIST_DELETE_TARGET_MISSING'
-      | 'TASK_MISSING'
-      | 'TAG_INVALID',
+    rule: RuleId,
     message: string,
   ): Promise<Result<T, AppError>> {
     const error = ruleError(rule, message);

@@ -137,14 +137,17 @@ describe('M3 five views — grouping per the domain selector', () => {
     expect(row.querySelector('.list-badge')?.textContent).toContain('Work');
   });
 
-  it('Completed: flat list with completion chip, no reorder handles (D1)', async () => {
+  it('Completed: retention-grouped list with completion chip, no reorder handles (D1)', async () => {
     await seedMixed();
     render(<CompletedView />);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Completed' })).toBeTruthy();
     expect(screen.getByText('1 tasks', { exact: true })).toBeTruthy();
     expect(screen.getByText(/^Completed on /u, { exact: true })).toBeTruthy();
-    expect(document.querySelector('.group-header')).toBeNull();
+    // S6 retention partition: a just-completed task renders under the recent group.
+    expect(document.querySelector('.group-header')?.textContent).toContain(
+      'Recently completed (last 7 days)',
+    );
   });
 
   it('Per-list: flat manual order, heading = list name, no list badge', async () => {

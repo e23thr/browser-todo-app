@@ -722,6 +722,17 @@ export function setTaskDone(id: string, done: boolean): Promise<Result<SetDoneOu
   });
 }
 
+/**
+ * S6 archive/restore (E9 retention): one guarded `set-archived` write. Archive
+ * preserves `completedAt`; restore backfills it (the domain owns both rules).
+ * The UI owns the `a11y.taskArchived`/`a11y.taskRestored` announcements.
+ */
+export function setTaskArchived(id: string, archived: boolean): Promise<Result<Task, AppError>> {
+  const r = runner;
+  if (r === null) return noRunner();
+  return guard(() => r.setArchived(id, archived));
+}
+
 export function addList(input: { name: string; color: string }): Promise<Result<List, AppError>> {
   const r = runner;
   if (r === null) return noRunner();

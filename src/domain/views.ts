@@ -16,7 +16,7 @@
  * silently invisible in a tree-grouped view.
  */
 
-import { addDays, isOverdue } from './dates';
+import { addDays, isOverdue, todayStr } from './dates';
 import { compareByPriority, type Task } from './model';
 import { SearchIndex, type SearchHit } from './search';
 import type { State } from './state';
@@ -33,7 +33,14 @@ export type GroupLabel =
   | { kind: 'overdue' }
   | { kind: 'day'; date: string }
   | { kind: 'list'; listId: string }
-  | { kind: 'results' };
+  | { kind: 'results' }
+  /**
+   * S6 retention partition (E9): the completed view splits its members into
+   * `recent` (completed within the last `RETENTION_RECENT_DAYS` days) and
+   * `older`; archived tasks ride their own `archived` group (see below).
+   */
+  | { kind: 'retention'; bucket: 'recent' | 'older' }
+  | { kind: 'archived' };
 
 export type ViewRow =
   | { type: 'group'; key: string; label: GroupLabel; count: number }
@@ -264,13 +271,48 @@ function listView(all: Task[], listId: string, today: string, compare: TaskCompa
   return { rows: treeRows(members, compare, today), counts: countsOf(members, today) };
 }
 
+/**
+ * S6 retention window (E9): a task completed within the last N calendar days
+ * (inclusive of today) is "recent"; everything completed earlier is "older".
+ */
+export const RETENTION_RECENT_DAYS = 7;
+
+/**
+ * Completed history (§4.7 + S6 retention partition): members are done ∪
+ * archived, bucketed into `retention recent ≤7d` / `retention older` /
+ * `archived` groups (empty groups omitted, order kept) with the pinned
+ * `completedAt` desc / id desc order inside each bucket. The rows stay FLAT —
+ * the retention partition must not widen the virtualized DOM-row cap the
+ * completed view already holds at 10k rows (test-card baseline: 22/10 000).
+ */
 function completedView(all: Task[], today: string, compare: TaskCompare): ViewResult {
-  const members = all.filter((t) => t.status === 'done');
-  const sorted = [...members].sort(compare);
-  return {
-    rows: sorted.map((t) => taskRow(t, 0, today)),
-    counts: countsOf(members, today),
+  const members = all.filter((t) => t.status === 'done' || t.status === 'archived');
+  // "Recent" compares LOCAL calendar-day labels (DST-safe, never a UTC
+  // instant): a completion is recent when its day label reaches back to
+  // `today - 7` at most — day-granular like every other date decision here.
+  const cutoff = addDays(today, -RETENTION_RECENT_DAYS);
+  const recent: Task[] = [];
+  const older: Task[] = [];
+  const archived: Task[] = [];
+  for (const task of members) {
+    if (task.status === 'archived') {
+      archived.push(task);
+      continue;
+    }
+    const completedAt = task.completedAt;
+    const day = completedAt === undefined ? null : todayStr(() => completedAt);
+    (day !== null && day >= cutoff ? recent : older).push(task);
+  }
+  const rows: ViewRow[] = [];
+  const bucket = (label: GroupLabel, key: string, bucketed: Task[]): void => {
+    if (bucketed.length === 0) return; // empty groups omitted (ux-foundation §4.4)
+    rows.push(groupRow(label, key, bucketed.length));
+    rows.push(...bucketed.sort(compare).map((t) => taskRow(t, 0, today)));
   };
+  bucket({ kind: 'retention', bucket: 'recent' }, 'group:retention:recent', recent);
+  bucket({ kind: 'retention', bucket: 'older' }, 'group:retention:older', older);
+  bucket({ kind: 'archived' }, 'group:archived', archived);
+  return { rows, counts: countsOf(members, today) };
 }
 
 /**
