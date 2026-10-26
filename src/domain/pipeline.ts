@@ -21,6 +21,8 @@
  */
 
 import { err, ok, ruleError, type AppError, type Result } from './kernel';
+import { todayStr } from './dates';
+import { nextOccurrence } from './recurrence';
 import {
   DEFAULT_SETTINGS,
   type List,
@@ -38,7 +40,9 @@ import type {
   ListRemoveOutcome,
   MoveTarget,
   OrderKeyOps,
+  RestoreOutcome,
   SettingsPort,
+  TaskOccurrenceDraft,
   TaskPort,
   TaskRemoveDisposition,
   TaskRemoveOutcome,
@@ -63,6 +67,13 @@ export type PipelineErrorInfo = {
   error: AppError;
   rolledBack: string[];
 };
+
+/**
+ * `setDone` outcome (S4 + S7): the settled row, plus — when completing minted a
+ * successor for a recurring task — the created occurrence. Callers that offer
+ * the S7 undo toast need `created` to know which id an undo must remove again.
+ */
+export type SetDoneOutcome = { readonly task: Task; readonly created?: Task };
 
 export type MutationRunnerDeps = {
   tasks: TaskPort;
@@ -276,17 +287,28 @@ export class MutationRunner {
     // S5 (t_ee8ecb0b): clearing a reminder mirrors `dueDateUnset` — the field is
     // removed from the record, never parked at a sentinel timestamp.
     const clearedReminder = patch.reminderAtUnset === true ? omit(cleared, 'reminderAt') : cleared;
+    // S4: clearing the recurrence mirrors the same two unset rules (the editor's
+    // "Repeat: Never" must drop the field, not store an empty object).
+    const clearedRecurrence =
+      patch.recurrenceUnset === true ? omit(clearedReminder, 'recurrence') : clearedReminder;
     return this.#run<Task>(
       'patch-task',
       opId,
-      { tasks: [clearedReminder] },
+      { tasks: [clearedRecurrence] },
       { tasks: [id] },
       async () => this.#deps.tasks.patch(id, patch),
       (saved) => ({ tasks: [saved] }),
     );
   }
 
-  setDone(id: string, done: boolean): Promise<Result<Task, AppError>> {
+  /**
+   * Complete / uncomplete. S4: completing a RECURRING task mints its next
+   * occurrence (`{freq, interval, until?}` over the all-day `dueDate`, E6 —
+   * see `domain/recurrence.ts`) instead of rewriting the row that was just
+   * completed: past occurrences are immutable, the successor is a NEW record
+   * written in the SAME transaction as the completion.
+   */
+  setDone(id: string, done: boolean): Promise<Result<SetDoneOutcome, AppError>> {
     const opId = this.#nextOpId();
     const prev = this.#state.tasks.get(id);
     if (prev === undefined) {
@@ -297,13 +319,102 @@ export class MutationRunner {
     const next: Task = done
       ? { ...stamped, status: 'done', completedAt: now }
       : omit({ ...stamped, status: 'open' as const }, 'completedAt');
-    return this.#run<Task>(
+
+    // S4: roll the series forward from the completed OCCURRENCE's due date
+    // (not from today), past the local day the user completed it on, capped by
+    // `until`. A recurring task without a due date has nothing to step from —
+    // it completes like any other task.
+    const occurrence =
+      done && prev.recurrence !== undefined && prev.dueDate !== undefined
+        ? nextOccurrence(prev.dueDate, prev.recurrence, todayStr(this.#deps.clock))
+        : null;
+    if (occurrence === null) {
+      return this.#run<SetDoneOutcome>(
+        'set-done',
+        opId,
+        { tasks: [next] },
+        { tasks: [id] },
+        async () => {
+          const saved = await this.#deps.tasks.setDone(id, done);
+          return saved.ok ? ok({ task: saved.value }) : err(saved.error);
+        },
+        (saved) => ({ tasks: [saved.task] }),
+      );
+    }
+
+    const recurrence = prev.recurrence;
+    if (recurrence === undefined) return this.#rejectSync('set-done', opId, 'TASK_MISSING', id);
+    const created: Task = {
+      id: this.#deps.ids(),
+      listId: prev.listId,
+      title: prev.title,
+      notes: prev.notes,
+      status: 'open',
+      priority: prev.priority,
+      dueDate: occurrence,
+      // The successor keeps the rule and the reminder instant (the S5 scheduler
+      // rolls a past instant forward through the same recurrence).
+      recurrence,
+      ...(prev.reminderAt !== undefined ? { reminderAt: prev.reminderAt } : {}),
+      tags: [...prev.tags],
+      ...(prev.parentTaskId !== undefined ? { parentTaskId: prev.parentTaskId } : {}),
+      sortOrder: this.#provisionalKeyFor(prev.listId, prev.parentTaskId),
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+      deviceId: this.#deps.deviceId,
+    };
+    const draft: TaskOccurrenceDraft = {
+      id: created.id,
+      listId: created.listId,
+      title: created.title,
+      notes: created.notes,
+      priority: created.priority,
+      dueDate: occurrence,
+      tags: [...created.tags],
+      recurrence,
+      ...(created.reminderAt !== undefined ? { reminderAt: created.reminderAt } : {}),
+      ...(created.parentTaskId !== undefined ? { parentTaskId: created.parentTaskId } : {}),
+    };
+    return this.#run<SetDoneOutcome>(
       'set-done',
       opId,
-      { tasks: [next] },
-      { tasks: [id] },
-      async () => this.#deps.tasks.setDone(id, done),
-      (saved) => ({ tasks: [saved] }),
+      { tasks: [next, created] },
+      { tasks: [id, created.id] },
+      async () => {
+        const written = await this.#deps.tasks.completeRecurring(id, draft);
+        return written.ok
+          ? ok({ task: written.value.done, created: written.value.created })
+          : err(written.error);
+      },
+      (outcome) => ({
+        tasks: outcome.created === undefined ? [outcome.task] : [outcome.task, outcome.created],
+      }),
+    );
+  }
+
+  /**
+   * S7 undo: write the captured pre-op rows back and tombstone the ids the
+   * undone op created (the successor a recurring completion minted). One
+   * transaction, so an undo can never half-land.
+   */
+  restoreTasks(
+    rows: readonly Task[],
+    removeIds: readonly string[],
+  ): Promise<Result<RestoreOutcome, AppError>> {
+    const opId = this.#nextOpId();
+    const restore = [...rows];
+    const drop = [...removeIds];
+    return this.#run<RestoreOutcome>(
+      'restore-tasks',
+      opId,
+      { tasks: restore, evictTasks: drop },
+      { tasks: [...restore.map((row) => row.id), ...drop] },
+      async () => this.#deps.tasks.restore(restore, drop),
+      (outcome) => ({
+        tasks: outcome.restored,
+        evictTasks: outcome.tombstoned.map((row) => row.id),
+      }),
     );
   }
 

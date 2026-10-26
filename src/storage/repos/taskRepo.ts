@@ -10,8 +10,11 @@ import { err, ok, ruleError, type AppError, type Result } from '../../domain/ker
 import type { List, Settings, Task, TaskDraft, TaskPatch } from '../../domain/model';
 import { DEFAULT_SETTINGS } from '../../domain/model';
 import type {
+  CompleteRecurringOutcome,
   MoveTarget,
   MoveOutcome,
+  RestoreOutcome,
+  TaskOccurrenceDraft,
   TaskPort,
   TaskRemoveDisposition,
   TaskRemoveOutcome,
@@ -101,7 +104,8 @@ export class TaskRepo implements TaskPort {
       if (patch.tags !== undefined) merged.tags = [...patch.tags];
       if (patch.reminderAtUnset === true) delete merged.reminderAt;
       else if (patch.reminderAt !== undefined) merged.reminderAt = patch.reminderAt;
-      if (patch.recurrence !== undefined) merged.recurrence = patch.recurrence;
+      if (patch.recurrenceUnset === true) delete merged.recurrence;
+      else if (patch.recurrence !== undefined) merged.recurrence = patch.recurrence;
       if (patch.dueDateUnset === true) delete merged.dueDate;
       else if (patch.dueDate !== undefined) merged.dueDate = patch.dueDate;
       const stamped: Task = { ...merged, updatedAt: clock(), deviceId: db.deviceId };
@@ -130,6 +134,94 @@ export class TaskRepo implements TaskPort {
       if (!validated.ok) return validated;
       await t.put('tasks', stamped);
       return ok(stamped);
+    });
+  }
+
+  /** S4 recurring completion: done + successor in ONE transaction. */
+  completeRecurring(
+    id: string,
+    next: TaskOccurrenceDraft,
+  ): Promise<Result<CompleteRecurringOutcome, AppError>> {
+    const { clock, ids, db } = this.#deps;
+    return txApp(db, ['tasks'], 'readwrite', async (t) => {
+      const row = await t.get('tasks', id);
+      if (row === undefined || row.deletedAt !== null) return err(taskMissing(id));
+      const now = clock();
+      const done: Task = {
+        ...row,
+        status: 'done',
+        completedAt: now,
+        updatedAt: now,
+        deviceId: db.deviceId,
+      };
+      const doneValidated = this.#validate(done);
+      if (!doneValidated.ok) return doneValidated;
+
+      const group: SiblingGroup = {
+        listId: next.listId,
+        parentTaskId: next.parentTaskId ?? null,
+      };
+      const depth = await this.#checkParent(t, group.parentTaskId);
+      if (!depth.ok) return depth;
+      const rows = await taskGroupRows(t, group);
+      const base: Task = {
+        id: next.id ?? ids(),
+        listId: next.listId,
+        title: next.title,
+        notes: next.notes,
+        status: 'open',
+        priority: next.priority,
+        ...(next.dueDate !== undefined ? { dueDate: next.dueDate } : {}),
+        ...(next.reminderAt !== undefined ? { reminderAt: next.reminderAt } : {}),
+        ...(next.recurrence !== undefined ? { recurrence: next.recurrence } : {}),
+        tags: [...next.tags],
+        ...(next.parentTaskId !== undefined ? { parentTaskId: next.parentTaskId } : {}),
+        sortOrder: 'h',
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+        deviceId: db.deviceId,
+      };
+      const created: Task = { ...base, sortOrder: this.#keyAtEnd(rows) };
+      const createdValidated = this.#validate(created);
+      if (!createdValidated.ok) return createdValidated;
+      await t.put('tasks', done);
+      await t.put('tasks', created); // one transaction: never done without its successor
+      return ok({ done, created });
+    });
+  }
+
+  /**
+   * S7 undo (see `TaskPort.restore`): the captured rows come back with every
+   * FIELD verbatim — `sortOrder`, `listId`, `parentTaskId`, `status`,
+   * `completedAt`, `dueDate`, `recurrence`… — and only the stamps are
+   * re-applied, like every other write here. A verbatim `updatedAt` would hide
+   * the restore from the tab-sync watermark sweep (`changedSince` queries by
+   * `updatedAt`) and let per-record LWW treat the undo as pre-delete state.
+   */
+  restore(rows: Task[], removeIds: string[]): Promise<Result<RestoreOutcome, AppError>> {
+    const { clock, db } = this.#deps;
+    return txApp(db, ['tasks'], 'readwrite', async (t) => {
+      const now = clock();
+      const restored: Task[] = [];
+      for (const row of rows) {
+        const next: Task = { ...row, updatedAt: now, deviceId: db.deviceId };
+        const validated = this.#validate(next);
+        if (!validated.ok) return validated;
+        await t.put('tasks', next);
+        restored.push(next);
+      }
+      const tombstoned: Task[] = [];
+      for (const id of removeIds) {
+        const current = await t.get('tasks', id);
+        if (current === undefined || current.deletedAt !== null) continue; // idempotent
+        const tomb: Task = { ...current, deletedAt: now, updatedAt: now, deviceId: db.deviceId };
+        const validated = this.#validate(tomb);
+        if (!validated.ok) return validated;
+        await t.put('tasks', tomb);
+        tombstoned.push(tomb);
+      }
+      return ok({ restored, tombstoned });
     });
   }
 

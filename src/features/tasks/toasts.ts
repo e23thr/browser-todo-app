@@ -23,6 +23,11 @@ export interface Toast {
   readonly messageKey: string;
   readonly params?: Readonly<Record<string, string | number>>;
   readonly action?: ToastAction;
+  /**
+   * Auto-dismiss lifetime (S7 undo toasts use the 10 s undo window; the default
+   * stays the 8 s error-toast lifetime the host already shipped with).
+   */
+  readonly durationMs?: number;
 }
 
 export const toasts = signal<readonly Toast[]>([]);

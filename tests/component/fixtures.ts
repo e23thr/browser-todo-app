@@ -13,13 +13,16 @@ import type { List, Settings, Task, TaskDraft, TaskPatch } from '../../src/domai
 import { DEFAULT_SETTINGS } from '../../src/domain/model';
 import { MutationRunner } from '../../src/domain/pipeline';
 import type {
+  CompleteRecurringOutcome,
   ListPort,
   ListPosition,
   ListRemoveDisposition,
   ListRemoveOutcome,
   MoveOutcome,
   MoveTarget,
+  RestoreOutcome,
   SettingsPort,
+  TaskOccurrenceDraft,
   TaskPort,
   TaskRemoveDisposition,
   TaskRemoveOutcome,
@@ -196,6 +199,52 @@ export function makeTestRunner(
       if (!done) delete next.completedAt;
       tasks.set(id, next);
       return ok(next);
+    },
+    async completeRecurring(
+      id: string,
+      next: TaskOccurrenceDraft,
+    ): Promise<Result<CompleteRecurringOutcome, AppError>> {
+      if (seed.hangWrites === true) {
+        return new Promise<never>(() => undefined);
+      }
+      const current = tasks.get(id);
+      if (current === undefined)
+        return { ok: false, error: { code: 'RULE', rule: 'TASK_MISSING', message: id } };
+      const now = clock();
+      const doneRow: Task = { ...current, status: 'done', completedAt: now, updatedAt: now };
+      tasks.set(id, doneRow);
+      const created = makeTask({
+        id: next.id ?? newUlid(),
+        listId: next.listId,
+        title: next.title,
+        ...(next.notes !== undefined ? { notes: next.notes } : {}),
+        ...(next.priority !== undefined ? { priority: next.priority } : {}),
+        ...(next.tags !== undefined ? { tags: [...next.tags] } : {}),
+        ...(next.dueDate !== undefined ? { dueDate: next.dueDate } : {}),
+        ...(next.reminderAt !== undefined ? { reminderAt: next.reminderAt } : {}),
+        ...(next.recurrence !== undefined ? { recurrence: next.recurrence } : {}),
+      });
+      tasks.set(created.id, created);
+      return ok({ done: doneRow, created });
+    },
+    async restore(rows: Task[], removeIds: string[]): Promise<Result<RestoreOutcome, AppError>> {
+      const now = clock();
+      const restored: Task[] = [];
+      for (const row of rows) {
+        const back: Task = { ...row, updatedAt: now };
+        tasks.set(back.id, back);
+        restored.push(back);
+      }
+      const tombstoned: Task[] = [];
+      for (const id of removeIds) {
+        const current = tasks.get(id);
+        if (current === undefined) continue;
+        const row: Task = { ...current, deletedAt: now, updatedAt: now };
+        tasks.set(id, row);
+        tasks.delete(id);
+        tombstoned.push(row);
+      }
+      return ok({ restored, tombstoned });
     },
     async move(id: string, target: MoveTarget): Promise<Result<MoveOutcome<Task>, AppError>> {
       if (seed.failMoves === true) {

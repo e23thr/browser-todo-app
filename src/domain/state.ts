@@ -16,6 +16,7 @@ export type MutationKind =
   | 'set-done'
   | 'move-task'
   | 'remove-task'
+  | 'restore-tasks'
   | 'sweep-tag'
   | 'upsert-imported'
   | 'create-list'
