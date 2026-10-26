@@ -24,6 +24,18 @@ the routing/encoding seam (`src/portability/foreign/index.ts`) and ride the same
 as B1; the QA card's `it.fails` pins (`docs/qa/e9-utilities.md` §8) plus this review's
 probe (attached to the card) flip to `it()` as the fixes land.
 
+> **Resolution note (fix card t_ef542fa3, pending re-review):** **B2 and B3 are
+> FIXED** at the routing seam `src/portability/foreign/index.ts` — B2 by making a
+> `{`-opening JSON object beat the `.txt` extension hint in `detectImportFormat`,
+> B3 by an encoding fail-closed sniff (leading replacement pair / NUL byte /
+> control-soup head) that rejects before routing, conversion or any DB read. All
+> four `it.fails` pins now run as `it()` and are green (the QA card's
+> `tests/unit/portability/e9-qa-probes.test.ts` E9-Q1/E9-Q2, and the reviewer's
+> probe promoted verbatim to `tests/unit/portability/e9-review-probe.test.ts`);
+> the `docs/qa/e9-review-probe.test.ts` copy keeps its original polarity as
+> review-time evidence. Detailed resolution under each finding in §4; fixture
+> ledger rows 9 and 11 in `docs/qa/e9-utilities.md` §4 flipped to PASS.
+
 **Severity rationale for B2/B3 (why blocking, not non-blocking):** the ADR-004
 data-safety *envelope* does hold (preview gate, pre-import snapshot, source file
 untouched — no silent loss), which is why the test card logged them non-blocking. They
@@ -165,6 +177,17 @@ were run first-hand by the test card at this same commit and are re-cited here:
   or, cheaper, retry the JSON path when a `.txt`/`.todo` file yields
   `NOTHING_TO_IMPORT`/implausible counts. Add the unit pin; flip the QA card's
   `it.fails` E9-Q2 to `it()`.
+- **RESOLVED (fix card t_ef542fa3, pending re-review):** `detectImportFormat` now
+  consults a tight object sniff (`/^\{\s*"/` after `trimStart()`) BEFORE the
+  extension hint, so a `{`-opening backup rides the JSON path under any file name —
+  deliberate narrowing vs a bare `{` so a todo.txt line list starting with `{…}`
+  keeps its own path (only a line opening like a JSON object takes JSON, and that
+  fails closed as bad JSON with zero side effects). Pins: QA card's
+  `tests/unit/portability/e9-qa-probes.test.ts` E9-Q2 `it.fails` → `it()` (now also
+  asserts `detectImportFormat === 'json'` + accepted-parity with the `.json` control
+  + the exact `{lists:1, tasks:1, settings:true}`), reviewer probe promoted verbatim
+  to `tests/unit/portability/e9-review-probe.test.ts` (3/3 green), and the docs copy
+  flipped too.
 
 ### B3 — E9-Q1: UTF-16LE source accepted as mojibake
 
@@ -174,6 +197,20 @@ were run first-hand by the test card at this same commit and are re-cited here:
 - **Fix:** sniff BOMs (`FF FE` / `FE FF`, and `FF FE 00 00`) before conversion and
   reject as unreadable source (or reject a decode containing NUL runs / a suspicious
   replacement-character density). Add the unit pin; flip the QA card's `it.fails` E9-Q1.
+- **RESOLVED (fix card t_ef542fa3, pending re-review):** `prepareForeignImport` runs
+  an `undecodableSource` decode-fingerprint sniff on the text IMMEDIATELY after the
+  size-capped read and BEFORE routing, conversion, or any DB read, returning a typed
+  `PARSE_ERROR` (zero side effects — no snapshot, rows unchanged, source untouched).
+  Three fingerprints, none of which can occur in genuine UTF-8: a leading U+FFFD pair
+  (the `FF FE` / `FE FF` / `FF FE 00 00` BOM bytes, which are invalid UTF-8), any NUL
+  byte (the E9-Q1 repro: every Latin/digit UTF-16 code unit carries a `00`), and a
+  head whose >10 % is C0 controls / U+FFFD (BOM-less UTF-16 of non-Latin text).
+  Converter-level behaviour from ledger row 8 (NUL/RTL titles surviving as literal
+  DATA inside `convertTodoTxt`) is untouched — the reject sits one level up, at the
+  seam, so a NUL-bearing FILE never reaches the converter. Pins: QA card's
+  E9-Q1 `it.fails` → `it()` (now also asserts `PARSE_ERROR` + `expectUntouched`),
+  reviewer probe promoted to `tests/unit/portability/e9-review-probe.test.ts`, docs
+  copy flipped.
 
 ---
 

@@ -49,11 +49,11 @@ Every claim below was re-run **first-hand**, not read off the impl handoff:
 |---|---|---|
 | `docs/qa/e9-utilities.md` with per-feature evidence | **MET** | this report; logs dir |
 | **10k retention-view numbers** | **NOT MET — S6 deferred** | §7: deferral verified genuine (no `setArchived`/retention code at `9ee9669` nor `ad4acc3`); best-available 10k completed-view baseline recorded; retention partition cannot be measured because it does not exist yet. Rides the review cycle (t_8f8242cc requeues the impl card) per the impl handoff |
-| Malicious/malformed import fixtures listed with outcomes (all rejected cleanly) | **MET with 2 disclosed exceptions** | §4 ledger: 15 fixtures — 12 reject/hold cleanly; **E9-Q1 (UTF-16LE) and E9-Q2 (JSON-backup-renamed-`.txt`) are ACCEPTED as garbage instead of rejected** → defects below. Hostile markup/formula rows are *correctly* accepted as inert data (row 6/8), that is not a reject |
+| Malicious/malformed import fixtures listed with outcomes (all rejected cleanly) | **MET with 2 disclosed exceptions** | §4 ledger: 15 fixtures — 12 reject/hold cleanly; **E9-Q1 (UTF-16LE) and E9-Q2 (JSON-backup-renamed-`.txt`) are ACCEPTED as garbage instead of rejected** → defects below. Hostile markup/formula rows are *correctly* accepted as inert data (row 6/8), that is not a reject. **Update (t_ef542fa3): both exceptions closed — rows 9 and 11 now PASS (reject / correct JSON routing), see §4 + §8.** |
 | Defect list in report AND completion metadata | **MET** | §8 + completion metadata |
 | FSA path AND download/upload fallback both exercised (per browser) | **MET** | §5: unit gesture/copy probes + e2e matrix on 3 engines |
 | Snapshot list can restore | **MET** | §6: engine-level undo round-trip probe + dashboard wiring probes + impl's `snapshot-restore-dashboard.test.tsx` green in my runs |
-| Malformed Todo.txt/CSV fixtures rejected without side effects | **MET** (except the two encoding/extension cases above) | §4: `expectUntouched` = 0 snapshots, 1 list, 1 task unchanged on every reject |
+| Malformed Todo.txt/CSV fixtures rejected without side effects | **MET** (the two encoding/extension cases were disclosed exceptions at report time, both since **fixed — t_ef542fa3**) | §4: `expectUntouched` = 0 snapshots, 1 list, 1 task unchanged on every reject (rows 9 and 11 now PASS: `PARSE_ERROR` reject / JSON routing, both untouched) |
 | i18n en+th for new copy | **MET** | `i18n:check` PASS at both commits; probe Q10 asserts the 5 new S10/S12 keys exist in both packs with identical placeholders |
 
 ## 3. Gate battery
@@ -100,10 +100,10 @@ reject (`expectUntouched`).
 | 5 | JSON backup with `__proto__` smuggled inside a task | malicious-shape reject | `MALICIOUS_SHAPE`, untouched, no pollution | **PASS** |
 | 6 | Markup/formula titles: `<img onerror>`, `<script>`, `=cmd\|'/C calc'!A0`, `javascript:`, `onload=` | inert data, byte-exact | all 5 import byte-exact; `globalThis.__pwned` never set; rendered as **text** in the list (probe Q16: no `<img>`/`<script>` element created) | **PASS** |
 | 7 | CSV row opening with an unescaped quote | whole-file reject (indistinguishable from truncation) | `PARSE_ERROR`, untouched — fail-closed, never a half import | **PASS** |
-| 8 | Titles with NUL / RTL-override (`U+202E`) | data or reject — never crash | preserved as literal data, no crash, no stripping (pinned as documented behaviour) | **PASS (behaviour pinned)** |
-| 9 | **UTF-16LE todo.txt** (Notepad "Unicode"; `File.text()` → NUL-interleaved mojibake) | reject as unreadable source | **ACCEPTED — imports as mojibake rows** (`prepared.ok === true`) | **DEFECT E9-Q1** (`it.fails` pin) |
+| 8 | Titles with NUL / RTL-override (`U+202E`) | data or reject — never crash | preserved as literal data, no crash, no stripping (pinned as documented behaviour) — still true at the CONVERTER level; since t_ef542fa3 a whole FILE containing NULs is rejected one level up at the seam (row 9), which the "reject" branch of this row allows | **PASS (behaviour pinned)** |
+| 9 | **UTF-16LE todo.txt** (Notepad "Unicode"; `File.text()` → NUL-interleaved mojibake) | reject as unreadable source | **REJECTED — `PARSE_ERROR`, untouched** (pre-fix: ACCEPTED, imported as mojibake rows) | **PASS** (E9-Q1 fixed at the routing seam, t_ef542fa3) |
 | 10 | CSV bytes named `.json` | reject as bad JSON | `PARSE_ERROR`, untouched | **PASS** |
-| 11 | **Valid JSON backup renamed `.txt`** | routed to the JSON backup path | **ACCEPTED as todo.txt — 53 garbage tasks** (one per pretty-printed JSON line) instead of 1 list/1 task | **DEFECT E9-Q2** (`it.fails` pin) |
+| 11 | **Valid JSON backup renamed `.txt`** | routed to the JSON backup path | **ROUTED TO JSON — 1 list / 1 task, identical plan to the `.json` control** (pre-fix: ACCEPTED as todo.txt, 53 garbage tasks) | **PASS** (E9-Q2 fixed at the routing seam, t_ef542fa3) |
 | 12 | Whitespace-only todo.txt | reject, no side effects | `NOTHING_TO_IMPORT`, `recoveryFile: null`, untouched | **PASS** |
 | 13 | Malformed-CSV drill against the real app (impl fixture, re-run by me on 3 engines) | inline notice + zero side effects | e2e: guard task survives, mystery row never lands — chromium/firefox/webkit | **PASS** |
 | 14 | Orphan row inside a snapshot payload (restore path) | quarantine + recovery, no silent drop | `outcome: "partial"`, 1 quarantined with verbatim record, recovery file present | **PASS** |
@@ -204,6 +204,17 @@ Severity rationale (all three): the ADR-004 data-safety envelope holds in every 
 silently LOST (preview gate, pre-import snapshot/undo, recovery files, source file untouched);
 the failures are "wrong content accepted" / "content invisible", not corruption or loss.
 
+> **Status update (fix card t_ef542fa3):** **E9-Q1 and E9-Q2 are FIXED** at
+> `src/portability/foreign/index.ts` — E9-Q1 by an `undecodableSource` decode-fingerprint
+> sniff (leading U+FFFD pair / NUL byte / control-soup head) that returns a typed
+> `PARSE_ERROR` before routing, conversion, or any DB read; E9-Q2 by a tight `/^\{\s*"/`
+> object sniff that beats the extension hint in `detectImportFormat`, so a JSON backup
+> renamed `.txt` takes the JSON path. Both pins flipped to `it()`:
+> `tests/unit/portability/e9-qa-probes.test.ts` E9-Q1/E9-Q2, plus the reviewer's probe
+> promoted verbatim to `tests/unit/portability/e9-review-probe.test.ts` (and the docs
+> copy flipped in place). Ledger rows 9/11 flipped to PASS (§4). E9-Q3 stays open and
+> S6-coupled.
+
 ### Cross-card findings (NOT E9, surfaced because the gate sees HEAD)
 
 | id | Sev | Finding |
@@ -217,8 +228,10 @@ the failures are "wrong content accepted" / "content invisible", not corruption 
 - `src/features/data-safety/actions.ts` statement coverage **62.5%** at `9ee9669` (branch 73.5) —
   framework/UI code, outside §9.5's ≥80% **domain** bar (domain itself: 97.57/87.36 PASS). My probes
   add coverage for the gesture/copy branches.
-- Probe convention: the two `it.fails` tests PASS **because** the defect reproduces; when someone
-  fixes E9-Q1/E9-Q2 the test reddens → flip it to `it()` as the fix lands (same as E8's probes).
+- Probe convention: an `it.fails` test PASSES **because** the defect reproduces; when someone
+  fixes the defect the test reddens → flip it to `it()`. E9-Q1/E9-Q2 were flipped by
+  **t_ef542fa3**, so the two pins in `e9-qa-probes.test.ts` now assert the FIXED behaviour and
+  are green (no `it.fails` remains in the E9 probe suites).
 
 ## 9. What the reviewer (t_8f8242cc) should weigh
 

@@ -96,10 +96,67 @@ function formatFromContent(text: string): ImportFormat {
   return 'todotxt';
 }
 
-/** Detect the import format of a picked file (extension first, content fallback). */
+/**
+ * Detect the import format of a picked file.
+ *
+ * One deliberate inversion of extension-first routing (defect E9-Q2 / review
+ * finding B2): a `{`-opening OBJECT opens the JSON path before the extension
+ * hint is consulted, because a valid JSON backup renamed `.txt` (the usual way
+ * to slip a `.json` past a mail filter) otherwise rides the todo.txt converter
+ * line-by-line — observed 53 garbage tasks, and confirming a REPLACE would
+ * write them over the profile. The sniff outranks EVERY extension hint; a
+ * `.json` file that does not open like an object still wins on its extension
+ * and then fails closed as bad JSON, and a non-JSON file whose first line opens
+ * like a JSON object (`{"…`) fails closed as unreadable JSON with zero side
+ * effects rather than importing.
+ *
+ * The sniff is `/^\{\s*"/` rather than a bare `{` so a todo.txt line list that
+ * merely starts with `{…}` (a title in braces) still takes the todo.txt path —
+ * a JSON object's first token after `{` is always the key string.
+ */
 export function detectImportFormat(input: File | string, text: string): ImportFormat {
   const name = typeof input === 'string' ? '' : input.name;
+  if (/^\{\s*"/u.test(text.trimStart())) return 'json';
   return formatFromName(name) ?? formatFromContent(text);
+}
+
+/** How much of the head the decode-fingerprint scan looks at (E9-Q1). */
+const DECODE_PROBE_CHARS = 4096;
+
+/**
+ * Decode-fingerprint sniff (defect E9-Q1 / review finding B3): `File.text()`
+ * ALWAYS UTF-8-decodes, so a UTF-16/UTF-32 source (Notepad's "Unicode", a
+ * Windows CSV saved as UTF-16) arrives as mojibake that the todo.txt converter
+ * accepts as ordinary titles — observed: the file IMPORTS instead of being
+ * rejected as an unreadable source (§10 E8). None of these fingerprints can
+ * occur in genuine UTF-8 text, so each fails the whole file closed BEFORE any
+ * conversion or DB read: typed error, zero side effects.
+ *
+ *   1. leading U+FFFD pair — the BOM bytes (`FF FE`, `FE FF`, `FF FE 00 00`)
+ *      are invalid UTF-8 and decode to replacement characters;
+ *   2. any NUL byte — every code unit of Latin/digit UTF-16 text carries a `00`
+ *      byte (the E9-Q1 repro: NUL-interleaved titles);
+ *   3. a dense C0-control / U+FFFD head — catches BOM-less UTF-16 of non-Latin
+ *      text, whose bytes decode to control soup instead of NULs.
+ *
+ * Returns a human-readable reason, or `null` when the decode is plausible.
+ */
+function undecodableSource(text: string): string | null {
+  if (text.startsWith('\uFFFD\uFFFD'))
+    return 'source starts with a BOM decoded as replacement characters';
+  if (text.includes('\u0000')) return 'source contains a NUL byte (not a UTF-8 text file)';
+  const head = text.slice(0, DECODE_PROBE_CHARS);
+  let suspects = 0;
+  for (const ch of head) {
+    const code = ch.codePointAt(0) ?? 0;
+    if (code === 0xfffd) suspects += 1;
+    else if (code < 0x20 && code !== 0x09 && code !== 0x0a && code !== 0x0d) suspects += 1;
+  }
+  // >10 % suspect characters in the head: a stray control is data, a screenful
+  // of them is a decode, not a document.
+  return suspects > 0 && suspects * 10 > head.length
+    ? 'head of the source decodes to control characters'
+    : null;
 }
 
 /**
@@ -117,6 +174,12 @@ export async function prepareForeignImport(
   // Size cap BEFORE the read — same gate as a JSON backup (Decision 6.1.2).
   const read = await readImportText(input);
   if (!read.ok) return err(read.error);
+
+  // Encoding fail-closed (E9-Q1): a UTF-16/32 source is not a readable text
+  // file here — reject BEFORE routing, conversion or any DB read, so a mojibake
+  // import can never reach the preview. Typed error, zero side effects.
+  const undecodable = undecodableSource(read.value.text);
+  if (undecodable !== null) return err({ code: 'PARSE_ERROR', message: undecodable });
 
   const fileName = opts.fileName ?? (typeof input === 'string' ? 'inline-import' : input.name);
   const format = detectImportFormat(input, read.value.text);

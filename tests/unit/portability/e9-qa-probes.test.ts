@@ -25,7 +25,7 @@ import type { AppDBImpl } from '../../../src/storage/db';
 import type { List } from '../../../src/storage/types';
 import { applyImport, prepareSnapshotRestore, takeSnapshot } from '../../../src/portability';
 import { listSnapshots } from '../../../src/portability/snapshots-api';
-import { prepareForeignImport } from '../../../src/portability/foreign';
+import { detectImportFormat, prepareForeignImport } from '../../../src/portability/foreign';
 import { convertTodoTxt } from '../../../src/portability/foreign/todotxt';
 import { MAX_IMPORT_BYTES } from '../../../src/portability/constants';
 import type { ConvertContext } from '../../../src/portability/foreign/types';
@@ -205,25 +205,26 @@ describe('Q5 — control characters and encodings', () => {
   });
 
   /**
-   * DEFECT E9-Q1 (non-blocking): `File.text()` UTF-8-decodes a UTF-16LE source into
-   * NUL-interleaved mojibake, and the todo.txt converter accepts those lines as
-   * ordinary titles — observed: the file IMPORTS (prepared.ok === true) instead of
-   * being rejected as an unreadable source (§10 E8: corrupt import file → clean
-   * reject). No data is lost (preview gate + pre-import snapshot + source untouched),
-   * which is why this is non-blocking; the fix is an encoding/BOM sniff before routing.
+   * REGRESSION E9-Q1 (fixed at the routing seam): `File.text()` UTF-8-decodes a
+   * UTF-16LE source into NUL-interleaved mojibake, and the todo.txt converter
+   * accepts those lines as ordinary titles — pre-fix observed: the file IMPORTS
+   * (prepared.ok === true) instead of being rejected as an unreadable source
+   * (§10 E8: corrupt import file → clean reject). `prepareForeignImport` now
+   * fails closed on the decode fingerprints (a raw NUL byte / a dense
+   * U+FFFD trail — which also subsume a byte-level BOM sniff) BEFORE any
+   * conversion or DB read: typed error, zero side effects.
    */
-  it.fails(
-    'DEFECT E9-Q1: a UTF-16LE todo.txt is rejected as unreadable, not imported as mojibake (§10 E8)',
-    async () => {
-      const { db } = await openSeeded();
-      // What `File.text()` yields for a UTF-16LE file: UTF-8 decoding of those bytes.
-      const utf16Bytes = Buffer.from('(A) buy milk\ndue:2026-10-30 call home\n', 'utf16le');
-      const decoded = utf16Bytes.toString('utf8');
-      const prepared = await prepareForeignImport(fakeFile('notepad-utf16.txt', decoded), { db });
-      expect(prepared.ok).toBe(false);
-      await expectUntouched(db);
-    },
-  );
+  it('E9-Q1 (fixed): a UTF-16LE todo.txt is rejected as unreadable, not imported as mojibake (§10 E8)', async () => {
+    const { db } = await openSeeded();
+    // What `File.text()` yields for a UTF-16LE file: UTF-8 decoding of those bytes.
+    const utf16Bytes = Buffer.from('(A) buy milk\ndue:2026-10-30 call home\n', 'utf16le');
+    const decoded = utf16Bytes.toString('utf8');
+    const prepared = await prepareForeignImport(fakeFile('notepad-utf16.txt', decoded), { db });
+    expect(prepared.ok).toBe(false);
+    if (prepared.ok) return;
+    expect(prepared.error.code).toBe('PARSE_ERROR');
+    await expectUntouched(db);
+  });
 });
 
 /* --------------------------- format detection --------------------------- */
@@ -240,29 +241,53 @@ describe('Q6 — extension vs content', () => {
   });
 
   /**
-   * DEFECT E9-Q2 (non-blocking): format routing is extension-FIRST, so a valid JSON
-   * backup renamed to `.txt` (a common way to pass files past mail filters) is run
-   * through the todo.txt converter line-by-line: observed = 53 garbage tasks (one per
-   * pretty-printed JSON line) instead of the backup's 1 list / 1 task. Confirming
-   * would REPLACE the profile with garbage — undoable via the pre-import snapshot,
-   * and the preview shows counts but not the detected format. Content sniffing
-   * already exists (`formatFromContent`); it is just tried AFTER the extension.
+   * REGRESSION E9-Q2 (fixed at the routing seam): routing was extension-FIRST, so
+   * a valid JSON backup renamed `.txt` (a common way to pass files past mail
+   * filters) ran through the todo.txt converter — pre-fix observed: 53 garbage
+   * tasks (one per pretty-printed JSON line) instead of the backup's records, and
+   * confirming would REPLACE the profile with them (preview shows counts only).
+   * A `{`-opening source now beats the `.txt` hint, so both names ride the SAME
+   * JSON path — parity is asserted against the `.json` control, plus the
+   * detection itself (`detectImportFormat` = the reviewer probe's assertions).
+   *
+   * Fixture note: the payload task MUST reference the payload list's id — Stage
+   * B's referential pass quarantines orphans, so an orphan payload would make
+   * `accepted.tasks` be 0 for FIXTURE reasons, not routing reasons.
    */
-  it.fails(
-    'DEFECT E9-Q2: a JSON backup renamed .txt imports as a real backup, not as 53 garbage todo.txt lines',
-    async () => {
-      const { db } = await openSeeded();
-      const corpus = makeDocText({
-        settings: makeSettings(),
-        lists: [makeList()],
-        tasks: [makeTask()],
-      });
-      const prepared = await prepareForeignImport(fakeFile('my-backup.txt', corpus), { db });
-      expect(prepared.ok).toBe(true);
-      if (!prepared.ok) return;
-      expect(prepared.value.accepted.tasks).toBe(1);
-    },
-  );
+  it('E9-Q2 (fixed): a JSON backup renamed .txt imports as a real backup, not as 53 garbage todo.txt lines', async () => {
+    const { db } = await openSeeded();
+    const payloadList = makeList();
+    const corpus = makeDocText({
+      settings: makeSettings(),
+      lists: [payloadList],
+      tasks: [makeTask({ listId: payloadList.id })],
+    });
+    expect(detectImportFormat(fakeFile('my-backup.txt', corpus), corpus)).toBe('json');
+    const jsonControl = await prepareForeignImport(fakeFile('my-backup.json', corpus), { db });
+    const prepared = await prepareForeignImport(fakeFile('my-backup.txt', corpus), { db });
+    expect(prepared.ok && jsonControl.ok).toBe(true);
+    if (!prepared.ok || !jsonControl.ok) return;
+    // Same bytes, both names → identical plan (the .txt name cannot open the
+    // todo.txt converter at all), and the corpus imports whole: 1 list/1 task.
+    expect(prepared.value.accepted).toEqual(jsonControl.value.accepted);
+    expect(prepared.value.accepted).toEqual({ lists: 1, tasks: 1, settings: true });
+  });
+
+  it('control: an extension-less JSON backup rides the same JSON path as its .json name', async () => {
+    const { db } = await openSeeded();
+    const payloadList = makeList();
+    const corpus = makeDocText({
+      settings: makeSettings(),
+      lists: [payloadList],
+      tasks: [makeTask({ listId: payloadList.id })],
+    });
+    const withExt = await prepareForeignImport(fakeFile('backup.json', corpus), { db });
+    const plan = await prepareForeignImport(fakeFile('backup', corpus), { db });
+    expect(plan.ok && withExt.ok).toBe(true);
+    if (plan.ok && withExt.ok) {
+      expect(plan.value.accepted).toEqual(withExt.value.accepted);
+    }
+  });
 });
 
 /* ------------------------ snapshot & settings --------------------------- */

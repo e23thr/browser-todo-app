@@ -3,9 +3,16 @@
  * disclosed S12 routing/encoding findings E9-Q1 / E9-Q2 from
  * docs/qa/e9-utilities.md §8.
  *
- * Polarity follows the E8/E9 probe convention: each `it.fails` asserts the
- * DESIRED behaviour and passes only because the defect reproduces. When the
- * fix lands the test reddens — flip it to `it()` as part of the fix.
+ * Polarity follows the E8/E9 probe convention: each `it.fails` asserted the
+ * DESIRED behaviour and passed only because the defect reproduced.
+ *
+ * **Flipped to `it()` by fix card t_ef542fa3** (B2/B3 resolved at the routing
+ * seam). This file stays where the review produced it, with the reviewer's
+ * imports untouched — it is NOT run in place (the vitest include glob is
+ * `tests/unit/**` and these relative imports resolve from that directory).
+ * The RUNNABLE twin is `tests/unit/portability/e9-review-probe.test.ts`, a
+ * verbatim copy of this file that is green at the fix commit; the QA card's
+ * own pins live in `tests/unit/portability/e9-qa-probes.test.ts`.
  *
  * Reviewer evidence; attached to the review card, not part of the suite.
  */
@@ -31,8 +38,8 @@ async function openSeeded(): Promise<AppDBImpl> {
 }
 
 describe('E9 review: format routing (E9-Q2)', () => {
-  it.fails(
-    'a valid JSON backup renamed .txt takes the JSON path (today: todo.txt converter)',
+  it(
+    'a valid JSON backup renamed .txt takes the JSON path (pre-fix: todo.txt converter)',
     async () => {
       const db = await openSeeded();
       const doc = makeDocText({ lists: [makeList()], tasks: [makeTask()] });
@@ -42,7 +49,7 @@ describe('E9 review: format routing (E9-Q2)', () => {
       expect(detectImportFormat(file, doc)).toBe('json');
       expect(txtPlan.ok && jsonPlan.ok).toBe(true);
       if (txtPlan.ok && jsonPlan.ok) {
-        // Shipped today: {lists:1, tasks:53, quarantined:0} vs the JSON
+        // Pre-fix: {lists:1, tasks:53, quarantined:0} vs the JSON
         // control's {lists:1, tasks:0, quarantined:1} — 53 garbage tasks.
         expect(txtPlan.value.accepted).toEqual(jsonPlan.value.accepted);
       }
@@ -63,8 +70,8 @@ describe('E9 review: format routing (E9-Q2)', () => {
 });
 
 describe('E9 review: encoding (E9-Q1)', () => {
-  it.fails(
-    'a UTF-16LE todo.txt is rejected as an unreadable source (today: accepted as mojibake)',
+  it(
+    'a UTF-16LE todo.txt is rejected as an unreadable source (pre-fix: accepted as mojibake)',
     async () => {
       const db = await openSeeded();
       const utf16 = new TextEncoder().encode('x 2026-10-20 2026-10-01 pay rent\n');
@@ -76,7 +83,7 @@ describe('E9 review: encoding (E9-Q1)', () => {
       }
       const decoded = new TextDecoder('utf-8').decode(bytes);
       const plan = await prepareForeignImport(fakeFile('unicode-notes.txt', decoded), { db });
-      // Shipped today: ok=true with {lists:1, tasks:2} of NUL-interleaved garbage.
+      // Pre-fix: ok=true with {lists:1, tasks:2} of NUL-interleaved garbage.
       expect(plan.ok).toBe(false);
     },
   );
