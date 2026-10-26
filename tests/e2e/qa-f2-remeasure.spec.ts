@@ -19,9 +19,22 @@ test('effective .task-check target is the label wrapper — measure both', async
     await startFresh.last().click();
     await page.waitForTimeout(400);
   }
-  // Compact viewport: seed through the empty-state/FAB sheet. A default list may already
+  // Compact viewport: seed through the empty-state "Add task". A default list may already
   // exist after "Start fresh" — only create one when the sheet offers it.
-  await page.getByRole('button', { name: 'Add task', exact: true }).first().click();
+  //
+  // Click the IN-FLOW empty-state button (inside <main>), never `.first()` across the page.
+  // `.first()` raced the skeleton load: before the view resolved the only "Add task" was the
+  // fixed-position FAB (bottom-right, `--z-sticky`=100). When the update-notice banner
+  // (update.css: also bottom-right, z-index 100, but mounted to <body> after #app) rendered in
+  // that window, it painted over the FAB and intercepted pointer events, so Playwright's
+  // hit-target actionability wait spun until the 90 s global test timeout — the
+  // qa-f2-remeasure:11 first-attempt flake. The empty-state button routes through the same
+  // startQuickAdd() seam as the FAB (TaskScreen.tsx vs Shell.tsx) so the sheet is identical,
+  // and being in normal flow it can never be covered by the banner. Both waits are bounded so a
+  // future stall fails fast and names the action instead of hanging to the global timeout.
+  const addTask = page.getByRole('main').getByRole('button', { name: 'Add task', exact: true });
+  await expect(addTask).toBeVisible({ timeout: 10_000 });
+  await addTask.click({ timeout: 10_000 });
   const sheet = page.getByRole('dialog', { name: 'Add task', exact: true });
   await expect(sheet).toBeVisible();
   const newList = sheet.getByRole('button', { name: 'New list', exact: true });
