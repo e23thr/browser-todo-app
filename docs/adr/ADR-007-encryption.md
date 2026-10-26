@@ -389,6 +389,40 @@ Consequences:
   (Decision 7.2 stamping applies) and require unlock; import into a locked store prompts unlock.
   The pre-import snapshot (ADR-002/ADR-004) is itself protected per Decision 4.4.
 
+### 4.6 Row sealing is staged OUTSIDE live transactions (the E10-Q6 rule)
+
+The row seam's `readRow`/`writeRow` are **real async work** (WebCrypto), and an IndexedDB
+transaction that awaits real async work **deactivates**: the continuation lands after the
+auto-commit window, so subsequent requests are refused (`InvalidStateError` /
+`TransactionInactiveError`) — or, worse, the already-issued deletes commit while the seam
+writes never land (the silent partial apply of E10-Q6). Whether this bites depends on the
+engine's promise scheduling: **chromium** resolves a small seal/digest as a microtask (the
+transaction survives); **firefox and webkit** do not (measured first-hand —
+`tests/e2e/e10-encryption.spec.ts` tx-lifetime + seamed-tx probes, per-engine pinned).
+`fake-indexeddb` sides with firefox/webkit.
+
+**Normative rule: the seam transform never runs inside a live transaction.** Multi-row seamed
+applies (import apply / snapshot restore, ADR-004 Decision 5 stage 6) **stage** every row
+first — `AppDBImpl.sealForWrite` applies exactly the transform `put` would (including the
+locked-write `BLOCKED` refusal) with no transaction open — then write the at-rest bytes
+**verbatim** in ONE `txRaw` transaction. Staging is pure (no side effects, nothing to roll
+back), so ADR-004 Decision 5's ONE-transaction atomicity contract and the Decision 4.1
+at-rest bytes format are both unchanged; a staging refusal fails the whole apply with zero
+writes.
+
+Consequences:
+
+- Multi-row seamed applies are engine-independent — chromium's microtask resolution is a
+  scheduling accident, not a contract, and must never again be load-bearing.
+- `Tx.put`/`Tx.get`/`Tx.getAll` still run the seam inside the transaction for the app's
+  single-row repo surface (`repos/support.ts` `withTx`), `purge.ts`'s seamed reads, and the
+  schema-v3 migration step — the same await-in-tx hazard, tracked as follow-ups of
+  t_361487a7. They must migrate to the stage-then-`txRaw` pattern before C1 can be called
+  cross-browser for day-to-day editing.
+- The rule ratifies what the code already did deliberately elsewhere: `queryWith` decrypts
+  AFTER `base.done`, and the C1 migration sweep (`src/crypto/migrate.ts`) transforms outside
+  and applies through `txRaw`.
+
 ---
 
 ## Decision 5 — Key lifecycle in session

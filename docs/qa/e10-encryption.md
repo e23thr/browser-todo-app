@@ -413,3 +413,34 @@ the fix card (same convention as §Q4/Q5's flip). Baseline before the fixes:
 | **E10-Q1** (D7.1 "resume on next unlock" had no caller) | `unlockWithPassphrase/…KeyFile/…RecoveryCode` resume the migrating sweep in-line before resolving; `refreshAfterUnlock` retries via the single-flight `resumeMigrationFlow` (quota dialog → one retry); progress/paused ride the `migrationRun` signal; sweeps are process-wide single-flight | `src/crypto/{vault,service}.ts`, `src/features/crypto/wiring.ts`; `tests/unit/crypto/boot-resume.test.ts` covers the wiring path (`initCryptoForApp` + unlock/refresh, never `resumeMigration` directly) |
 | **E10-Q2** (sweep failure stranded an undisclosed recovery slot) | The slot is no longer minted into the key ring: headless callers get it issued only after a SUCCESSFUL sweep; the wizard gets the D6.1 order structurally — material disclosed before the sweep, slot persisted only on the "I saved it" ack | `src/crypto/service.ts` (`onRecoveryOffer` seam); `tests/component/enable-wizard.test.tsx` (code on screen with zero rows encrypted + no slot; ack persists it) |
 | **E10-Q3** (fresh-store join left `status: 'off'` — locked screen never shows, writes stay plaintext, reload bricks) | `joinWithKeyFile` flips a fresh store to `status: 'on'` (zero record re-encryption stays D3.2's rule) and calls `clearDecryptQuarantine()` so pre-join foreign rows heal under the adopted key (D3.3, deviation #10's missing caller); the blocked signal clears | `src/crypto/vault.ts`; `tests/unit/crypto/join-heal.test.ts` (quarantine → join → readable + signal cleared) |
+
+---
+
+## 10. E10-Q6 UN-WITHDRAWN — real on firefox/webkit; product fix (append-only — card t_361487a7)
+
+§6's WITHDRAWN verdict measured the double against **Chromium only**. The same probe run on
+the pinned playwright engines shows the table's `crypto.subtle.digest` row diverges per
+engine: chromium survives (microtask resolution — a scheduling accident), **firefox throws
+`InvalidStateError` and webkit `TransactionInactiveError`** (the continuation lands after
+the transaction's auto-commit window). fake-indexeddb was a TRUE positive for those engines,
+so E10-Q6 was real product data loss on non-Chromium: `applyImport`/`restoreSnapshot`'s
+ONE-tx apply deactivated mid-write (hard-deletes committed, seamed writes refused/dropped).
+
+Fixed on t_361487a7 by the ADR-007 Decision 4.6 rule: rows are sealed OUTSIDE the
+transaction (`AppDBImpl.sealForWrite`) and written verbatim in one `txRaw` — ADR-004
+Decision 5's ONE-transaction atomicity and the at-rest bytes format unchanged.
+
+Evidence (fix branch `fix/e10-import-sealed-tx-t_361487a7`):
+
+| Check | Result |
+|---|---|
+| `e10-encryption.spec.ts` × {chromium, firefox, webkit, chromium-th}, skips removed | **16 passed (0 skipped)** — import D4.5 + restore D4.4 on every engine |
+| seamed-tx probe (raw pre-fix pattern) | pinned per engine: chromium `null`; firefox/webkit one of `InvalidStateError`/`TransactionInactiveError` |
+| unit staging contract (`tests/unit/portability/apply.test.ts`, macrotask seam) | 3 tests RED on pre-fix `src/`, GREEN after; restore round-trips on fake-indexeddb now too |
+| `tests/unit/crypto/e10-qa-probes.test.ts` Q6 | restore assertion tightened from "typed failure tolerated" to "restore succeeds, rows ciphertext" |
+| full unit suite | 138 files / 1442 passed |
+| lint / `tsc -b` / prettier | clean |
+
+Remaining seamed-in-tx carriers (repo writes/reads via `repos/support.ts` `withTx`,
+`purge.ts`, schema-v3 migration step) are the same hazard and are tracked as a follow-up of
+t_361487a7 (ADR-007 Decision 4.6).

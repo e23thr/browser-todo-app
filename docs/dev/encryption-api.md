@@ -14,7 +14,7 @@ deviations are additive and listed in §4 — nothing normative was weakened).
 | Area | Modules |
 |---|---|
 | Crypto core | `src/crypto/{bytes,errors,payload,passphrase,recovery,keys,lock,vault,migrate,service,portability}.ts` |
-| Row seam | `src/storage/cryptoSeam.ts` + the `AppDB`/`Tx` read-write transform in `src/storage/db.ts` (`txRaw`/`getAllRaw`/`putRaw` are the at-rest escape hatches) |
+| Row seam | `src/storage/cryptoSeam.ts` + the `AppDB`/`Tx` read-write transform in `src/storage/db.ts` (`txRaw`/`getAllRaw`/`putRaw` are the at-rest escape hatches; `sealForWrite` stages a row OUTSIDE any tx — ADR-007 Decision 4.6) |
 | Storage chain | `crypto_state` singleton store at **idbVersion 3 / schemaVersion 4** (`src/storage/{schema,types,migrations,validate}.ts`) |
 | Sync interop | `src/sync/mergeSeam.ts` + `merge.ts` `LOCKED` deferral + encrypted-shape types in `src/sync/{types,hash,engine}.ts` |
 | Portability | export decrypt (plaintext backups, D4.5), import stamp+encrypt, snapshot payload wrap/unwrap (D4.4), enc-aware `canonicalizeRecord` |
@@ -67,6 +67,17 @@ deviations are additive and listed in §4 — nothing normative was weakened).
    Headless callers (no seam) get their slot issued only after a successful
    sweep — a failed enable strands none either. `'cancelled'` (wizard closed
    at the offer) rolls the store back to plaintext per D6.1.
+8. **Seam work NEVER runs inside a live IndexedDB transaction (ADR-007
+   Decision 4.6, E10-Q6 / t_361487a7).** firefox/webkit deactivate a `readwrite`
+   transaction across a `crypto.subtle` await (chromium survives only because it
+   resolves the small seal as a microtask — a scheduling accident, not a
+   contract), so multi-row seamed applies STAGE every row first
+   (`AppDBImpl.sealForWrite` — the same transform `put` applies, including the
+   locked-write `BLOCKED` refusal) and write at-rest bytes verbatim in one
+   `txRaw`. `applyImport`/`restoreSnapshot` are staged this way; the remaining
+   seamed-in-tx carriers (`Tx.put`/`get`/`getAll` via `repos/support.ts`
+   `withTx`, `purge.ts` seamed reads, the schema-v3 migration step) must follow
+   before C1 is cross-browser for day-to-day editing (follow-up of t_361487a7).
 
 ## 3. Dependency & budget audit (testing contract: "attach to the impl card")
 

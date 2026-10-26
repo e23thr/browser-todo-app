@@ -429,6 +429,10 @@ confirmation UX.
   record. Any failure — including `QUOTA_EXCEEDED` — **aborts the transaction**: the database is
   exactly as before (IDB atomicity), and the typed error surfaces (§5.5 dialog for
   `QUOTA_EXCEEDED`: export/cleanup, never a silent drop).
+- **C1 staging (ADR-007 Decision 4.6):** when the target store is encrypted, each accepted
+  record is sealed to its at-rest bytes BEFORE the transaction opens, and the transaction
+  writes those bytes verbatim (the at-rest transaction, `txRaw`). The atomicity contract
+  above is unchanged — staging is pure — and the at-rest format is ADR-007 Decision 4.1's.
 - `snapshots`/`snapshot_payloads` are untouched by apply (the pre-import snapshot row was written
   in stage 5). Imported `data.snapshots` metadata is **not** restored — informational only
   (warning: "snapshot metadata ignored — snapshot payloads are device-local").
