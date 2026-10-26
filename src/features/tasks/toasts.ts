@@ -28,6 +28,13 @@ export interface Toast {
    * stays the 8 s error-toast lifetime the host already shipped with).
    */
   readonly durationMs?: number;
+  /**
+   * Called when the toast leaves the screen by ANY route — its action, the close
+   * button, `Escape`, or auto-expiry. The S7 undo offer hooks this: a dismissed
+   * toast is an abandoned offer, since its Undo button was the offer's only
+   * affordance and the offer must not outlive it.
+   */
+  readonly onDismiss?: () => void;
 }
 
 export const toasts = signal<readonly Toast[]>([]);
@@ -47,10 +54,17 @@ export function pushToast(toast: Toast): string {
 }
 
 export function dismissToast(id: string): void {
+  const target = toasts.value.find((toast) => toast.id === id);
   toasts.value = toasts.value.filter((toast) => toast.id !== id);
+  target?.onDismiss?.();
 }
 
-/** Test seam. */
+/**
+ * Test seam. Fires each toast's `onDismiss` so a dismissed offer never survives
+ * the clear (same rule as a per-toast dismissal).
+ */
 export function clearToasts(): void {
+  const pending = toasts.value;
   toasts.value = [];
+  for (const toast of pending) toast.onDismiss?.();
 }

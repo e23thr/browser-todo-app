@@ -11,6 +11,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/pre
 
 import { Composer } from '../../src/features/tasks/Composer';
 import { TaskEditor } from '../../src/features/tasks/TaskEditor';
+import { ToastHost } from '../../src/features/tasks/ToastHost';
 import { t } from '../../src/app/i18n';
 import { resetPersistGate } from '../../src/features/data-safety/persistGate';
 import {
@@ -266,7 +267,7 @@ describe('S4 task editor — F2 edit', () => {
     expect(state.value.tasks.get('T1')?.title).toBe('keep me');
   });
 
-  it('deletes through the S7.1 confirm naming the task', async () => {
+  it('deletes immediately — the S7.1 undo toast names the task in place of the confirm', async () => {
     await seed({
       lists: [makeList({ id: 'L1' })],
       tasks: [makeTask({ id: 'T1', title: 'Buy milk' })],
@@ -274,22 +275,22 @@ describe('S4 task editor — F2 edit', () => {
     const task = state.value.tasks.get('T1');
     const onClose = vi.fn();
     render(<TaskEditor task={task!} lists={liveLists(state.value)} onClose={onClose} />);
+    render(<ToastHost />); // the App hosts this; the undo toast needs it mounted
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete task' }));
-    const confirm = await screen.findByRole('dialog', { name: 'Delete task?' });
-    expect(
-      within(confirm).getByText('"Buy milk" will be deleted. This can\'t be undone.', {
-        exact: true,
-      }),
-    ).toBeTruthy();
 
-    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
+    // S7.1 binding (t_1b9ee0e6): no confirm dialog — the undo toast IS the confirm,
+    // and it names the task the way the confirm body used to.
+    expect(screen.queryByRole('dialog', { name: 'Delete task?' })).toBeNull();
     await waitFor(() => {
       expect(state.value.tasks.has('T1')).toBe(false);
     });
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled();
     });
+    const message = await screen.findByText('Deleted "Buy milk"', { exact: true });
+    expect(message).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeTruthy();
     await waitFor(() => {
       expect(regions.polite?.textContent).toBe('Task deleted');
     });

@@ -433,14 +433,17 @@ type UndoOffer = {
 let undoOffer: UndoOffer | null = null;
 let undoTimer: ReturnType<typeof setTimeout> | null = null;
 
-/** Drop the offer on the table (expiry, replacement, store reset). */
+/** Drop the offer on the table (expiry, replacement, toast dismissal, store reset). */
 function dropUndoOffer(): void {
   if (undoTimer !== null) {
     clearTimeout(undoTimer);
     undoTimer = null;
   }
-  if (undoOffer !== null) dismissToast(undoOffer.toastId);
+  const offer = undoOffer;
+  // Clear BEFORE dismissing: the undo toast's `onDismiss` is this very function
+  // (any dismissal route drops the offer), so the re-entry must see no offer.
   undoOffer = null;
+  if (offer !== null) dismissToast(offer.toastId);
 }
 
 /** The single undo currently offered (test seam; at most one by construction). */
@@ -474,6 +477,8 @@ function offerUndo(
     messageKey,
     params,
     durationMs: UNDO_WINDOW_MS,
+    // Any dismissal route (Escape, close, auto-expiry) abandons the offer.
+    onDismiss: dropUndoOffer,
     action: {
       key: 'common.undo',
       run: () => {

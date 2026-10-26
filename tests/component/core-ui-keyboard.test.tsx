@@ -191,8 +191,8 @@ describe('keyboard-only: F3 complete', () => {
   });
 });
 
-describe('keyboard-only: F4 delete with confirm', () => {
-  it('deletes via Delete key + confirm dialog', async () => {
+describe('keyboard-only: F4 delete (S7.1 undo toast replaces the confirm)', () => {
+  it('deletes via Delete key immediately and announces the deletion', async () => {
     await seed({
       lists: [makeList({ id: 'L1', name: 'Personal' })],
       tasks: [makeTask({ id: 'T1', listId: 'L1', title: 'Throw away' })],
@@ -216,25 +216,19 @@ describe('keyboard-only: F4 delete with confirm', () => {
     tabTo(row);
     steps.push('Tab → task row');
     fireEvent.keyDown(row, { key: 'Delete' });
-    steps.push('Delete → S7.1 confirm opens, initial focus on Cancel');
+    steps.push('Delete → task deleted immediately (S7.1: the undo toast replaces the confirm)');
 
-    const confirm = await screen.findByRole('dialog', { name: 'Delete task?' });
-    await waitFor(() => {
-      expect((document.activeElement as HTMLButtonElement).textContent).toBe('Cancel');
-    });
-    steps.push('Tab → "Delete" (confirm) button — trap cycles inside the dialog');
-    const confirmButton = within(confirm).getByRole('button', { name: 'Delete' });
-    tabTo(confirmButton);
-    activate(confirmButton);
-    steps.push('Enter → task deleted, announced "Task deleted", focus moves to next row/heading');
-
+    // S7.1 binding (t_1b9ee0e6): no confirm dialog — the 10 s undo offer IS the
+    // confirmation. The undo/toast matrices are owned by t_a056b19f.
+    expect(screen.queryByRole('dialog', { name: 'Delete task?' })).toBeNull();
     await waitFor(() => {
       expect(state.value.tasks.has('T1')).toBe(false);
     });
     await waitFor(() => {
       expect(regions.polite?.textContent).toBe('Task deleted');
     });
-    record('F4 delete (confirm)', steps);
+    steps.push('announced "Task deleted", focus moves to next row/heading');
+    record('F4 delete (undo toast)', steps);
   });
 });
 

@@ -27,7 +27,7 @@ import type { Task } from '../../domain/model';
 import { selectView } from '../../domain/views';
 import { TaskEditor } from '../tasks/TaskEditor';
 import { MoveToListDialog } from '../tasks/MoveToListDialog';
-import { TaskDeleteDialog } from '../tasks/TaskDeleteDialog';
+import { needsDeleteDisposition, TaskDeleteDialog } from '../tasks/TaskDeleteDialog';
 import { TaskList } from '../tasks/TaskList';
 import type { EditingTask } from '../tasks/TaskScreen';
 import {
@@ -170,7 +170,17 @@ export function SearchView(): JSX.Element {
           setEditing({ id, task });
         }}
         onDelete={(id) => {
-          setConfirmingId(id);
+          // S7.1 binding (t_1b9ee0e6): the confirm dialog is REPLACED by the
+          // 10 s undo toast — kept only for the subtask disposition choice.
+          if (needsDeleteDisposition(id)) {
+            setConfirmingId(id);
+            return;
+          }
+          const task = storeState.tasks.get(id);
+          if (task === undefined) return;
+          void deleteTask(task.id, { mode: 'cascade' }).then((result) => {
+            if (result.ok) announce(t('a11y.taskDeleted'));
+          });
         }}
         onMove={() => {
           // D1: search results derive their order — the alternative is Move to list.
