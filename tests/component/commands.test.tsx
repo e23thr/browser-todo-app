@@ -235,6 +235,34 @@ describe('command palette (S8 core loop, keyboard-only)', () => {
     expect(handlers.onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('runs the LIVE close handler on Escape, even in the frame of a stage render (D2 pin)', async () => {
+    const { input, handlers } = await openPalette();
+    fireEvent.input(input, { target: { value: 'milk' } });
+
+    // Raw dispatches (NOT fireEvent): Preact re-registers changed effects post-paint,
+    // so a render commit lands in a microtask while the document Escape listener still
+    // holds the PRE-stage closure — the D2 race the QA probe caught live (t_b3280190).
+    // fireEvent is act-wrapped and would close that window.
+    const key = (k: string): void => {
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }),
+      );
+    };
+    key('Enter'); // enter the task stage (state update -> deferred render)
+    for (let tick = 0; tick < 3; tick += 1) await Promise.resolve();
+    // The stage is already on screen while the listener refresh is still pending.
+    expect(screen.getByRole('option', { name: /Open task/ })).toBeTruthy();
+
+    key('Escape'); // stage -> root (a stale closure would CLOSE the palette here)
+    for (let tick = 0; tick < 3; tick += 1) await Promise.resolve();
+    expect(handlers.onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('option', { name: /Add a task/ })).toBeTruthy();
+
+    key('Escape'); // root -> close (a stale closure would step back instead)
+    for (let tick = 0; tick < 3; tick += 1) await Promise.resolve();
+    expect(handlers.onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('describes the dialog with the keyboard hint (aria-describedby, review N5)', async () => {
     await openPalette();
     const dialog = document.querySelector('.dialog');
@@ -293,6 +321,78 @@ describe('command palette (S8 core loop, keyboard-only)', () => {
     );
     expect(keystrokeMs).toBeLessThan(200);
     expect(clearMs).toBeLessThan(200);
+  });
+});
+
+/** jsdom ships no matchMedia — same wide-shell stub as tests/component/app.test.tsx. */
+function stubWideViewport(): void {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    media: query,
+    matches: query.includes('min-width: 1024px'),
+    onchange: null,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    dispatchEvent: () => false,
+  }));
+}
+
+describe('palette "Add a task" hands focus to the composer (QA D1, t_b3280190)', () => {
+  async function bootAppOnAllOpen(): Promise<HTMLElement> {
+    render(<App />);
+    await screen.findByRole('heading', { level: 1, name: 'Today' });
+    await waitFor(() => {
+      expect(storeStatus.value).toBe('ready');
+    });
+    await addList({ name: 'Inbox', color: '#2e6fd9' });
+    window.location.hash = '#/all';
+    return screen.findByRole('heading', { level: 1, name: 'All open' });
+  }
+
+  /** Park focus on the heading — the probe's parkFocusOnHeading; any non-composer
+   *  opener (row, nav entry) reproduces D1 the same way. */
+  async function parkFocusOnHeading(heading: HTMLElement): Promise<void> {
+    // Wait out the route-change focus effect (setTimeout(0)) first: it targets the
+    // composer's data-autofocus on the wide shell and would undo the parked focus.
+    await waitFor(() => {
+      expect(document.activeElement).not.toBe(document.body);
+    });
+    heading.focus();
+    expect(document.activeElement).toBe(heading);
+  }
+
+  async function runAddATaskFromPalette(): Promise<void> {
+    press({ key: 'F', ctrlKey: true, shiftKey: true });
+    const palette = await screen.findByRole('dialog', { name: 'Command palette' });
+    const input = within(palette).getByRole('combobox');
+    fireEvent.input(input, { target: { value: 'add a' } });
+    await screen.findByRole('option', { name: /Add a task/ });
+    fireEvent.keyDown(input, { key: 'Enter' });
+  }
+
+  it('wide shell: the inline composer title keeps focus — never back on the heading', async () => {
+    stubWideViewport();
+    const heading = await bootAppOnAllOpen();
+    // The inline composer must be mounted and registered before the chord runs.
+    await screen.findByLabelText('Title', { exact: true });
+    await parkFocusOnHeading(heading);
+    await runAddATaskFromPalette();
+
+    const title = await screen.findByLabelText('Title', { exact: true });
+    expect(document.activeElement).toBe(title);
+    expect(document.activeElement).not.toBe(heading);
+  });
+
+  it('compact shell: focus lands in the composer sheet title', async () => {
+    const heading = await bootAppOnAllOpen();
+    await parkFocusOnHeading(heading);
+    await runAddATaskFromPalette();
+
+    const sheet = await screen.findByRole('dialog');
+    const title = within(sheet).getByLabelText('Title', { exact: true });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(title);
+    });
+    expect(document.activeElement).not.toBe(heading);
   });
 });
 
