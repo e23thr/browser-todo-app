@@ -42,7 +42,20 @@ jobs:
           key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
       - run: npm ci
       - run: npx playwright install --with-deps ${{ matrix.browser }}
+      # §9.1 perf-evidence protocol: `tests/e2e/qa-search-reorder.spec.ts` measures per-keystroke
+      # search latency and only exists in the chromium project (it skips the others), and its
+      # header states the measurement contract — "one worker, fresh profile per test". The matrix
+      # default (2 workers) let a sibling suite's CPU contention inflate those numbers, which is
+      # exactly what reddened nightly run 40242355014 (cold index open measured 86.7 -> 105.5 ->
+      # 115.0 -> 117.1 ms of the app's OWN page clock across attempts of the same code; split
+      # evidence: scripts/diag-search-budget-split.mjs, whose calibration loop runs 5.4 ms on an
+      # idle box and 41.5 ms on a saturated one). The budgets themselves are unchanged — this
+      # only makes CI measure them under the conditions the spec documents.
+      - name: Full E2E suite (chromium — single worker for the perf-evidence protocol)
+        if: matrix.browser == 'chromium'
+        run: npx playwright test --project=chromium --workers=1
       - name: Full E2E suite
+        if: matrix.browser != 'chromium'
         run: npx playwright test --project=${{ matrix.browser }}
 
   e2e-thai-locale:
