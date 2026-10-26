@@ -276,7 +276,7 @@ export function RecurrenceField({ value, onChange }: RecurrenceFieldProps): JSX.
             value={String(interval)}
             onInput={(event) => {
               emit({
-                freq: freq as Recurrence['freq'],
+                freq,
                 interval: clampInterval(event.currentTarget.value),
                 until,
               });
@@ -294,7 +294,7 @@ export function RecurrenceField({ value, onChange }: RecurrenceFieldProps): JSX.
             onChange={(event) => {
               const next = event.currentTarget.value;
               emit({
-                freq: freq as Recurrence['freq'],
+                freq,
                 interval,
                 until: next === '' ? null : next,
               });

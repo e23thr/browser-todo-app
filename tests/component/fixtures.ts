@@ -217,9 +217,12 @@ export function makeTestRunner(
         id: next.id ?? newUlid(),
         listId: next.listId,
         title: next.title,
-        ...(next.notes !== undefined ? { notes: next.notes } : {}),
-        ...(next.priority !== undefined ? { priority: next.priority } : {}),
-        ...(next.tags !== undefined ? { tags: [...next.tags] } : {}),
+        // TaskDraft's notes/priority/tags are REQUIRED (model.ts), so they are
+        // passed through directly — the conditional spreads below stay for the
+        // genuinely optional fields (exactOptionalPropertyTypes).
+        notes: next.notes,
+        priority: next.priority,
+        tags: [...next.tags],
         ...(next.dueDate !== undefined ? { dueDate: next.dueDate } : {}),
         ...(next.reminderAt !== undefined ? { reminderAt: next.reminderAt } : {}),
         ...(next.recurrence !== undefined ? { recurrence: next.recurrence } : {}),
